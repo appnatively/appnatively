@@ -1,0 +1,86 @@
+{
+	"name": "wpmvc1774522210/appnatively",
+	"description": "WpMVC is a WordPress plugin framework that makes web development easy and enjoyable.",
+	"type": "project",
+	"license": "MIT",
+	"version": "2.0.0",
+	"scripts": {
+		"setup": [
+			"composer install --no-cache",
+			"composer humbug/php-scoper",
+			"composer add-prefix",
+			"composer permission"
+		],
+		"build": [
+			"composer -d vendor --no-plugins --no-interaction install --no-scripts --no-dev"
+		],
+		"humbug/php-scoper": "composer bin php-scoper require --dev humbug/php-scoper:0.17.5",
+		"add-prefix": [
+			"vendor-src/bin/php-scoper add-prefix --config=dev-tools/scoper/index.php --output-dir vendor --force",
+			"composer dump-autoload -d vendor"
+		],
+		"format": "vendor/vendor-src/bin/phpcbf --standard=dev-tools/phpcs.xml",
+		"phpcs": "vendor/vendor-src/bin/phpcs --standard=dev-tools/phpcs.xml",
+		"i18n": [
+			"wp i18n make-pot . languages/appnatively.pot --include='app/**/*.php,assets/**/*.js,assets/**/*.php,resources/views'",
+			"cp languages/appnatively.pot languages/appnatively.po"
+		],
+		"i18n:build-dev": [
+			"composer i18n",
+			"wp i18n make-json languages/appnatively.po --pretty-print"
+		],
+		"i18n:build": [
+			"composer i18n",
+			"wp i18n make-json languages/appnatively.po"
+		],
+		"permission": [
+			"chmod +x vendor/vendor-src/bin/phpcs",
+			"chmod +x vendor/vendor-src/bin/phpcbf",
+			"chmod +x vendor/vendor-src/bin/phpunit"
+		],
+		"test": "vendor/vendor-src/bin/phpunit",
+		"test:setup": "bash bin/install-wp-tests.sh wpmvc_test root '' 127.0.0.1 latest false"
+	},
+	"autoload": {
+		"psr-4": {
+			"App\\": "./../app/",
+			"Bootstrap\\": "./../bootstrap/",
+			"Database\\": "./../database/"
+		}
+	},
+	"authors": [
+		{
+			"name": "MD AL AMIN",
+			"email": "mdalaminbey@gmail.com"
+		}
+	],
+	"minimum-stability": "dev",
+	"require": {
+		"php": ">=7.4",
+		"wpmvc/framework": "^2.0.0"
+	},
+	"require-dev": {
+		"wpmvc/artisan": "^2.0.0",
+		"bamarni/composer-bin-plugin": "1.8.2",
+		"squizlabs/php_codesniffer": "3.7.2",
+		"dealerdirect/phpcodesniffer-composer-installer": "1.0.0",
+		"phpcompatibility/phpcompatibility-wp": "2.1.4",
+		"wp-coding-standards/wpcs": "^2.3",
+		"phpunit/phpunit": "^9.6",
+		"mockery/mockery": "^1.6",
+		"yoast/phpunit-polyfills": "^2.0",
+		"wp-cli/i18n-command": "^2.0@dev"
+	},
+	"config": {
+		"vendor-dir": "vendor-src",
+		"allow-plugins": {
+			"bamarni/composer-bin-plugin": true,
+			"dealerdirect/phpcodesniffer-composer-installer": true
+		}
+	},
+	"extra": {
+		"bamarni-bin": {
+			"target-directory": "vendor-src/vendor-bin"
+		}
+	}
+}

@@ -1,0 +1,4 @@
+* text=auto
+
+/dev export-ignore
+/composer.lock export-ignore
