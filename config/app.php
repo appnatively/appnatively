@@ -29,7 +29,7 @@ return [
         /**
          * The versions of the REST API.
          */
-        'versions'  => []
+        'versions'  => ['v1']
     ],
 
     /**
