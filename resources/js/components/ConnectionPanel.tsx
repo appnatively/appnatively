@@ -103,13 +103,13 @@ export function ConnectionPanel() {
     }
 
     // --- RENDER: Embedded Mode (Iframe) ---
-    if ( status === 'connected' && selectedAppId ) {
+    // if ( status === 'connected' && selectedAppId ) {
         const path = `/studio/app/${selectedAppId}/overview`;
         const embedUrl = `${ platformUrl }${ path }?source=wordpress&siteUrl=${ encodeURIComponent( appnativelyData.siteUrl ) }`;
         
         return (
             <div className="connection-embed-container w-full h-[calc(100vh-32px)] flex flex-col bg-background">
-                <div className="flex items-center justify-between p-2 border-b border-border bg-muted/30">
+                {/* <div className="flex items-center justify-between p-2 border-b border-border bg-muted/30">
                     <Button variant="ghost" size="sm" onClick={() => setSelectedAppId( null )} className="gap-2">
                         <ArrowLeft className="w-4 h-4" />
                         Back to Connections
@@ -119,17 +119,18 @@ export function ConnectionPanel() {
                             App ID: {selectedAppId}
                         </Badge>
                     </div>
-                </div>
+                </div> */}
                 <div className="flex-1 w-full bg-background overflow-hidden relative">
                     <iframe 
-                        src={embedUrl}
+                        src={"https://local.appnatively.com/new-dashboard"}
+                        // src={embedUrl}
                         className="w-full h-full border-0"
                         title="AppNatively Studio"
                     />
                 </div>
             </div>
         );
-    }
+    // }
 
     // --- RENDER: Dashboard Mode (List) ---
     if ( status === 'connected' ) {

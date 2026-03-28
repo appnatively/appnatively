@@ -9,7 +9,8 @@ export default function App() {
             className="connection-page-wrapper w-full h-full min-h-screen"
             style={{ paddingTop: top, paddingLeft: left }}
         >
-            <div className="w-full px-4">
+            <div className="w-full">
+            {/* <div className="w-full px-4"> */}
                 <ConnectionPanel />
             </div>
         </div>
