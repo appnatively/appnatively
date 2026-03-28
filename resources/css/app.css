@@ -128,15 +128,17 @@
   }
 }
 
-
-#wpcontent {
-	padding-left: 0px;
-}
-
-#wpbody-content {
-  padding-bottom: 0px;
+/* WordPress Admin Layout Overrides for AppNatively */
+.toplevel_page_appnatively {
+  overflow: hidden !important;
 }
 
 #wpfooter {
-  display: none;
+  display: none !important;
+}
+
+.appnatively-root {
+  position: fixed;
+  inset: 0;
+  z-index: 999;
 }

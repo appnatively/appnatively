@@ -4,9 +4,9 @@ namespace AppNatively\App\Http\Controllers;
 
 defined( 'ABSPATH' ) || exit;
 
-use AppNatively\WpMVC\Exceptions\Exception;
 use AppNatively\WpMVC\Routing\Response;
 use AppNatively\WpMVC\RequestValidator\Request;
+use AppNatively\App\Models\Connection;
 
 class ConnectionController extends Controller
 {
@@ -15,16 +15,9 @@ class ConnectionController extends Controller
      * GET /wp-json/appnatively/v1/connection/verify-token
      */
     public function verify_token( Request $request ) {
-        $auth_header = $request->get_header( 'Authorization' );
-        if ( ! $auth_header || strpos( $auth_header, 'Bearer ' ) !== 0 ) {
-            return Response::send( [ 'message' => 'Unauthorized' ], 401 );
-        }
-
-        $token        = substr( $auth_header, 7 );
-        $stored_token = get_option( 'appnatively_site_token' );
-
-        if ( empty( $stored_token ) || ! hash_equals( $stored_token, $token ) ) {
-           return Response::send( [ 'message' => 'Invalid or expired token' ], 401 );
+        $auth = $this->authenticate_request( $request );
+        if ( is_wp_error( $auth ) ) {
+            return Response::send( [ 'message' => $auth->get_error_message() ], 401 );
         }
 
         // Return site info
@@ -43,14 +36,22 @@ class ConnectionController extends Controller
      * GET /wp-json/appnatively/v1/connection/status
      */
     public function get_status() {
-        $status     = get_option( 'appnatively_connection_status', 'disconnected' );
-        $linked_app = get_option( 'appnatively_connected_app_name', '' );
+        $connections = Connection::all();
+        
+        $formatted_connections = [];
+        foreach ( $connections as $conn ) {
+            $formatted_connections[] = [
+                'appId'     => $conn->app_id,
+                'appName'   => $conn->app_name,
+                'status'    => $conn->status,
+                'connected' => $conn->status === 'connected',
+            ];
+        }
 
         return Response::send(
             [
-                'connected' => $status === 'connected',
-                'appName'   => $linked_app,
-                'siteUrl'   => get_site_url(),
+                'connections' => $formatted_connections,
+                'siteUrl'     => get_site_url(),
             ] 
         );
     }
@@ -59,30 +60,39 @@ class ConnectionController extends Controller
      * Disconnects the site from the platform.
      * DELETE /wp-json/appnatively/v1/connection/disconnect
      */
-    public function disconnect() {
-        delete_option( 'appnatively_site_token' );
-        delete_option( 'appnatively_connection_status' );
-        delete_option( 'appnatively_connected_app_name' );
-        delete_option( 'appnatively_connected_app_id' );
+    public function disconnect( Request $request ) {
+        $app_id = $request->get_param( 'appId' );
+
+        if ( $app_id ) {
+            $connection = Connection::where( 'app_id', $app_id )->first();
+            if ( $connection ) {
+                $connection->delete();
+            }
+        } else {
+            // Reset everything: Clear the table and any pending handshake tokens
+            Connection::truncate();
+            delete_option( 'appnatively_site_token' );
+            delete_option( 'appnatively_site_token_expiry' );
+            delete_option( 'appnatively_state_nonce' );
+        }
 
         return Response::send( [ 'success' => true ] );
     }
 
     /**
      * Initiates the connection handshake.
-     * AJAX action: appnatively_init_connect
+     * POST /wp-json/appnatively/v1/connection/init
      */
     public function init_connect() {
-        // Generate a cryptographically random token (32-byte hex)
+        // Generate a 64-character site token and 32-character state nonce
         $site_token  = wp_generate_password( 64, false );
         $state_nonce = wp_generate_password( 32, false );
 
-        // Store in options with 15-min expiry
+        // Standardize persistence with 15-min TTL
         update_option( 'appnatively_site_token', $site_token );
         update_option( 'appnatively_site_token_expiry', time() + ( 15 * MINUTE_IN_SECONDS ) );
         update_option( 'appnatively_state_nonce', $state_nonce );
 
-        // The platform URL should be configurable, for now hardcoding or using a constant
         $platform_url = defined( 'APPNATIVELY_PLATFORM_URL' ) ? APPNATIVELY_PLATFORM_URL : 'https://local.appnatively.com';
         
         $redirect_url = add_query_arg(
@@ -100,5 +110,66 @@ class ConnectionController extends Controller
                 'redirectUrl' => $redirect_url,
             ]
         );
+    }
+
+    /**
+     * Completes the connection from the platform.
+     * POST /wp-json/appnatively/v1/connection/connect
+     */
+    public function post_connect( Request $request ) {
+        $auth = $this->authenticate_request( $request );
+        if ( is_wp_error( $auth ) ) {
+            return Response::send( [ 'message' => $auth->get_error_message() ], 401 );
+        }
+
+        $app_name   = $request->get_param( 'appName' );
+        $app_id     = $request->get_param( 'appId' );
+        $site_token = get_option( 'appnatively_site_token' );
+
+        $connection = Connection::where( 'app_id', $app_id )->first();
+
+        if ( ! $connection ) {
+            $connection = new Connection();
+            $connection->app_id = $app_id;
+        }
+
+        $connection->app_name = $app_name;
+        $connection->status   = 'connected';
+        $connection->token    = $site_token;
+        $connection->site_url = get_site_url();
+        $connection->save();
+
+        return Response::send( [ 'success' => true ] );
+    }
+
+    /**
+     * Private helper to authenticate requests via Bearer token.
+     */
+    private function authenticate_request( Request $request ) {
+        $auth_header = $request->get_header( 'Authorization' );
+        if ( ! $auth_header || strpos( $auth_header, 'Bearer ' ) !== 0 ) {
+            return new \WP_Error( 'unauthorized', 'Unauthorized' );
+        }
+
+        $token  = substr( $auth_header, 7 );
+        $expiry = get_option( 'appnatively_site_token_expiry' );
+        
+        if ( $expiry && time() > (int) $expiry ) {
+            return new \WP_Error( 'token_expired', 'Token expired' );
+        }
+
+        // Check for connection token
+        $connection = Connection::where( 'token', $token )->first();
+        if ( $connection ) {
+            return true;
+        }
+
+        // Fallback for global site_token during init/connect handshake
+        $stored_token = get_option( 'appnatively_site_token' );
+        if ( $stored_token && hash_equals( $stored_token, $token ) ) {
+            return true;
+        }
+
+        return new \WP_Error( 'invalid_token', 'Invalid or expired token' );
     }
 }

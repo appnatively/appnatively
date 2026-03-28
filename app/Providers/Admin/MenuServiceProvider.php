@@ -24,10 +24,7 @@ class MenuServiceProvider extends Provider
      * @return void
      */
     public function action_admin_menu() {
-        add_menu_page( "Appnatively", 'Appnatively', 'manage_options', 'appnatively-menu', function () { }, 'dashicons-admin-generic', 30 );
-        add_submenu_page( 'appnatively-menu', esc_html__( 'Overview', 'appnatively' ), esc_html__( 'Overview', 'appnatively' ), 'manage_options', 'appnatively', [$this, 'overview'] );
-
-        remove_submenu_page( 'appnatively-menu', 'appnatively-menu' );
+        add_menu_page( "App Natively", 'App Natively', 'manage_options', 'appnatively', [$this, 'dashboard'], 'dashicons-admin-generic', 30 );
     }
 
     /**
@@ -35,7 +32,7 @@ class MenuServiceProvider extends Provider
      *
      * @return void
      */
-    public function overview() {
+    public function dashboard() {
         View::render( 'index' );
     }
 }

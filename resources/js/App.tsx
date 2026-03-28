@@ -1,11 +1,17 @@
-import ConnectionPanel from "./components/ConnectionPanel";
+import { ConnectionPanel } from "./components/ConnectionPanel";
+import { useAdminSidebarLayout } from '@wpmvc/admin-sidebar';
 
 export default function App() {
+    const { left, top } = useAdminSidebarLayout();
+
     return (
-        <div className="flex flex-col items-center justify-center p-8 bg-muted/20 min-h-[500px] rounded-xl border border-border/50 shadow-sm!">
-            <div className="w-full max-w-2xl animate-in fade-in slide-in-from-bottom-4 duration-500">
+        <div 
+            className="connection-page-wrapper w-full h-full min-h-screen"
+            style={{ paddingTop: top, paddingLeft: left }}
+        >
+            <div className="w-full px-4">
                 <ConnectionPanel />
             </div>
         </div>
-    )
+    );
 }

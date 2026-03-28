@@ -49,6 +49,7 @@
 		"@wordpress/dom-ready": "^4.42.0",
 		"@wordpress/element": "^6.42.0",
 		"@wordpress/url": "^4.42.0",
+		"@wpmvc/admin-sidebar": "^0.0.4",
 		"class-variance-authority": "^0.7.1",
 		"clsx": "^2.1.1",
 		"lucide-react": "^1.7.0",

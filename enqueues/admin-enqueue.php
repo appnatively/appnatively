@@ -4,6 +4,10 @@ use AppNatively\WpMVC\Enqueue\Enqueue;
 
 defined( 'ABSPATH' ) || exit;
 
+if ( 'toplevel_page_appnatively' !== $hook_suffix ) {
+    return;
+}
+
 if ( defined( 'SCRIPT_DEBUG' ) && SCRIPT_DEBUG === true ) {
     Enqueue::script( 'appnatively-runtime', 'build/runtime' );
 }
@@ -14,10 +18,8 @@ Enqueue::style( 'appnatively-style', 'build/css/app' );
 
 wp_localize_script(
     'appnatively-script', 'appnativelyData', [
-        'restUrl'          => get_rest_url( null, 'appnatively/v1' ),
-        'nonce'            => wp_create_nonce( 'wp_rest' ),
-        'siteUrl'          => get_site_url(),
-        'connectionStatus' => get_option( 'appnatively_connection_status', 'disconnected' ),
-        'connectedApp'     => get_option( 'appnatively_connected_app_name', '' ),
+        'restUrl' => get_rest_url( null, 'appnatively/v1' ),
+        'nonce'   => wp_create_nonce( 'wp_rest' ),
+        'siteUrl' => get_site_url(),
     ] 
 );

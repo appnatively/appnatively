@@ -6,6 +6,7 @@ use AppNatively\App\Http\Controllers\ConnectionController;
 use AppNatively\WpMVC\Routing\Route;
 
 Route::get( 'connection/verify-token', [ ConnectionController::class, 'verify_token' ] );
+Route::post( 'connection/connect', [ ConnectionController::class, 'post_connect' ] );
 
 Route::group(
     'connection', function () {
