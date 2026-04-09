@@ -1,10 +1,10 @@
-const path = require('path');
-const defaultConfig = require('@wordpress/scripts/config/webpack.config');
+const path = require( 'path' );
+const defaultConfig = require( '@wordpress/scripts/config/webpack.config' );
 
 const devHost = 'app.local';
 
 const alias = {
-	'@': path.resolve( __dirname, 'resources/js' )
+	'@': path.resolve( __dirname, 'resources/js' ),
 };
 
 module.exports = {
@@ -14,10 +14,7 @@ module.exports = {
 		'css/app': './resources/css/app.css',
 	},
 	watchOptions: {
-		ignored: [
-			'**/assets/build/**',
-			'**/*.asset.php',
-		],
+		ignored: [ '**/assets/build/**', '**/*.asset.php' ],
 	},
 	output: {
 		path: path.resolve( __dirname, './assets/build/' ),
@@ -26,7 +23,7 @@ module.exports = {
 	},
 	plugins: [
 		...defaultConfig.plugins.filter(
-			(plugin) => plugin.constructor.name !== 'RtlCssPlugin'
+			( plugin ) => plugin.constructor.name !== 'RtlCssPlugin'
 		),
 	],
 	resolve: {
@@ -38,7 +35,7 @@ module.exports = {
 			writeToDisk: true,
 		},
 		allowedHosts: 'auto',
-		port: 8887,
+		port: 8889,
 		host: devHost,
 		proxy: {
 			'/assets/build': {
@@ -48,5 +45,5 @@ module.exports = {
 			},
 		},
 		headers: { 'Access-Control-Allow-Origin': '*' },
-	}
+	},
 };
