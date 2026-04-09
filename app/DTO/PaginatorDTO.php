@@ -4,10 +4,7 @@ namespace AppNatively\App\DTO;
 
 defined( "ABSPATH" ) || exit;
 
-use AppNatively\WpMVC\DTO\DTO;
-use JsonSerializable;
-
-abstract class PaginatorDTO extends DTO implements JsonSerializable {
+abstract class PaginatorDTO extends DTO {
     /**
      * The current page being viewed.
      *
@@ -125,14 +122,5 @@ abstract class PaginatorDTO extends DTO implements JsonSerializable {
     public function set_total( int $total ): self {
         $this->total = $total;
         return $this;
-    }
-
-    /**
-     * Specify data which should be serialized to JSON.
-     *
-     * @return array
-     */
-    public function jsonSerialize(): array {
-        return $this->to_array();
     }
 }

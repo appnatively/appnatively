@@ -13,19 +13,52 @@ use AppNatively\WpMVC\RequestValidator\Request;
 
 class ProductController extends Controller {
     /**
+     * The allowed fields for the resource.
+     *
+     * @var array
+     */
+    protected array $allowed_fields = [
+        "id",
+        "name",
+        "slug",
+        "description",
+        "short_description",
+        "sku",
+        "price",
+        "regular_price",
+        "sale_price",
+        "on_sale",
+        "status",
+        "stock_status",
+        "images",
+        "categories"
+    ];
+
+    /**
      * Display a listing of the resource.
      *
      * @param Request $request The REST request instance.
      * @return array
      */
     public function index( Request $request ): array {
-        $product_paginator = apply_filters( "appnatively_ecommerce_product_paginator", null, $request );
+        $request->validate(
+            [
+                "page"        => "nullable|integer|min:1",
+                "per_page"    => "nullable|integer|min:1|max:100",
+                "search"      => "nullable|string",
+                "sort"        => "nullable|string",
+                "fields"      => "nullable|string",
+                "integration" => "required|string",
+            ]
+        );
+
+        $integration       = sanitize_text_field( $request->get_param( "integration" ) );
+        $fields            = appnatively_get_verified_fields( $request->get_param( "fields" ), $this->allowed_fields );
+        $product_paginator = apply_filters( "appnatively_ecommerce_{$integration}_products", null, $request, $fields );
 
         if ( ! $product_paginator instanceof ProductPaginatorDTO ) {
-            throw new Exception( esc_html__( "Product paginator not found" ) );
+            throw new Exception( esc_html__( "Products integration not found" ) );
         }
-
-        $product_paginator = new ProductPaginatorDTO( 1, 10, 100, 10, [] );
 
         return Response::send( ["data" => $product_paginator] );
     }
@@ -40,11 +73,15 @@ class ProductController extends Controller {
     public function show( Request $request ): array {
         $request->validate(
             [
-                "id" => "required|numeric"
+                "id"          => "required|numeric",
+                "fields"      => "nullable|string",
+                "integration" => "required|string",
             ]
         );
 
-        $product = apply_filters( "appnatively_ecommerce_product", null, $request );
+        $integration = sanitize_text_field( $request->get_param( "integration" ) );
+        $fields      = appnatively_get_verified_fields( $request->get_param( "fields" ), $this->allowed_fields );
+        $product     = apply_filters( "appnatively_ecommerce_{$integration}_product", null, $request, $fields );
 
         if ( ! $product instanceof ProductDTO ) {
             throw new Exception( esc_html__( "Product not found" ) );

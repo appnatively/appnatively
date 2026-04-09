@@ -13,19 +13,45 @@ use AppNatively\WpMVC\RequestValidator\Request;
 
 class CategoryController extends Controller {
     /**
+     * The allowed fields for the resource.
+     *
+     * @var array
+     */
+    protected array $allowed_fields = [
+        "id",
+        "name",
+        "slug",
+        "description",
+        "parent",
+        "count",
+        "image",
+    ];
+
+    /**
      * Display a listing of the resource.
      *
      * @param Request $request The REST request instance.
      * @return array
      */
     public function index( Request $request ): array {
-        $product_paginator = apply_filters( "appnatively_ecommerce_category_paginator", null, $request );
+        $request->validate(
+            [
+                "page"        => "nullable|integer|min:1",
+                "per_page"    => "nullable|integer|min:1|max:100",
+                "search"      => "nullable|string",
+                "sort"        => "nullable|string",
+                "fields"      => "nullable|string",
+                "integration" => "required|string",
+            ]
+        );
+
+        $integration       = sanitize_text_field( $request->get_param( "integration" ) );
+        $fields            = appnatively_get_verified_fields( $request->get_param( "fields" ), $this->allowed_fields );
+        $product_paginator = apply_filters( "appnatively_ecommerce_{$integration}_categories", null, $request, $fields );
 
         if ( ! $product_paginator instanceof CategoryPaginatorDTO ) {
             throw new Exception( esc_html__( "Category paginator not found" ) );
         }
-
-        $product_paginator = new CategoryPaginatorDTO( 1, 10, 100, 10, [] );
 
         return Response::send( ["data" => $product_paginator] );
     }
@@ -40,11 +66,15 @@ class CategoryController extends Controller {
     public function show( Request $request ): array {
         $request->validate(
             [
-                "id" => "required|numeric"
+                "id"          => "required|numeric",
+                "fields"      => "nullable|string",
+                "integration" => "required|string",
             ]
         );
 
-        $product = apply_filters( "appnatively_ecommerce_category", null, $request );
+        $integration = sanitize_text_field( $request->get_param( "integration" ) );
+        $fields      = appnatively_get_verified_fields( $request->get_param( "fields" ), $this->allowed_fields );
+        $product     = apply_filters( "appnatively_ecommerce_{$integration}_category", null, $request, $fields );
 
         if ( ! $product instanceof CategoryDTO ) {
             throw new Exception( esc_html__( "Category not found" ) );

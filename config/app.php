@@ -3,12 +3,14 @@
 defined( 'ABSPATH' ) || exit;
 
 use AppNatively\App\Http\Middleware\EnsureIsUserAdmin;
+use AppNatively\App\Integrations\FluentCart;
 use AppNatively\App\Providers\Admin\MenuServiceProvider;
 use AppNatively\App\Models\Comment;
 use AppNatively\App\Models\Post;
 use AppNatively\App\Models\Term;
 use AppNatively\App\Models\TermTaxonomy;
 use AppNatively\App\Models\User;
+use AppNatively\App\Integrations\Woocommerce;
 use AppNatively\WpMVC\Helpers\Helpers;
 
 return [
@@ -50,7 +52,10 @@ return [
     /**
      * Service providers for the plugin.
      */
-    'providers'                   => [],
+    'providers'                   => [
+        Woocommerce::class,
+        FluentCart::class,
+    ],
 
     /**
      * Service providers for the admin area of the plugin.

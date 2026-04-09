@@ -106,3 +106,20 @@ function appnatively_dir( string $dir = '' ): string {
 function appnatively_now( ?DateTimeZone $timezone = null ): Date {
     return Date::now( $timezone );
 }
+
+/**
+ * Get the verified fields from the requested fields string.
+ *
+ * @param string|null $fields The requested fields.
+ * @param array $allowed_fields The allowed fields.
+ * @return array
+ */
+function appnatively_get_verified_fields( ?string $fields, array $allowed_fields ): array {
+    if ( empty( $fields ) ) {
+        return $allowed_fields;
+    }
+
+    $fields = array_map( "trim", explode( ",", $fields ) );
+
+    return array_values( array_intersect( $fields, $allowed_fields ) );
+}
