@@ -17,6 +17,15 @@ return [
     // For more see: https://github.com/humbug/php-scoper/blob/master/docs/configuration.md#patchers
     'patchers'                => [
         static function ( string $file_path, string $prefix, string $contents ): string {
+            $excluded_alias_classes = [ 
+                'wp-async-request.php', 
+                'wp-background-process.php',
+            ];
+
+            if ( in_array( basename( $file_path ), $excluded_alias_classes ) ) {
+                $contents = preg_replace( '/\\\class_alias/', '// \class_alias(', $contents );
+            }
+
             // Fix PHPCSUtils string in ValidationHelper
             if ( basename( $file_path ) === 'ValidationHelper.php' ) {
                 $contents = str_replace( "'PHPCSUtils\\Utils\\TextStrings'", "'$prefix\\PHPCSUtils\\Utils\\TextStrings'", $contents );
