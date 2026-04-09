@@ -21,5 +21,5 @@ wp_localize_script(
         'restUrl' => get_rest_url( null, 'appnatively/v1' ),
         'nonce'   => wp_create_nonce( 'wp_rest' ),
         'siteUrl' => get_site_url(),
-    ] 
+    ]
 );
