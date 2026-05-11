@@ -11,7 +11,6 @@ use AppNatively\App\DTO\Ecommerce\CategoryPaginatorDTO;
 use AppNatively\App\DTO\Ecommerce\ProductDTO;
 use AppNatively\App\DTO\Ecommerce\ProductDimensionDTO;
 use AppNatively\App\DTO\Ecommerce\ProductImageDTO;
-use AppNatively\App\DTO\Ecommerce\ProductOptionDTO;
 use AppNatively\App\DTO\Ecommerce\ProductPaginatorDTO;
 use AppNatively\App\DTO\Ecommerce\ProductVariantDTO;
 use AppNatively\WpMVC\Exceptions\Exception;

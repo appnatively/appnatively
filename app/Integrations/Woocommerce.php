@@ -4,6 +4,8 @@ namespace AppNatively\App\Integrations;
 
 defined( "ABSPATH" ) || exit;
 
+use AppNatively\App\DTO\Ecommerce\CartDTO;
+use AppNatively\App\DTO\Ecommerce\CartItemDTO;
 use AppNatively\App\Models\Post;
 use AppNatively\App\DTO\Ecommerce\CategoryDTO;
 use AppNatively\App\DTO\Ecommerce\CategoryPaginatorDTO;
@@ -13,10 +15,13 @@ use AppNatively\App\DTO\Ecommerce\ProductImageDTO;
 use AppNatively\App\DTO\Ecommerce\ProductOptionDTO;
 use AppNatively\App\DTO\Ecommerce\ProductPaginatorDTO;
 use AppNatively\App\DTO\Ecommerce\ProductVariantDTO;
+use AppNatively\App\DTO\Ecommerce\OrderDTO;
+use AppNatively\App\DTO\Ecommerce\OrderPaginatorDTO;
 use AppNatively\App\Models\Term;
 use AppNatively\WpMVC\Contracts\Provider;
 use AppNatively\WpMVC\RequestValidator\Request;
 use AppNatively\WpMVC\Exceptions\Exception;
+use Automattic\WooCommerce\Enums\OrderInternalStatus;
 
 class Woocommerce extends Provider {
     /**
@@ -36,7 +41,406 @@ class Woocommerce extends Provider {
         add_filter( "appnatively_ecommerce_woocommerce_product", [$this, "product"], 10, 3 );
         add_filter( "appnatively_ecommerce_woocommerce_categories", [$this, "categories"], 10, 3 );
         add_filter( "appnatively_ecommerce_woocommerce_category", [$this, "category"], 10, 3 );
+
+        // Cart filters
+        add_filter( "appnatively_ecommerce_woocommerce_cart_get", [$this, "cart_get"], 10, 2 );
+        add_filter( "appnatively_ecommerce_woocommerce_cart_add", [$this, "cart_add"], 10, 2 );
+        add_filter( "appnatively_ecommerce_woocommerce_cart_update", [$this, "cart_update"], 10, 2 );
+        add_filter( "appnatively_ecommerce_woocommerce_cart_remove", [$this, "cart_remove"], 10, 2 );
+        add_filter( "appnatively_ecommerce_woocommerce_cart_clear", [$this, "cart_clear"], 10, 2 );
+        add_filter( "appnatively_ecommerce_woocommerce_orders_get", [$this, "orders_get"], 10, 2 );
+        add_filter( "appnatively_ecommerce_woocommerce_order_get", [$this, "order_get"], 10, 3 );
+
+
+        // Autologin handler for web checkout
+        add_action( 'init', [$this, 'handle_autologin'] );
     }
+
+    /**
+     * Handle autologin from mobile app token.
+     *
+     * @return void
+     */
+    public function handle_autologin(): void {
+        if ( ! empty( $_GET['appnatively_token'] ) && ! is_user_logged_in() ) {
+            $token        = sanitize_text_field( $_GET['appnatively_token'] );
+            $hashed_token = hash( 'sha256', $token );
+            $users        = get_users( [
+                'meta_key'    => 'appnatively_auth_token',
+                'meta_value'  => $hashed_token,
+                'number'      => 1,
+                'count_total' => false,
+            ] );
+
+            if ( ! empty( $users ) ) {
+                wp_set_auth_cookie( $users[0]->ID );
+                wp_safe_redirect( remove_query_arg( 'appnatively_token' ) );
+                exit;
+            }
+        }
+    }
+
+    /**
+     * Ensure WooCommerce cart and session are loaded.
+     * Also authenticates the user from the Bearer token if present.
+     *
+     * @param Request|null $request The REST request instance.
+     * @return void
+     */
+    private function ensure_cart_loaded( ?Request $request = null ): void {
+        if ( $request && ! get_current_user_id() ) {
+            $auth_header = $request->get_header( 'Authorization' );
+            if ( $auth_header && preg_match( '/Bearer\s+(.*)$/i', $auth_header, $matches ) ) {
+                $token        = $matches[1];
+                $hashed_token = hash( 'sha256', $token );
+                $users        = get_users( [
+                    'meta_key'    => 'appnatively_auth_token',
+                    'meta_value'  => $hashed_token,
+                    'number'      => 1,
+                    'count_total' => false,
+                ] );
+
+                if ( ! empty( $users ) ) {
+                    wp_set_current_user( $users[0]->ID );
+                }
+            }
+        }
+
+        if ( is_null( WC()->cart ) ) {
+            wc_load_cart();
+        }
+        if ( is_null( WC()->session ) ) {
+            WC()->session = new \WC_Session_Handler();
+            WC()->session->init();
+        }
+    }
+
+    /**
+     * Get cart DTO.
+     *
+     * @param CartDTO|null $cart_dto The cart DTO.
+     * @param Request $request The REST request instance.
+     * @return CartDTO
+     */
+    public function cart_get( ?CartDTO $cart_dto, Request $request ): CartDTO {
+        $this->ensure_cart_loaded( $request );
+        WC()->cart->calculate_totals();
+
+        $dto = new CartDTO();
+        $checkout_url = wc_get_checkout_url();
+        $auth_header  = $request->get_header( 'Authorization' );
+        if ( $auth_header && preg_match( '/Bearer\s+(.*)$/i', $auth_header, $matches ) ) {
+            $checkout_url = add_query_arg( 'appnatively_token', $matches[1], $checkout_url );
+        }
+
+        $dto->set_subtotal( (string) WC()->cart->get_subtotal() )
+            ->set_total( (string) WC()->cart->get_total( 'edit' ) )
+            ->set_currency( get_woocommerce_currency() )
+            ->set_item_count( WC()->cart->get_cart_contents_count() )
+            ->set_checkout_url( $checkout_url );
+
+        $items = [];
+        foreach ( WC()->cart->get_cart() as $key => $cart_item ) {
+            $item_dto = new CartItemDTO();
+            $product  = $cart_item['data'];
+            
+            $item_dto->set_key( $key )
+                ->set_product_id( $cart_item['product_id'] )
+                ->set_variation_id( $cart_item['variation_id'] )
+                ->set_quantity( $cart_item['quantity'] )
+                ->set_name( $product->get_name() )
+                ->set_price( (string) $product->get_price() )
+                ->set_subtotal( (string) $cart_item['line_subtotal'] )
+                ->set_total( (string) $cart_item['line_total'] );
+
+            $image_id = $product->get_image_id();
+            
+            // Fallback to parent image if variation has no image
+            if ( ! $image_id && $product->is_type( 'variation' ) ) {
+                $image_id = get_post_thumbnail_id( $product->get_parent_id() );
+            }
+
+            if ( $image_id ) {
+                $img_url = wp_get_attachment_image_url( $image_id, 'woocommerce_thumbnail' );
+                if ( $img_url ) {
+                    $img = new ProductImageDTO();
+                    $img->set_id( (int) $image_id )
+                        ->set_src( $img_url )
+                        ->set_alt( (string) get_post_meta( $image_id, '_wp_attachment_image_alt', true ) );
+                    $item_dto->set_image( $img );
+                }
+            }
+
+            if ( ! empty( $cart_item['variation'] ) ) {
+                $item_dto->set_variation( $cart_item['variation'] );
+            }
+
+            $items[] = $item_dto;
+        }
+
+        $dto->set_items( $items );
+
+        return $dto;
+    }
+
+    /**
+     * Add item to cart.
+     */
+    public function cart_add( ?CartDTO $cart_dto, Request $request ): CartDTO {
+        $this->ensure_cart_loaded( $request );
+        
+        $items = $request->get_param( "items" );
+        foreach ( (array) $items as $item ) {
+            $product_id   = (int) ( $item['productId'] ?? 0 );
+            $variation_id = (int) ( $item['variantId'] ?? 0 );
+            $quantity     = (int) ( $item['quantity'] ?? 1 );
+            $variations   = (array) ( $item['options'] ?? [] );
+
+            if ( $product_id ) {
+                WC()->cart->add_to_cart( $product_id, $quantity, $variation_id, $variations );
+            }
+        }
+
+        return $this->cart_get( null, $request );
+    }
+
+    /**
+     * Update cart item quantity.
+     */
+    public function cart_update( ?CartDTO $cart_dto, Request $request ): CartDTO {
+        $this->ensure_cart_loaded( $request );
+        
+        $items = $request->get_param( "items" );
+        foreach ( (array) $items as $item ) {
+            $key      = sanitize_text_field( $item['itemId'] ?? '' );
+            $quantity = (int) ( $item['quantity'] ?? 0 );
+
+            if ( $key ) {
+                WC()->cart->set_quantity( $key, $quantity );
+            }
+        }
+
+        return $this->cart_get( null, $request );
+    }
+
+    /**
+     * Remove cart item.
+     */
+    public function cart_remove( ?CartDTO $cart_dto, Request $request ): CartDTO {
+        $this->ensure_cart_loaded( $request );
+        
+        $item_ids = $request->get_param( "itemIds" );
+        foreach ( (array) $item_ids as $key ) {
+            WC()->cart->remove_cart_item( sanitize_text_field( $key ) );
+        }
+
+        return $this->cart_get( null, $request );
+    }
+
+    /**
+     * Clear cart.
+     */
+    public function cart_clear( ?CartDTO $cart_dto, Request $request ): CartDTO {
+        $this->ensure_cart_loaded( $request );
+        WC()->cart->empty_cart();
+
+        return $this->cart_get( null, $request );
+    }
+
+    /**
+     * Get customer orders.
+     *
+     * @param array $orders Current orders array.
+     * @param Request $request REST request instance.
+     * @return array
+     */
+    /**
+     * Orders get.
+     *
+     * @param OrderPaginatorDTO|null $order_paginator The order paginator.
+     * @param Request $request The REST request instance.
+     * @return OrderPaginatorDTO
+     */
+    public function orders_get( ?OrderPaginatorDTO $order_paginator, Request $request ): OrderPaginatorDTO {
+        $this->ensure_cart_loaded( $request );
+        $user_id = get_current_user_id();
+
+        $page     = (int) $request->get_param( "page" ) ?: 1;
+        $per_page = (int) $request->get_param( "per_page" ) ?: 20;
+
+        if ( ! $user_id ) {
+            return new OrderPaginatorDTO( $page, $per_page, 0, 1, [] );
+        }
+
+        $status = wc_get_order_statuses();
+        unset( $status['wc-checkout-draft'] );
+        
+        $paginator = wc_get_orders( [
+            'customer' => $user_id,
+            'limit'    => $per_page,
+            'page'     => $page,
+            'status'   => array_keys( $status ),
+            'paginate' => true,
+        ] );
+
+        $order_dtos = [];
+        foreach ( $paginator->orders as $wc_order ) {
+            $line_items = [];
+            foreach ( $wc_order->get_items() as $item_id => $item ) {
+                $product    = $item->get_product();
+                $image_id   = $product ? $product->get_image_id() : null;
+                $image_url  = $image_id ? wp_get_attachment_image_url( $image_id, 'woocommerce_thumbnail' ) : null;
+
+                $line_items[] = new \AppNatively\App\DTO\Ecommerce\OrderItemDTO( [
+                    'title'        => $item->get_name(),
+                    'quantity'     => $item->get_quantity(),
+                    'price'        => [
+                        'amount'       => (string) $wc_order->get_item_total( $item, false, true ),
+                        'currencyCode' => $wc_order->get_currency(),
+                    ],
+                    'variantTitle' => $product && $product->is_type( 'variation' ) ? $product->get_name() : null,
+                    'image'        => $image_url ? [ 'url' => $image_url ] : null,
+                ] );
+            }
+
+            $order_dtos[] = new \AppNatively\App\DTO\Ecommerce\OrderDTO( [
+                'id'                => (string) $wc_order->get_id(),
+                'name'              => '#' . $wc_order->get_order_number(),
+                'processedAt'       => $wc_order->get_date_created() ? $wc_order->get_date_created()->format( 'c' ) : '',
+                'financialStatus'   => $wc_order->get_status(),
+                'fulfillmentStatus' => $wc_order->get_status(), // @TODO: Map to more granular status
+                'totalPrice'        => [
+                    'amount'       => (string) $wc_order->get_total(),
+                    'currencyCode' => $wc_order->get_currency(),
+                ],
+                'lineItems'         => $line_items,
+            ] );
+        }
+
+        return new OrderPaginatorDTO(
+            $page,
+            $per_page,
+            $paginator->total,
+            $paginator->max_num_pages,
+            $order_dtos
+        );
+    }
+
+    /**
+     * Get single order details.
+     *
+     * @param OrderDTO|null $order_dto The order DTO.
+     * @param int|string $id The order ID.
+     * @param Request $request The REST request instance.
+     * @return OrderDTO|null
+     */
+    public function order_get( ?OrderDTO $order_dto, $id, Request $request ): ?OrderDTO {
+        $this->ensure_cart_loaded( $request );
+        $user_id = get_current_user_id();
+
+        if ( ! $user_id ) {
+            return null;
+        }
+
+        $wc_order = wc_get_order( $id );
+
+        if ( ! $wc_order || $wc_order->get_customer_id() !== $user_id ) {
+            return null;
+        }
+
+        $line_items = [];
+
+        foreach ( $wc_order->get_items() as $item_id => $item ) {
+            /**
+             * @var \WC_Order_Item_Product $item
+             */
+            $product    = $item->get_product();
+            $image_id   = $product ? $product->get_image_id() : null;
+            $image_url  = $image_id ? wp_get_attachment_image_url( $image_id, 'woocommerce_thumbnail' ) : null;
+
+            $variant_title = null;
+            $title         = $item->get_name();
+
+            if ( $product && $product->is_type( 'variation' ) ) {
+                $variant_title = wc_get_formatted_variation( $product, true );
+                $variant_title = trim( str_replace( [ '(', ')' ], '', $variant_title ) );
+                
+                // Fallback to item meta if standard variation formatter is empty
+                if ( empty( $variant_title ) ) {
+                    $formatted_meta = [];
+                    foreach ( $item->get_formatted_meta_data( '_' ) as $meta ) {
+                        $formatted_meta[] = $meta->display_key . ': ' . $meta->display_value;
+                    }
+                    $variant_title = implode( ', ', $formatted_meta );
+                }
+
+                $parent_id = $product->get_parent_id();
+                if ( $parent_id ) {
+                    $title = get_the_title( $parent_id );
+                }
+            }
+
+            $line_items[] = new \AppNatively\App\DTO\Ecommerce\OrderItemDTO( [
+                'title'        => $title,
+                'quantity'     => $item->get_quantity(),
+                'price'        => [
+                    'amount'       => (string) $wc_order->get_item_total( $item, false, true ),
+                    'currencyCode' => $wc_order->get_currency(),
+                ],
+                'variantTitle' => $variant_title,
+                'image'        => $image_url ? [ 'url' => $image_url ] : null,
+            ] );
+
+        }
+
+        $shipping = $wc_order->get_address( 'shipping' );
+
+        return new \AppNatively\App\DTO\Ecommerce\OrderDTO( [
+            'id'                 => (string) $wc_order->get_id(),
+            'name'               => (string) '#' . $wc_order->get_order_number(),
+
+            'processedAt'        => $wc_order->get_date_created() ? $wc_order->get_date_created()->format( 'c' ) : '',
+            'financialStatus'    => $wc_order->get_status(),
+            'fulfillmentStatus'  => $wc_order->get_status(),
+            'totalPrice'         => [
+                'amount'       => (string) $wc_order->get_total(),
+                'currencyCode' => $wc_order->get_currency(),
+            ],
+            'subtotalPrice'      => [
+                'amount'       => (string) $wc_order->get_subtotal(),
+                'currencyCode' => $wc_order->get_currency(),
+            ],
+            'totalTax'           => [
+                'amount'       => (string) $wc_order->get_total_tax(),
+                'currencyCode' => $wc_order->get_currency(),
+            ],
+            'totalShippingPrice' => [
+                'amount'       => (string) $wc_order->get_shipping_total(),
+                'currencyCode' => $wc_order->get_currency(),
+            ],
+            'totalDiscount'      => [
+                'amount'       => (string) $wc_order->get_total_discount(),
+                'currencyCode' => $wc_order->get_currency(),
+            ],
+            'paymentMethod'      => $wc_order->get_payment_method_title(),
+            'discountCode'       => implode( ', ', $wc_order->get_coupon_codes() ),
+            'shipping'           => [
+
+
+                'firstName' => $shipping['first_name'],
+                'lastName'  => $shipping['last_name'],
+                'address1'  => $shipping['address_1'],
+                'address2'  => $shipping['address_2'],
+                'city'      => $shipping['city'],
+                'province'  => $shipping['state'],
+                'zip'       => $shipping['postcode'],
+                'country'   => $shipping['country'],
+            ],
+            'lineItems'          => $line_items,
+
+        ] );
+    }
+
 
     /**
      * Product paginator.

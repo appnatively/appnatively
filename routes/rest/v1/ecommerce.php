@@ -4,6 +4,8 @@ defined( 'ABSPATH' ) || exit;
 
 use AppNatively\App\Http\Controllers\Ecommerce\CategoryController;
 use AppNatively\App\Http\Controllers\Ecommerce\ProductController;
+use AppNatively\App\Http\Controllers\Ecommerce\CartController;
+use AppNatively\App\Http\Controllers\Ecommerce\OrderController;
 use AppNatively\WpMVC\Routing\Route;
 
 Route::group(
@@ -19,3 +21,16 @@ Route::group(
         Route::get( '/{id}', [CategoryController::class, 'show'] );
     }
 );
+
+Route::group(
+    'cart', function() {
+        Route::get( '/', [CartController::class, 'index'] );
+        Route::post( '/add', [CartController::class, 'add'] );
+        Route::post( '/update', [CartController::class, 'update'] );
+        Route::post( '/remove', [CartController::class, 'remove'] );
+        Route::post( '/clear', [CartController::class, 'clear'] );
+    }
+);
+
+Route::get( 'orders', [OrderController::class, 'index'] );
+Route::get( 'orders/{id}', [OrderController::class, 'show'] );
