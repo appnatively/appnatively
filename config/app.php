@@ -10,6 +10,7 @@ use AppNatively\App\Models\Post;
 use AppNatively\App\Models\Term;
 use AppNatively\App\Models\TermTaxonomy;
 use AppNatively\App\Models\User;
+use AppNatively\App\Integrations\Directorist;
 use AppNatively\App\Integrations\Woocommerce;
 use AppNatively\WpMVC\Helpers\Helpers;
 
@@ -55,6 +56,7 @@ return [
     'providers'                   => [
         Woocommerce::class,
         FluentCart::class,
+        Directorist::class,
     ],
 
     /**

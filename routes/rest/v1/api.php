@@ -10,4 +10,10 @@ Route::group(
     } 
 );
 
+Route::group(
+    'directory', function() {
+        require __DIR__ . '/directory.php';
+    }
+);
+
 require __DIR__ . '/auth.php';
