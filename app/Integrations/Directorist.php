@@ -4,8 +4,11 @@ namespace AppNatively\App\Integrations;
 
 defined( "ABSPATH" ) || exit;
 
+use AppNatively\App\DTO\Directory\CategoryDTO;
+use AppNatively\App\DTO\Directory\CategoryPaginatorDTO;
 use AppNatively\App\DTO\Directory\ListingDTO;
 use AppNatively\App\DTO\Directory\ListingPaginatorDTO;
+use AppNatively\App\Models\Term;
 use AppNatively\WpMVC\Contracts\Provider;
 use AppNatively\WpMVC\RequestValidator\Request;
 use Directorist\Helper;
@@ -27,6 +30,7 @@ class Directorist extends Provider {
      */
     public function boot(): void {
         add_filter( "appnatively_directory_directorist_listings", [$this, "listings"], 10, 3 );
+        add_filter( "appnatively_directory_directorist_categories", [$this, "categories"], 10, 3 );
     }
 
     /**
@@ -90,6 +94,142 @@ class Directorist extends Provider {
             (int) $query->max_num_pages,
             $items
         );
+    }
+
+    /**
+     * Get categories paginator.
+     *
+     * @param CategoryPaginatorDTO|null $category_paginator The category paginator.
+     * @param Request                   $request The REST request instance.
+     * @param array                     $fields The requested fields.
+     * @return CategoryPaginatorDTO
+     */
+    public function categories( ?CategoryPaginatorDTO $category_paginator, Request $request, array $fields = [] ): CategoryPaginatorDTO {
+        $page     = (int) $request->get_param( "page" ) ?: 1;
+        $per_page = (int) $request->get_param( "per_page" ) ?: 10;
+        $search   = sanitize_text_field( (string) $request->get_param( "search" ) );
+        $taxonomy = defined( "ATBDP_CATEGORY" ) ? ATBDP_CATEGORY : "at_biz_dir-category";
+
+        $query = Term::join( "term_taxonomy", "terms.term_id", "=", "term_taxonomy.term_id" )
+            ->where( "term_taxonomy.taxonomy", $taxonomy );
+
+        $columns = $this->get_category_columns_from_fields( $fields );
+        $query->select( $columns );
+
+        if ( ! empty( $search ) ) {
+            global $wpdb;
+            $search = $wpdb->esc_like( $search );
+            $query->where( "terms.name", "like", "%$search%" );
+        }
+
+        $sort     = sanitize_text_field( (string) $request->get_param( "sort" ) );
+        $order_by = "name";
+        $order    = "ASC";
+
+        if ( ! empty( $sort ) ) {
+            if ( 0 === strpos( $sort, "-" ) ) {
+                $order_by = ltrim( $sort, "-" );
+                $order    = "DESC";
+            } else {
+                $order_by = $sort;
+                $order    = "ASC";
+            }
+        }
+
+        $sort_map = [
+            "name" => "terms.name",
+            "id"   => "terms.term_id",
+            "slug" => "terms.slug",
+            "count" => "term_taxonomy.count",
+        ];
+
+        $query->order_by( $sort_map[$order_by] ?? "terms.name", $order );
+        $paginator = $query->paginate( $page, $per_page );
+
+        $items = [];
+        foreach ( $paginator->items() as $term ) {
+            $items[] = $this->map_term_to_category_dto( $term, $fields );
+        }
+
+        return new CategoryPaginatorDTO(
+            $page,
+            $per_page,
+            $paginator->total(),
+            $paginator->last_page(),
+            $items
+        );
+    }
+
+    /**
+     * Get SQL columns from fields for categories.
+     *
+     * @param array $fields The requested fields.
+     * @return array
+     */
+    private function get_category_columns_from_fields( array $fields ): array {
+        $map = [
+            "id"          => "terms.term_id",
+            "name"        => "terms.name",
+            "slug"        => "terms.slug",
+            "description" => "term_taxonomy.description",
+            "parent"      => "term_taxonomy.parent",
+            "count"       => "term_taxonomy.count",
+        ];
+
+        $columns = ["terms.term_id"];
+        foreach ( $fields as $field ) {
+            if ( isset( $map[$field] ) ) {
+                $columns[] = $map[$field];
+            }
+        }
+
+        return array_unique( $columns );
+    }
+
+    /**
+     * Map term result to CategoryDTO.
+     *
+     * @param mixed $term The term result.
+     * @param array $fields The requested fields.
+     * @return CategoryDTO
+     */
+    private function map_term_to_category_dto( $term, array $fields ): CategoryDTO {
+        $dto = new CategoryDTO();
+
+        if ( in_array( "id", $fields, true ) ) {
+            $dto->set_id( (int) $term->term_id );
+        }
+        if ( in_array( "name", $fields, true ) ) {
+            $dto->set_name( $term->name );
+        }
+        if ( in_array( "slug", $fields, true ) ) {
+            $dto->set_slug( $term->slug );
+        }
+        if ( in_array( "description", $fields, true ) ) {
+            $dto->set_description( $term->description );
+        }
+        if ( in_array( "parent", $fields, true ) ) {
+            $dto->set_parent( (int) $term->parent );
+        }
+        if ( in_array( "count", $fields, true ) ) {
+            $dto->set_count( (int) $term->count );
+        }
+        if ( in_array( "image", $fields, true ) ) {
+            $image_id = (int) get_term_meta( (int) $term->term_id, "category_img", true );
+            if ( $image_id ) {
+                $src = wp_get_attachment_url( $image_id );
+                if ( $src ) {
+                    $dto->set_image(
+                        [
+                            "id"  => $image_id,
+                            "src" => (string) $src,
+                        ]
+                    );
+                }
+            }
+        }
+
+        return $dto;
     }
 
     /**
