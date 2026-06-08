@@ -35,7 +35,7 @@ class FormGent extends Form {
             'single_select' => 'dropdown',
             'range'         => 'range-slider',
             'rating'        => 'rating',
-            'switch'        => 'gdpr',
+            'switch'        => 'gdpr', //TODO: checkbox
             'password'      => 'password',
         ];
 
