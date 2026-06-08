@@ -4,6 +4,8 @@ defined( 'ABSPATH' ) || exit;
 
 use AppNatively\App\Http\Middleware\EnsureIsUserAdmin;
 use AppNatively\App\Integrations\FluentCart;
+use AppNatively\App\Integrations\Forms\FluentForm;
+use AppNatively\App\Integrations\Forms\FormGent;
 use AppNatively\App\Providers\Admin\MenuServiceProvider;
 use AppNatively\App\Models\Comment;
 use AppNatively\App\Models\Post;
@@ -53,8 +55,13 @@ return [
      * Service providers for the plugin.
      */
     'providers'                   => [
+        // Ecommerce Integrations
         Woocommerce::class,
         FluentCart::class,
+
+        // Form Integrations
+        FormGent::class,
+        FluentForm::class,
     ],
 
     /**

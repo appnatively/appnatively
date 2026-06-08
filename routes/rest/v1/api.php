@@ -10,4 +10,5 @@ Route::group(
     } 
 );
 
+require __DIR__ . '/form.php';
 require __DIR__ . '/auth.php';
