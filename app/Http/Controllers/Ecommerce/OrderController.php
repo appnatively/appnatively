@@ -37,7 +37,7 @@ class OrderController extends Controller {
             ]
         );
 
-        $integration  = sanitize_text_field( $request->get_param( "integration" ) );
+        $integration = sanitize_text_field( $request->get_param( "integration" ) );
         
         // Apply filter to get orders from specific integration (e.g. WooCommerce)
         $order_paginator = apply_filters( "appnatively_ecommerce_{$integration}_orders_get", null, $request );

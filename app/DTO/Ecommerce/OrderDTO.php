@@ -62,6 +62,7 @@ class OrderDTO {
      *
      * @var OrderItemDTO[]
      */
+
     /**
      * Line items.
      *
@@ -118,27 +119,25 @@ class OrderDTO {
      */
     public $discountCode;
 
-
-
     /**
      * OrderDTO constructor.
      *
      * @param array $data Order data.
      */
     public function __construct( array $data ) {
-        $this->id                = (string) ( $data['id'] ?? '' );
-        $this->name              = $data['name'] ?? '';
-        $this->processedAt       = $data['processedAt'] ?? '';
-        $this->financialStatus   = $data['financialStatus'] ?? '';
-        $this->fulfillmentStatus = $data['fulfillmentStatus'] ?? '';
-        $this->totalPrice        = $data['totalPrice'] ?? [ 'amount' => '0', 'currencyCode' => 'USD' ];
-        $this->subtotalPrice     = $data['subtotalPrice'] ?? null;
-        $this->totalTax          = $data['totalTax'] ?? null;
+        $this->id                 = (string) ( $data['id'] ?? '' );
+        $this->name               = $data['name'] ?? '';
+        $this->processedAt        = $data['processedAt'] ?? '';
+        $this->financialStatus    = $data['financialStatus'] ?? '';
+        $this->fulfillmentStatus  = $data['fulfillmentStatus'] ?? '';
+        $this->totalPrice         = $data['totalPrice'] ?? [ 'amount' => '0', 'currencyCode' => 'USD' ];
+        $this->subtotalPrice      = $data['subtotalPrice'] ?? null;
+        $this->totalTax           = $data['totalTax'] ?? null;
         $this->totalShippingPrice = $data['totalShippingPrice'] ?? null;
-        $this->shipping          = $data['shipping'] ?? null;
-        $this->totalDiscount     = $data['totalDiscount'] ?? null;
-        $this->paymentMethod     = $data['paymentMethod'] ?? '';
-        $this->discountCode      = $data['discountCode'] ?? '';
+        $this->shipping           = $data['shipping'] ?? null;
+        $this->totalDiscount      = $data['totalDiscount'] ?? null;
+        $this->paymentMethod      = $data['paymentMethod'] ?? '';
+        $this->discountCode       = $data['discountCode'] ?? '';
 
 
         if ( isset( $data['lineItems'] ) && is_array( $data['lineItems'] ) ) {
@@ -181,5 +180,4 @@ class OrderDTO {
             ),
         ];
     }
-
 }
