@@ -210,6 +210,48 @@ class FormGent extends Form {
         return $rules;
     }
 
+    public function form_submit( Request $request ) {
+        $form = $this->get_form( $request->get_param( "form_id" ) );
+
+        if ( ! $form ) {
+            throw new \Exception( __( 'Form not found', 'appnatively' ) );
+        }
+
+        $form_object = (object) $form;
+        $fields      = formgent_get_form_fields( $form_object );
+
+        foreach ( $fields as $field ) {
+            if ( empty( $field['name'] ) || empty( $field['field_type'] ) ) {
+                continue;
+            }
+
+            $type        = $field['field_type'];
+            $mapped_type = $this->map_field_type( $type );
+            if ( ! $mapped_type ) {
+                continue;
+            }
+
+            $field_name = $field['name'];
+            $value      = $request->get_param( $field_name );
+
+            if ( $value === null ) {
+                continue;
+            }
+
+            if ( $mapped_type === 'checkbox' && is_array( $value ) ) {
+                $request->set_param( $field_name, ! empty( $value ) ? array_combine( $value, $value ) : [] );
+            }
+
+            if ( $mapped_type === 'range' && is_array( $value ) ) {
+                $request->set_param( $field_name, isset( $value['max'] ) && $value['max'] !== '' ? (int) $value['max'] : 0 );
+            }
+        }
+
+        $request->validate( $this->get_validation_rules( $form ) );
+
+        $this->submit( $request, $form );
+    }
+
     protected function submit( Request $request, array $form ) {
         if ( empty( $form ) ) {
             return;
@@ -217,7 +259,6 @@ class FormGent extends Form {
 
         $form_id = (int) ( isset( $form['id'] ) ? $form['id'] : ( isset( $form['ID'] ) ? $form['ID'] : 0 ) );
 
-        // Create ResponseDTO
         $response_dto = new \FormGent\App\DTO\ResponseDTO();
         $response_dto->set_status( \FormGent\App\EnumeratedList\ResponseStatus::PUBLISH )
             ->set_is_completed( 1 )
@@ -245,7 +286,6 @@ class FormGent extends Form {
         $response_repository = formgent_response_repository();
         $response_id         = $response_repository->create( $response_dto );
 
-        // Parse form fields and construct AnswerDTO instances
         $form_object = (object) $form;
         $fields      = formgent_get_form_fields( $form_object );
         $field_dtos  = [];
@@ -255,8 +295,9 @@ class FormGent extends Form {
                 continue;
             }
 
-            $type = $field['field_type'];
-            if ( ! $this->map_field_type( $type ) ) {
+            $type        = $field['field_type'];
+            $mapped_type = $this->map_field_type( $type );
+            if ( ! $mapped_type ) {
                 continue;
             }
 
@@ -279,7 +320,6 @@ class FormGent extends Form {
             $answer_repository->creates( $response_id, $field_dtos );
         }
 
-        // Trigger FormGent submission hooks so email notifications and integrations run
         do_action( "formgent_after_create_form_response", $response_id, $form_object, $request );
     }
 }
