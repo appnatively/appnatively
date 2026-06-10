@@ -36,14 +36,24 @@ class FluentForm extends Form {
             'radio'         => 'input_radio',
             'checkbox'      => 'input_checkbox',
             'single_select' => 'select',
-            'range'         => 'rangeslider',
+            // 'range'         => 'rangeslider',
             'rating'        => 'ratings',
-            'switch'        => '',
+            'date_time_picker' => 'input_date',
+            // 'switch'        => '',
             'password'      => 'input_password',
         ];
 
         $key = array_search( $type, $map, true );
         return false !== $key ? $key : null;
+    }
+
+    private function get_form_fields_array( array $form ): array {
+        $form_fields = $form['form_fields'] ?? '';
+        if ( is_array( $form_fields ) ) {
+            return $form_fields;
+        }
+        $decoded = json_decode( $form_fields, true );
+        return is_array( $decoded ) ? $decoded : [];
     }
 
     private function get_base_rules( array $field ): array {
@@ -125,12 +135,12 @@ class FluentForm extends Form {
         return $this->get_base_rules( $field );
     }
 
-    protected function get_validation_rules( array $form ) : array {
-        if ( empty( $form['form_fields'] ) ) {
-            return [];
-        }
+    private function get_date_time_picker_rules( array $field ): array {
+        return $this->get_base_rules( $field );
+    }
 
-        $form_fields = json_decode( $form['form_fields'], true );
+    protected function get_validation_rules( array $form ) : array {
+        $form_fields = $this->get_form_fields_array( $form );
         if ( empty( $form_fields['fields'] ) ) {
             return [];
         }
@@ -186,6 +196,9 @@ class FluentForm extends Form {
                 case 'password':
                     $field_rules = $this->get_password_rules( $field );
                     break;
+                case 'date_time_picker':
+                    $field_rules = $this->get_date_time_picker_rules( $field );
+                    break;
                 default:
                     continue 2;
             }
@@ -220,8 +233,22 @@ class FluentForm extends Form {
         return $fields;
     }
 
+    public function form_submit( Request $request ) {
+        $form = $this->get_form( $request->get_param( "form_id" ) );
+
+        error_log(print_r($request, true));
+
+        if ( ! $form ) {
+            throw new \Exception( __( 'Form not found', 'appnatively' ) );
+        }
+
+        $request->validate( $this->get_validation_rules( $form ) );
+
+        $this->submit( $request, $form );
+    }
+
     protected function submit( Request $request, array $form ) {
-        $form_fields = json_decode( $form['form_fields'], true );
+        $form_fields = $this->get_form_fields_array( $form );
         if ( empty( $form_fields['fields'] ) ) {
             return;
         }
@@ -238,7 +265,7 @@ class FluentForm extends Form {
             $field_name = $field['attributes']['name'] ?? $field['name'] ?? '';
             if ( $field_name ) {
                 $value = $request->get_param( $field_name );
-                if ( $value !== null ) {
+                if ( $value !== null && $value !== '' && $value !== [] ) {
                     $form_data[$field_name] = $value;
                 }
             }
