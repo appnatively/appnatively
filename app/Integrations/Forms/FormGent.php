@@ -35,8 +35,9 @@ class FormGent extends Form {
             'single_select' => 'dropdown',
             'range'         => 'range-slider',
             'rating'        => 'rating',
-            'switch'        => 'gdpr', //TODO: checkbox
-            'password'      => 'password',
+            'date_time_picker' => 'date-picker',
+            // 'switch'        => 'gdpr', //TODO: checkbox
+            // 'password'      => 'password',
         ];
 
         $key = array_search( $type, $map, true );
@@ -51,16 +52,16 @@ class FormGent extends Form {
         return $rules;
     }
 
-    private function get_password_rules( array $field ): array {
-        $rules = [ 'string' ];
-        if ( ! empty( $field['character_limit'] ) && ! empty( $field['limit'] ) ) {
-            $rules[] = 'max:' . absint( $field['limit'] );
-        }
-        if ( ! empty( $field['limit_min'] ) && ! empty( $field['min'] ) ) {
-            $rules[] = 'min:' . absint( $field['min'] );
-        }
-        return $rules;
-    }
+    // private function get_password_rules( array $field ): array {
+    //     $rules = [ 'string' ];
+    //     if ( ! empty( $field['character_limit'] ) && ! empty( $field['limit'] ) ) {
+    //         $rules[] = 'max:' . absint( $field['limit'] );
+    //     }
+    //     if ( ! empty( $field['limit_min'] ) && ! empty( $field['min'] ) ) {
+    //         $rules[] = 'min:' . absint( $field['min'] );
+    //     }
+    //     return $rules;
+    // }
 
     private function get_email_rules( array $field ): array {
         $rules = [ 'string', 'email' ];
@@ -133,9 +134,9 @@ class FormGent extends Form {
         return $rules;
     }
 
-    private function get_switch_rules( array $field ): array {
-        return [ 'integer', 'in:0,1' ];
-    }
+    // private function get_switch_rules( array $field ): array {
+    //     return [ 'integer', 'in:0,1' ];
+    // }
 
     protected function get_validation_rules( array $form ) : array {
         if ( empty( $form ) ) {
@@ -188,12 +189,12 @@ class FormGent extends Form {
                 case 'rating':
                     $field_rules = $this->get_rating_rules( $field );
                     break;
-                case 'switch':
-                    $field_rules = $this->get_switch_rules( $field );
-                    break;
-                case 'password':
-                    $field_rules = $this->get_password_rules( $field );
-                    break;
+                // case 'switch':
+                //     $field_rules = $this->get_switch_rules( $field );
+                //     break;
+                // case 'password':
+                //     $field_rules = $this->get_password_rules( $field );
+                //     break;
                 default:
                     continue 2;
             }
