@@ -134,6 +134,10 @@ class FormGent extends Form {
         return $rules;
     }
 
+    private function get_date_time_picker_rules( array $field ): array {
+        return [ 'string' ];
+    }
+
     // private function get_switch_rules( array $field ): array {
     //     return [ 'integer', 'in:0,1' ];
     // }
@@ -188,6 +192,9 @@ class FormGent extends Form {
                     break;
                 case 'rating':
                     $field_rules = $this->get_rating_rules( $field );
+                    break;
+                case 'date_time_picker':
+                    $field_rules = $this->get_date_time_picker_rules( $field );
                     break;
                 // case 'switch':
                 //     $field_rules = $this->get_switch_rules( $field );
