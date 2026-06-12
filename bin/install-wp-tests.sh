@@ -116,6 +116,11 @@ install_wp() {
 		download https://downloads.wordpress.org/plugin/formgent.zip $TMPDIR/formgent.zip
 		unzip -q $TMPDIR/formgent.zip -d "$WP_CORE_DIR"/wp-content/plugins/
 	fi
+
+	if [ ! -d "$WP_CORE_DIR"/wp-content/plugins/contact-form-7 ]; then
+		download https://downloads.wordpress.org/plugin/contact-form-7.zip $TMPDIR/contact-form-7.zip
+		unzip -q $TMPDIR/contact-form-7.zip -d "$WP_CORE_DIR"/wp-content/plugins/
+	fi
 }
 
 install_test_suite() {

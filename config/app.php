@@ -6,6 +6,7 @@ use AppNatively\App\Http\Middleware\EnsureIsUserAdmin;
 use AppNatively\App\Integrations\FluentCart;
 use AppNatively\App\Integrations\Forms\FluentForm;
 use AppNatively\App\Integrations\Forms\FormGent;
+use AppNatively\App\Integrations\Forms\ContactForm7;
 use AppNatively\App\Providers\Admin\MenuServiceProvider;
 use AppNatively\App\Models\Comment;
 use AppNatively\App\Models\Post;
@@ -61,6 +62,7 @@ return [
 
         // Form Integrations
         FormGent::class,
+        ContactForm7::class,
         FluentForm::class,
     ],
 

@@ -51,6 +51,11 @@ function _manually_load_plugin() {
         }
     }
 
+    // Load Contact Form 7
+    if ( file_exists( $wp_plugins_dir . '/contact-form-7/wp-contact-form-7.php' ) ) {
+        require_once $wp_plugins_dir . '/contact-form-7/wp-contact-form-7.php';
+    }
+
     require dirname( __DIR__ ) . '/appnatively.php';
 
     // Reset and create database tables for tests
