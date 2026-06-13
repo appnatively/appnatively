@@ -7,6 +7,7 @@ use AppNatively\App\Integrations\FluentCart;
 use AppNatively\App\Integrations\Forms\FluentForm;
 use AppNatively\App\Integrations\Forms\FormGent;
 use AppNatively\App\Integrations\Forms\ContactForm7;
+use AppNatively\App\Integrations\Forms\WPForms;
 use AppNatively\App\Providers\Admin\MenuServiceProvider;
 use AppNatively\App\Models\Comment;
 use AppNatively\App\Models\Post;
@@ -64,6 +65,7 @@ return [
         FormGent::class,
         ContactForm7::class,
         FluentForm::class,
+        WPForms::class,
     ],
 
     /**

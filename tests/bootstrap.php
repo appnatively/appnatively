@@ -56,6 +56,35 @@ function _manually_load_plugin() {
         require_once $wp_plugins_dir . '/contact-form-7/wp-contact-form-7.php';
     }
 
+    // Load WPForms
+    $_wpforms_path = '';
+    if ( file_exists( $wp_plugins_dir . '/wpforms-lite/wpforms.php' ) ) {
+        $_wpforms_path = $wp_plugins_dir . '/wpforms-lite/wpforms.php';
+    } elseif ( file_exists( $wp_plugins_dir . '/wpforms/wpforms.php' ) ) {
+        $_wpforms_path = $wp_plugins_dir . '/wpforms/wpforms.php';
+    } elseif ( file_exists( dirname( __DIR__, 2 ) . '/wpforms-lite/wpforms.php' ) ) {
+        $_wpforms_path = dirname( __DIR__, 2 ) . '/wpforms-lite/wpforms.php';
+    }
+
+    if ( $_wpforms_path ) {
+        require_once $_wpforms_path;
+
+        // When WPForms is loaded via a symlink, __FILE__ resolves to the real path
+        // outside WP_PLUGIN_DIR, causing plugin_basename() to return the wrong value.
+        // This prevents the Requirements validator from finding per-plugin config and
+        // the license check fails (free Lite has no license key).
+        // Force-load the main class if wpforms() wasn't defined.
+        if ( ! function_exists( 'wpforms' ) ) {
+            require_once WPFORMS_PLUGIN_DIR . '/src/WPForms.php';
+
+            if ( function_exists( 'wpforms' ) ) {
+                // Create singleton; constructor registers objects() on plugins_loaded.
+                wpforms();
+            }
+        }
+    }
+    unset( $_wpforms_path );
+
     require dirname( __DIR__ ) . '/appnatively.php';
 
     // Reset and create database tables for tests

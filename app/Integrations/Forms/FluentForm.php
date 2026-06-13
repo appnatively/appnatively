@@ -236,8 +236,6 @@ class FluentForm extends Form {
     public function form_submit( Request $request ) {
         $form = $this->get_form( $request->get_param( "form_id" ) );
 
-        error_log(print_r($request, true));
-
         if ( ! $form ) {
             throw new \Exception( __( 'Form not found', 'appnatively' ) );
         }
