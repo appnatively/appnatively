@@ -7,8 +7,6 @@ defined( "ABSPATH" ) || exit;
 use AppNatively\WpMVC\RequestValidator\Request;
 
 class WPForms extends Form {
-    private $field_name_to_id = [];
-
     public function get_key(): string {
         return 'wpforms';
     }
@@ -49,26 +47,6 @@ class WPForms extends Form {
         ];
 
         return $map[$type] ?? null;
-    }
-
-    private function get_field_name( array $field, array &$used_names ): string {
-        $label = ! empty( $field['label'] ) ? $field['label'] : $field['type'] . '_' . $field['id'];
-        $name  = str_replace( '-', '_', sanitize_title( $label ) );
-
-        if ( empty( $name ) ) {
-            $name = $field['type'] . '_' . $field['id'];
-        }
-
-        $original = $name;
-        $counter  = 1;
-
-        while ( isset( $used_names[$name] ) ) {
-            $name = $original . '_' . ( $counter++ );
-        }
-
-        $used_names[$name] = $field['id'];
-
-        return $name;
     }
 
     private function get_text_rules( array $field ): array {
@@ -129,11 +107,9 @@ class WPForms extends Form {
         }
 
         $rules       = [];
-        $used_names  = [];
-        $this->field_name_to_id = [];
 
         foreach ( $form['fields'] as $field ) {
-            if ( empty( $field['type'] ) ) {
+            if ( empty( $field['type'] ) || empty( $field['id'] ) ) {
                 continue;
             }
 
@@ -142,9 +118,6 @@ class WPForms extends Form {
             if ( ! $mapped_type ) {
                 continue;
             }
-
-            $field_name = $this->get_field_name( $field, $used_names );
-            $this->field_name_to_id[$field_name] = $field['id'];
 
             $field_rules = [];
 
@@ -176,7 +149,7 @@ class WPForms extends Form {
             }
 
             if ( ! empty( $field_rules ) ) {
-                $rules[$field_name] = implode( '|', array_unique( $field_rules ) );
+                $rules[ $field['id'] ] = implode( '|', array_unique( $field_rules ) );
             }
         }
 
@@ -188,11 +161,10 @@ class WPForms extends Form {
         if ( ! $form ) {
             throw new \Exception( __( 'Form not found', 'appnatively' ) );
         }
-        
+
         if ( ! empty( $form['fields'] ) ) {
-            $used_names = [];
             foreach ( $form['fields'] as $field ) {
-                if ( empty( $field['type'] ) ) {
+                if ( empty( $field['type'] ) || empty( $field['id'] ) ) {
                     continue;
                 }
 
@@ -200,15 +172,14 @@ class WPForms extends Form {
                 if ( ! $mapped_type ) {
                     continue;
                 }
-
-                $field_name = $this->get_field_name( $field, $used_names );
-                $value      = $request->get_param( $field_name );
+                $field_name = $field['id'];
+                $value = $request->get_param( $field_name );
                 if ( $value === null ) {
                     continue;
                 }
 
                 if ( $mapped_type === 'number_slider' && is_array( $value ) ) {
-                    $request->set_param( $field_name, isset( $value['max'] ) && $value['max'] !== '' ? (int) $value['max'] : 0 );
+                    $request->set_param( $field['id'], isset( $value['max'] ) && $value['max'] !== '' ? (int) $value['max'] : 0 );
                 }
             }
         }
@@ -228,12 +199,19 @@ class WPForms extends Form {
             $entry['nonce'] = wp_create_nonce( "wpforms::form_{$form['id']}" );
         }
 
-        $mapping = empty( $this->field_name_to_id ) ? $this->build_field_name_to_id( $form ) : $this->field_name_to_id;
+        foreach ( $form['fields'] as $field ) {
+            if ( empty( $field['type'] ) || empty( $field['id'] ) ) {
+                continue;
+            }
 
-        foreach ( $request->get_params() as $param_name => $value ) {
-            if ( isset( $mapping[ $param_name ] ) ) {
-                $field_id                     = $mapping[ $param_name ];
-                $entry['fields'][ $field_id ] = $value;
+            if ( ! $this->map_field_type( $field['type'] ) ) {
+                continue;
+            }
+
+            $field_name = $field['id'];
+            $value = $request->get_param( $field_name );
+            if ( $value !== null ) {
+                $entry['fields'][ $field['id'] ] = $value;
             }
         }
 
@@ -254,20 +232,5 @@ class WPForms extends Form {
 
         remove_filter( 'wpforms_process_anti_spam_direct_post_bypass', '__return_true' );
         remove_filter( 'wpforms_field_choices_allow_unknown_value', '__return_true' );
-    }
-
-    private function build_field_name_to_id( array $form ): array {
-        $used_names = [];
-        $mapping    = [];
-
-        foreach ( $form['fields'] as $field ) {
-            if ( empty( $field['type'] ) || ! $this->map_field_type( $field['type'] ) ) {
-                continue;
-            }
-            $name               = $this->get_field_name( $field, $used_names );
-            $mapping[ $name ]   = $field['id'];
-        }
-
-        return $mapping;
     }
 }

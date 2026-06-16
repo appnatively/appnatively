@@ -156,24 +156,17 @@ class WPFormsTest extends \WP_UnitTestCase {
         $form    = $wpforms->expose_get_form( $this->form_id );
         $rules   = $wpforms->expose_get_validation_rules( $form );
 
-        $expected_fields = [
-            'single_line_text',
-            'email',
-            'dropdown',
-            'checkboxes',
-            'numbers',
-            'number_slider',
-        ];
-        foreach ( $expected_fields as $field ) {
-            $this->assertArrayHasKey( $field, $rules );
+        $expected_field_ids = [ '1', '7', '2', '4', '5', '6' ];
+        foreach ( $expected_field_ids as $id ) {
+            $this->assertArrayHasKey( $id, $rules );
         }
 
-        $this->assertEquals( 'string', $rules['single_line_text'] );
-        $this->assertEquals( 'string|email|required', $rules['email'] );
-        $this->assertEquals( 'string|max:255', $rules['dropdown'] );
-        $this->assertEquals( 'array', $rules['checkboxes'] );
-        $this->assertEquals( 'numeric', $rules['numbers'] );
-        $this->assertEquals( 'numeric|min:10|max:24', $rules['number_slider'] );
+        $this->assertEquals( 'string', $rules['1'] );
+        $this->assertEquals( 'string|email|required', $rules['7'] );
+        $this->assertEquals( 'string|max:255', $rules['2'] );
+        $this->assertEquals( 'array', $rules['4'] );
+        $this->assertEquals( 'numeric', $rules['5'] );
+        $this->assertEquals( 'numeric|min:10|max:24', $rules['6'] );
     }
 
     public function test_submit() {
@@ -183,12 +176,12 @@ class WPFormsTest extends \WP_UnitTestCase {
         $wp_request = new \WP_REST_Request();
         $wp_request->set_param( 'form_id', $this->form_id );
         $wp_request->set_param( 'integration', 'wpforms' );
-        $wp_request->set_param( 'single_line_text', 'Hello' );
-        $wp_request->set_param( 'email', 'test@example.com' );
-        $wp_request->set_param( 'dropdown', 'First Choice' );
-        $wp_request->set_param( 'checkboxes', [ 'First Choice' ] );
-        $wp_request->set_param( 'numbers', '42' );
-        $wp_request->set_param( 'number_slider', '20' );
+        $wp_request->set_param( '1', 'Hello' );
+        $wp_request->set_param( '7', 'test@example.com' );
+        $wp_request->set_param( '2', 'First Choice' );
+        $wp_request->set_param( '4', [ 'First Choice' ] );
+        $wp_request->set_param( '5', '42' );
+        $wp_request->set_param( '6', '20' );
         $wp_request->set_param( 'unsupported', 'should be skipped' );
 
         $request = new Request( $wp_request );

@@ -182,7 +182,7 @@ class SureForms extends Form {
         ];
 
         foreach ( $form['fields'] as $field ) {
-            error_log( 'Processing field: ' . print_r( $field, true ) );
+            error_log( "Processing field for submission: " . print_r( $field, true ) );
             if ( empty( $field['slug'] ) ) {
                 continue;
             }
@@ -195,8 +195,6 @@ class SureForms extends Form {
 
             $form_data[$field['slug']] = $value;
         }
-
-        error_log( 'Submitting to SureForms with data: ' . print_r( $form_data, true ) );
 
         \SRFM\Inc\Form_Submit::get_instance()->handle_form_entry( $form_data );
     }
