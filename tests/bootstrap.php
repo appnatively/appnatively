@@ -56,6 +56,19 @@ function _manually_load_plugin() {
         require_once $wp_plugins_dir . '/contact-form-7/wp-contact-form-7.php';
     }
 
+    // Load SureForms
+    $_sureforms_path = '';
+    if ( file_exists( $wp_plugins_dir . '/sureforms/sureforms.php' ) ) {
+        $_sureforms_path = $wp_plugins_dir . '/sureforms/sureforms.php';
+    } elseif ( file_exists( dirname( __DIR__, 2 ) . '/sureforms/sureforms.php' ) ) {
+        $_sureforms_path = dirname( __DIR__, 2 ) . '/sureforms/sureforms.php';
+    }
+
+    if ( $_sureforms_path ) {
+        require_once $_sureforms_path;
+    }
+    unset( $_sureforms_path );
+
     // Load WPForms
     $_wpforms_path = '';
     if ( file_exists( $wp_plugins_dir . '/wpforms-lite/wpforms.php' ) ) {
