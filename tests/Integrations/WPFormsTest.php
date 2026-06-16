@@ -334,6 +334,10 @@ class WPFormsTest extends \WP_UnitTestCase {
         $wpforms->expose_submit( $request, $form );
 
         $this->assertNotNull( $captured_entry, 'wpforms_process_before action was not fired' );
+
+        $process = wpforms()->obj( 'process' );
+        $this->assertEmpty( $process->errors, 'WPForms validation errors: ' . print_r( $process->errors, true ) );
+        $this->assertNotEmpty( $process->entry_id, 'WPForms did not create an entry' );
         $this->assertEquals( $this->form_id, $captured_entry['id'] );
         $this->assertArrayHasKey( 'fields', $captured_entry );
 

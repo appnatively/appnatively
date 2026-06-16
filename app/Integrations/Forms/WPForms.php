@@ -40,11 +40,11 @@ class WPForms extends Form {
 
     private function map_field_type( string $type ) {
         $map = [
-            'text'          => 'single_line_text',
+            'text'          => 'text',
             'number'        => 'number',
             'email'         => 'email',
-            'checkbox'      => 'checkboxes',
-            'select'        => 'dropdown',
+            'checkbox'      => 'checkbox',
+            'select'        => 'select',
             'number-slider' => 'number_slider',
         ];
 
@@ -71,7 +71,7 @@ class WPForms extends Form {
         return $name;
     }
 
-    private function get_single_line_text_rules( array $field ): array {
+    private function get_text_rules( array $field ): array {
         $rules = [ 'string' ];
 
         if ( ! empty( $field['limit_enabled'] ) && ! empty( $field['limit_count'] ) ) {
@@ -99,62 +99,28 @@ class WPForms extends Form {
         return [ 'string', 'email' ];
     }
 
-    private function get_website_rules( array $field ): array {
-        return [ 'string', 'url' ];
-    }
-
-    private function get_checkboxes_rules( array $field ): array {
+    private function get_checkbox_rules( array $field ): array {
         return [ 'array' ];
     }
 
-    private function get_dropdown_rules( array $field ): array {
-        $rules = [ 'string' ];
-
-        if ( ! empty( $field['choices'] ) && is_array( $field['choices'] ) ) {
-            $labels = [];
-            foreach ( $field['choices'] as $choice ) {
-                if ( isset( $choice['label'] ) && $choice['label'] !== '' ) {
-                    $labels[] = $choice['label'];
-                }
-            }
-            if ( ! empty( $labels ) ) {
-                $rules[] = 'in:' . implode( ',', $labels );
-            }
-        }
-
-        return $rules;
+    private function get_select_rules( array $field ): array {
+        return [ 'string', 'max:255' ];
     }
 
     private function get_number_slider_rules( array $field ): array {
-        $rules = [ 'numeric' ];
-
-        if ( isset( $field['min'] ) && $field['min'] !== '' ) {
-            $rules[] = 'min:' . floatval( $field['min'] );
+        $rules       = [];
+        $slider_type = isset( $field['slider_type'] ) ? $field['slider_type'] : 'number';
+        if ( 'number' === $slider_type ) {
+            $rules[] = 'numeric';
+            if ( isset( $field['min'] ) && isset( $field['max'] )
+                 && is_numeric( $field['min'] ) && is_numeric( $field['max'] ) ) {
+                $rules[] = 'min:' . floatval( $field['min'] );
+                $rules[] = 'max:' . floatval( $field['max'] );
+            }
+        } else {
+            $rules[] = 'string';
         }
-
-        if ( isset( $field['max'] ) && $field['max'] !== '' ) {
-            $rules[] = 'max:' . floatval( $field['max'] );
-        }
-
         return $rules;
-    }
-
-    private function get_rating_rules( array $field ): array {
-        $rules = [ 'integer' ];
-
-        if ( isset( $field['max_rating'] ) ) {
-            $rules[] = 'max:' . absint( $field['max_rating'] );
-        }
-
-        return $rules;
-    }
-
-    private function get_date_time_rules( array $field ): array {
-        return [ 'string' ];
-    }
-
-    private function get_password_rules( array $field ): array {
-        return [ 'string' ];
     }
 
     protected function get_validation_rules( array $form ): array {
@@ -180,13 +146,30 @@ class WPForms extends Form {
             $field_name = $this->get_field_name( $field, $used_names );
             $this->field_name_to_id[$field_name] = $field['id'];
 
-            $method = 'get_' . $mapped_type . '_rules';
+            $field_rules = [];
 
-            if ( ! method_exists( $this, $method ) ) {
-                continue;
+            switch ( $mapped_type ) {
+                case 'text':
+                    $field_rules = $this->get_text_rules( $field );
+                    break;
+                case 'number':
+                    $field_rules = $this->get_number_rules( $field );
+                    break;
+                case 'email':
+                    $field_rules = $this->get_email_rules( $field );
+                    break;
+                case 'checkbox':
+                    $field_rules = $this->get_checkbox_rules( $field );
+                    break;
+                case 'select':
+                    $field_rules = $this->get_select_rules( $field );
+                    break;
+                case 'number_slider':
+                    $field_rules = $this->get_number_slider_rules( $field );
+                    break;
+                default:
+                    continue 2;
             }
-
-            $field_rules = $this->$method( $field );
 
             if ( ! empty( $field['required'] ) && $field['required'] === '1' ) {
                 $field_rules[] = 'required';
@@ -204,6 +187,30 @@ class WPForms extends Form {
         $form = $this->get_form( $request->get_param( 'form_id' ) );
         if ( ! $form ) {
             throw new \Exception( __( 'Form not found', 'appnatively' ) );
+        }
+        
+        if ( ! empty( $form['fields'] ) ) {
+            $used_names = [];
+            foreach ( $form['fields'] as $field ) {
+                if ( empty( $field['type'] ) ) {
+                    continue;
+                }
+
+                $mapped_type = $this->map_field_type( $field['type'] );
+                if ( ! $mapped_type ) {
+                    continue;
+                }
+
+                $field_name = $this->get_field_name( $field, $used_names );
+                $value      = $request->get_param( $field_name );
+                if ( $value === null ) {
+                    continue;
+                }
+
+                if ( $mapped_type === 'number_slider' && is_array( $value ) ) {
+                    $request->set_param( $field_name, isset( $value['max'] ) && $value['max'] !== '' ? (int) $value['max'] : 0 );
+                }
+            }
         }
 
         $request->validate( $this->get_validation_rules( $form ) );
@@ -230,7 +237,23 @@ class WPForms extends Form {
             }
         }
 
+        // WPForms checks $_POST['action'] === 'wpforms_submit' when AJAX submission is enabled.
+        // REST API requests don't set this, so we set it manually to bypass the check.
+        $_POST['action'] = 'wpforms_submit';
+
+        // Bypass the direct POST request check that blocks non-AJAX POST requests
+        // when AJAX submission + anti-spam v3 are enabled.
+        add_filter( 'wpforms_process_anti_spam_direct_post_bypass', '__return_true' );
+
+        add_filter( 'wpforms_field_choices_allow_unknown_value', '__return_true' );
+
         wpforms()->obj( 'process' )->process( $entry );
+
+        // Restore the original action to avoid side effects.
+        unset( $_POST['action'] );
+
+        remove_filter( 'wpforms_process_anti_spam_direct_post_bypass', '__return_true' );
+        remove_filter( 'wpforms_field_choices_allow_unknown_value', '__return_true' );
     }
 
     private function build_field_name_to_id( array $form ): array {
