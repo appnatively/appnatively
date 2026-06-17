@@ -6,6 +6,7 @@ use AppNatively\App\Http\Middleware\EnsureIsUserAdmin;
 use AppNatively\App\Integrations\FluentCart;
 use AppNatively\App\Integrations\Forms\FluentForm;
 use AppNatively\App\Integrations\Forms\FormGent;
+use AppNatively\App\Integrations\Forms\Forminator;
 use AppNatively\App\Integrations\Forms\ContactForm7;
 use AppNatively\App\Integrations\Forms\SureForms;
 use AppNatively\App\Integrations\Forms\WPForms;
@@ -64,6 +65,7 @@ return [
 
         // Form Integrations
         FormGent::class,
+        Forminator::class,
         ContactForm7::class,
         FluentForm::class,
         SureForms::class,

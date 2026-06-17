@@ -49,6 +49,19 @@ function _manually_load_plugin() {
         }
     }
 
+    // Load Forminator
+    $_forminator_path = '';
+    if ( file_exists( $wp_plugins_dir . '/forminator/forminator.php' ) ) {
+        $_forminator_path = $wp_plugins_dir . '/forminator/forminator.php';
+    } elseif ( file_exists( dirname( __DIR__, 2 ) . '/forminator/forminator.php' ) ) {
+        $_forminator_path = dirname( __DIR__, 2 ) . '/forminator/forminator.php';
+    }
+
+    if ( $_forminator_path ) {
+        require_once $_forminator_path;
+    }
+    unset( $_forminator_path );
+
     // Load Contact Form 7
     if ( file_exists( $wp_plugins_dir . '/contact-form-7/wp-contact-form-7.php' ) ) {
         require_once $wp_plugins_dir . '/contact-form-7/wp-contact-form-7.php';
