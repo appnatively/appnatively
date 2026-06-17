@@ -68,7 +68,7 @@ class SureForms extends Form {
             'number'   => 'number',
             'url'      => 'url',
             'checkbox' => 'checkbox',
-            'gdpr'     => 'checkbox',
+            'gdpr'     => 'gdpr',
             'dropdown' => 'select',
         ];
 
@@ -103,11 +103,33 @@ class SureForms extends Form {
     }
 
     private function get_checkbox_rules( array $field ): array {
-        return [ 'array' ];
+        return [ 'string' ];
+    }
+
+    private function get_gdpr_rules( array $field ): array {
+        return [ 'string' ];
     }
 
     private function get_select_rules( array $field ): array {
         return [ 'string', 'max:255' ];
+    }
+
+    private function build_sureforms_field_name( array $field, int &$dropdown_counter ): string {
+        $type = $field['type'];
+
+        if ( $type === 'dropdown' ) {
+            $dropdown_counter++;
+            $type_part = "dropdown-{$dropdown_counter}";
+        } else {
+            $type_part = $type;
+        }
+
+        $block_id     = $field['block_id'];
+        $label        = ! empty( $field['label'] ) ? $field['label'] : $type;
+        $base64_label = \SRFM\Inc\Helper::encrypt( $label );
+        $block_slug   = $field['slug'];
+
+        return "srfm-{$type_part}-{$block_id}-lbl-{$base64_label}-{$block_slug}";
     }
 
     protected function get_validation_rules( array $form ): array {
@@ -145,6 +167,9 @@ class SureForms extends Form {
                 case 'checkbox':
                     $field_rules = $this->get_checkbox_rules( $field );
                     break;
+                case 'gdpr':
+                    $field_rules = $this->get_gdpr_rules( $field );
+                    break;
                 case 'select':
                     $field_rules = $this->get_select_rules( $field );
                     break;
@@ -171,6 +196,27 @@ class SureForms extends Form {
             throw new \Exception( __( 'Form not found', 'appnatively' ) );
         }
 
+        foreach ( $form['fields'] as $field ) {
+            if ( empty( $field['type'] ) || empty( $field['slug'] ) ) {
+                continue;
+            }
+
+            $mapped_type = $this->map_field_type( $field['type'] );
+            if ( ! $mapped_type ) {
+                continue;
+            }
+
+            $value = $request->get_param( $field['slug'] );
+
+            if ( $value === null ) {
+                continue;
+            }
+
+            if ( in_array( $mapped_type, [ 'checkbox', 'gdpr' ], true ) && is_array( $value ) ) {
+                $request->set_param( $field['slug'], ! empty( $value ) ? (string) reset( $value ) : '' );
+            }
+        }
+
         $request->validate( $this->get_validation_rules( $form ) );
 
         $this->submit( $request, $form );
@@ -181,9 +227,10 @@ class SureForms extends Form {
             'form-id' => $form['id'],
         ];
 
+        $dropdown_counter = 0;
+
         foreach ( $form['fields'] as $field ) {
-            error_log( "Processing field for submission: " . print_r( $field, true ) );
-            if ( empty( $field['slug'] ) ) {
+            if ( empty( $field['slug'] ) || empty( $field['type'] ) ) {
                 continue;
             }
 
@@ -193,7 +240,8 @@ class SureForms extends Form {
                 continue;
             }
 
-            $form_data[$field['slug']] = $value;
+            $field_name = $this->build_sureforms_field_name( $field, $dropdown_counter );
+            $form_data[$field_name] = $value;
         }
 
         \SRFM\Inc\Form_Submit::get_instance()->handle_form_entry( $form_data );

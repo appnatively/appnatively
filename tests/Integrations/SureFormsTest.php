@@ -27,16 +27,16 @@ class SureFormsTest extends \WP_UnitTestCase {
 
         $blocks = [
             $this->make_block( 'srfm/input', [
-                'block_id' => 'blk_001',
+                'block_id' => '5f233a44',
                 'label'    => 'Single Line Text',
-                'slug'     => 'input',
+                'slug'     => 'text-field',
                 'required' => false,
                 'textLength' => '',
                 'placeholder' => '',
                 'defaultValue' => '',
             ] ),
             $this->make_block( 'srfm/email', [
-                'block_id' => 'blk_002',
+                'block_id' => '846eafba',
                 'label'    => 'Email',
                 'slug'     => 'email',
                 'required' => true,
@@ -44,7 +44,7 @@ class SureFormsTest extends \WP_UnitTestCase {
                 'defaultValue' => '',
             ] ),
             $this->make_block( 'srfm/number', [
-                'block_id'    => 'blk_003',
+                'block_id'    => 'fe3d1169',
                 'label'       => 'Numbers',
                 'slug'        => 'number',
                 'required'    => false,
@@ -54,7 +54,7 @@ class SureFormsTest extends \WP_UnitTestCase {
                 'defaultValue' => '',
             ] ),
             $this->make_block( 'srfm/url', [
-                'block_id' => 'blk_004',
+                'block_id' => '766ee324',
                 'label'    => 'Website',
                 'slug'     => 'url',
                 'required' => true,
@@ -62,13 +62,19 @@ class SureFormsTest extends \WP_UnitTestCase {
                 'defaultValue' => '',
             ] ),
             $this->make_block( 'srfm/checkbox', [
-                'block_id' => 'blk_005',
+                'block_id' => 'da780916',
                 'label'    => 'Checkboxes',
                 'slug'     => 'checkbox',
                 'required' => false,
             ] ),
+            $this->make_block( 'srfm/gdpr', [
+                'block_id' => '6ec80c0e',
+                'label'    => 'I consent',
+                'slug'     => 'consent',
+                'required' => true,
+            ] ),
             $this->make_block( 'srfm/dropdown', [
-                'block_id' => 'blk_006',
+                'block_id' => 'd1a53b24',
                 'label'    => 'Dropdown',
                 'slug'     => 'dropdown',
                 'required' => false,
@@ -111,44 +117,59 @@ class SureFormsTest extends \WP_UnitTestCase {
         return new TestableSureForms( \AppNatively\WpMVC\App::instance() );
     }
 
+    private function build_expected_field_name( array $field, int &$dropdown_counter ): string {
+        $type = $field['type'];
+        if ( $type === 'dropdown' ) {
+            $dropdown_counter++;
+            $type_part = "dropdown-{$dropdown_counter}";
+        } else {
+            $type_part = $type;
+        }
+        $label        = ! empty( $field['label'] ) ? $field['label'] : $type;
+        $base64_label = \SRFM\Inc\Helper::encrypt( $label );
+        return "srfm-{$type_part}-{$field['block_id']}-lbl-{$base64_label}-{$field['slug']}";
+    }
+
     public function test_get_key() {
         $sureforms = new SureForms( \AppNatively\WpMVC\App::instance() );
         $this->assertEquals( 'sureforms', $sureforms->get_key() );
     }
 
     public function test_get_form() {
-        $wpforms = $this->get_integration_instance();
-        $form    = $wpforms->expose_get_form( $this->form_id );
+        $sureforms = $this->get_integration_instance();
+        $form      = $sureforms->expose_get_form( $this->form_id );
 
         $this->assertNotEmpty( $form );
         $this->assertEquals( $this->form_id, $form['id'] );
         $this->assertNotEmpty( $form['fields'] );
-        $this->assertCount( 6, $form['fields'] );
+        $this->assertCount( 7, $form['fields'] );
     }
 
     public function test_get_validation_rules() {
-        $wpforms = $this->get_integration_instance();
-        $form    = $wpforms->expose_get_form( $this->form_id );
-        $rules   = $wpforms->expose_get_validation_rules( $form );
+        $sureforms = $this->get_integration_instance();
+        $form      = $sureforms->expose_get_form( $this->form_id );
+        $rules     = $sureforms->expose_get_validation_rules( $form );
 
-        $expected_fields = [
-            'input',
+        $expected_slugs = [
+            'text-field',
             'email',
             'number',
             'url',
             'checkbox',
+            'consent',
             'dropdown',
         ];
 
-        foreach ( $expected_fields as $field ) {
-            $this->assertArrayHasKey( $field, $rules );
+        foreach ( $expected_slugs as $slug ) {
+            $this->assertArrayHasKey( $slug, $rules, "Missing rule for slug: {$slug}" );
         }
 
-        $this->assertEquals( 'string', $rules['input'] );
+        $this->assertEquals( 'string', $rules['text-field'] );
         $this->assertEquals( 'string|email|required', $rules['email'] );
         $this->assertEquals( 'numeric', $rules['number'] );
         $this->assertEquals( 'string|url|required', $rules['url'] );
-        $this->assertEquals( 'array', $rules['checkbox'] );
+        $this->assertEquals( 'string', $rules['checkbox'] );
+        $this->assertEquals( 'string|required', $rules['consent'] );
         $this->assertEquals( 'string|max:255', $rules['dropdown'] );
     }
 
@@ -178,20 +199,21 @@ class SureFormsTest extends \WP_UnitTestCase {
         $form      = $sureforms->expose_get_form( $this->form_id );
         $this->assertNotEmpty( $form, 'Form not retrieved' );
 
-        $expected_data = [
-            'input'    => 'Hello',
-            'email'    => 'test@example.com',
-            'number'   => '42',
-            'url'      => 'https://example.com',
-            'checkbox' => [ 'Option 1' ],
-            'dropdown' => 'First Choice',
+        $slug_to_value = [
+            'text-field' => 'Hello',
+            'email'      => 'test@example.com',
+            'number'     => '42',
+            'url'        => 'https://example.com',
+            'checkbox'   => 'on',
+            'consent'    => 'on',
+            'dropdown'   => 'First Choice',
         ];
 
         $wp_request = new \WP_REST_Request();
         $wp_request->set_param( 'form_id', $this->form_id );
         $wp_request->set_param( 'integration', 'sureforms' );
-        foreach ( $expected_data as $key => $value ) {
-            $wp_request->set_param( $key, $value );
+        foreach ( $slug_to_value as $slug => $value ) {
+            $wp_request->set_param( $slug, $value );
         }
         $wp_request->set_param( 'unsupported', 'should be skipped' );
 
@@ -217,9 +239,20 @@ class SureFormsTest extends \WP_UnitTestCase {
         // Verify the raw slug-value pairs were passed to handle_form_entry()
         $this->assertNotNull( $passed_form_data, 'srfm_form_submit_data was not fired' );
         $this->assertSame( $this->form_id, (int) $passed_form_data['form-id'], 'form-id mismatch' );
-        foreach ( $expected_data as $key => $value ) {
-            $this->assertArrayHasKey( $key, $passed_form_data, "Missing key: {$key}" );
-            $this->assertSame( $value, $passed_form_data[$key], "Value mismatch for: {$key}" );
+
+        // Verify the full SureForms field names are used as keys
+        $dropdown_counter = 0;
+        foreach ( $form['fields'] as $field ) {
+            if ( empty( $field['slug'] ) || empty( $field['type'] ) ) {
+                continue;
+            }
+            $slug = $field['slug'];
+            if ( ! isset( $slug_to_value[$slug] ) ) {
+                continue;
+            }
+            $expected_field_name = $this->build_expected_field_name( $field, $dropdown_counter );
+            $this->assertArrayHasKey( $expected_field_name, $passed_form_data, "Missing field name: {$expected_field_name}" );
+            $this->assertSame( $slug_to_value[$slug], $passed_form_data[$expected_field_name], "Value mismatch for: {$expected_field_name}" );
         }
         $this->assertArrayNotHasKey( 'unsupported', $passed_form_data );
 
