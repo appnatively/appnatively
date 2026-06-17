@@ -10,6 +10,10 @@ class TestableSureForms extends SureForms {
         return $this->get_validation_rules( $form );
     }
 
+    public function expose_get_validation_messages( array $form ) {
+        return $this->get_validation_messages( $form );
+    }
+
     public function expose_submit( Request $request, array $form ) {
         return $this->submit( $request, $form );
     }
@@ -171,6 +175,75 @@ class SureFormsTest extends \WP_UnitTestCase {
         $this->assertEquals( 'string', $rules['checkbox'] );
         $this->assertEquals( 'string|required', $rules['consent'] );
         $this->assertEquals( 'string|max:255', $rules['dropdown'] );
+    }
+
+    public function test_get_validation_messages() {
+        $sureforms = $this->get_integration_instance();
+        $form      = $sureforms->expose_get_form( $this->form_id );
+        $messages  = $sureforms->expose_get_validation_messages( $form );
+
+        // Required fields (email, url, consent are required in the fixture).
+        $this->assertArrayHasKey( 'email.required', $messages );
+        $this->assertArrayHasKey( 'url.required', $messages );
+        $this->assertArrayHasKey( 'consent.required', $messages );
+
+        // Non-required fields have no required message.
+        $this->assertArrayNotHasKey( 'text-field.required', $messages );
+        $this->assertArrayNotHasKey( 'number.required', $messages );
+        $this->assertArrayNotHasKey( 'checkbox.required', $messages );
+        $this->assertArrayNotHasKey( 'dropdown.required', $messages );
+
+        // Type-rule messages for email and url fields.
+        $this->assertArrayHasKey( 'email.email', $messages );
+        $this->assertArrayHasKey( 'url.url', $messages );
+
+        // The fixture's number field has no min/max, so no bound messages.
+        $this->assertArrayNotHasKey( 'number.min', $messages );
+        $this->assertArrayNotHasKey( 'number.max', $messages );
+    }
+
+    public function test_get_validation_messages_number_min_max_placeholders() {
+        $sureforms = $this->get_integration_instance();
+
+        $form = [
+            'fields' => [
+                [
+                    'type'     => 'number',
+                    'slug'     => 'qty',
+                    'required' => true,
+                    'min'      => 5,
+                    'max'      => 20,
+                ],
+            ],
+        ];
+
+        $messages = $sureforms->expose_get_validation_messages( $form );
+
+        $this->assertArrayHasKey( 'qty.required', $messages );
+        $this->assertArrayHasKey( 'qty.min', $messages );
+        $this->assertArrayHasKey( 'qty.max', $messages );
+
+        // SureForms stores "%s" placeholders; they must be converted to :min/:max
+        // so the WpMVC validator can substitute the bound value.
+        $this->assertStringContainsString( ':min', $messages['qty.min'] );
+        $this->assertStringContainsString( ':max', $messages['qty.max'] );
+        $this->assertStringNotContainsString( '%s', $messages['qty.min'] );
+        $this->assertStringNotContainsString( '%s', $messages['qty.max'] );
+    }
+
+    public function test_get_validation_messages_reads_settings_option() {
+        update_option( 'srfm_default_dynamic_block_option', [
+            'srfm_valid_email' => 'CUSTOM_EMAIL_MSG',
+        ] );
+
+        $sureforms = $this->get_integration_instance();
+        $form      = $sureforms->expose_get_form( $this->form_id );
+        $messages  = $sureforms->expose_get_validation_messages( $form );
+
+        // Proves the message is read from the SureForms settings option, not hardcoded.
+        $this->assertSame( 'CUSTOM_EMAIL_MSG', $messages['email.email'] );
+
+        delete_option( 'srfm_default_dynamic_block_option' );
     }
 
     public function test_submit_entries_add_directly() {

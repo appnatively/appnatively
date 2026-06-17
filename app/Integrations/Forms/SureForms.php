@@ -189,6 +189,88 @@ class SureForms extends Form {
         return $rules;
     }
 
+    /**
+     * Build the custom validation messages pulled from the SureForms
+     * "Form Messages" settings, so failed rules surface the admin-configured
+     * text instead of the framework default. Mirrors the WPForms integration.
+     *
+     * Keys are `{slug}.{rule}` to match the rules array from get_validation_rules().
+     *
+     * @param array $form Form data.
+     * @return array<string, string>
+     */
+    protected function get_validation_messages( array $form ): array {
+        if ( empty( $form['fields'] ) ) {
+            return [];
+        }
+
+        $messages = [];
+
+        foreach ( $form['fields'] as $field ) {
+            if ( empty( $field['type'] ) || empty( $field['slug'] ) ) {
+                continue;
+            }
+
+            $mapped_type = $this->map_field_type( $field['type'] );
+            if ( ! $mapped_type ) {
+                continue;
+            }
+
+            $slug = (string) $field['slug'];
+
+            if ( ! empty( $field['required'] ) ) {
+                $required_key = $this->get_required_message_key( $mapped_type );
+                if ( ! empty( $required_key ) ) {
+                    $messages["{$slug}.required"] = \SRFM\Inc\Helper::get_default_dynamic_block_option( $required_key );
+                }
+            }
+
+            if ( $mapped_type === 'email' ) {
+                $messages["{$slug}.email"] = \SRFM\Inc\Helper::get_default_dynamic_block_option( 'srfm_valid_email' );
+            }
+
+            if ( $mapped_type === 'url' ) {
+                $messages["{$slug}.url"] = \SRFM\Inc\Helper::get_default_dynamic_block_option( 'srfm_valid_url' );
+            }
+
+            if ( $mapped_type === 'number' ) {
+                if ( isset( $field['min'] ) && $field['min'] !== '' ) {
+                    $msg = \SRFM\Inc\Helper::get_default_dynamic_block_option( 'srfm_input_min_value' );
+                    $messages["{$slug}.min"] = str_replace( '%s', ':min', $msg );
+                }
+
+                if ( isset( $field['max'] ) && $field['max'] !== '' ) {
+                    $msg = \SRFM\Inc\Helper::get_default_dynamic_block_option( 'srfm_input_max_value' );
+                    $messages["{$slug}.max"] = str_replace( '%s', ':max', $msg );
+                }
+            }
+        }
+
+        return $messages;
+    }
+
+    /**
+     * Map a mapped field type to its SureForms per-block "required" message
+     * settings key. SureForms keeps one required message per block type,
+     * unlike WPForms' single validation-required key.
+     *
+     * @param string $mapped_type Mapped field type.
+     * @return string|null Settings key, or null when none applies.
+     */
+    private function get_required_message_key( string $mapped_type ): ?string {
+        $map = [
+            'text'     => 'srfm_input_block_required_text',
+            'email'    => 'srfm_email_block_required_text',
+            'number'   => 'srfm_number_block_required_text',
+            'url'      => 'srfm_url_block_required_text',
+            'checkbox' => 'srfm_checkbox_block_required_text',
+            'gdpr'     => 'srfm_gdpr_block_required_text',
+            'select'   => 'srfm_dropdown_block_required_text',
+        ];
+
+        return $map[$mapped_type] ?? null;
+    }
+
     public function form_submit( Request $request ) {
         $form = $this->get_form( $request->get_param( 'form_id' ) );
 
@@ -217,7 +299,13 @@ class SureForms extends Form {
             }
         }
 
-        $request->validate( $this->get_validation_rules( $form ) );
+        $validation = $request->make(
+            $request,
+            $this->get_validation_rules( $form ),
+            $this->get_validation_messages( $form )
+        );
+        $validation->throw_if_fails();
+        $request->errors = $validation->errors();
 
         $this->submit( $request, $form );
     }
