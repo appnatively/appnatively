@@ -156,6 +156,95 @@ class WPForms extends Form {
         return $rules;
     }
 
+    protected function get_validation_messages( array $form ): array {
+        if ( empty( $form['fields'] ) ) {
+            return [];
+        }
+
+        $messages = [];
+
+        foreach ( $form['fields'] as $field ) {
+            if ( empty( $field['type'] ) || empty( $field['id'] ) ) {
+                continue;
+            }
+
+            $mapped_type = $this->map_field_type( $field['type'] );
+
+            if ( ! $mapped_type ) {
+                continue;
+            }
+
+            $field_id = (string) $field['id'];
+
+            if ( ! empty( $field['required'] ) && $field['required'] === '1' ) {
+                $messages["{$field_id}.required"] = wpforms_setting(
+                    'validation-required',
+                    __( 'This field is required.', 'wpforms-lite' )
+                );
+            }
+
+            if ( $mapped_type === 'email' ) {
+                $messages["{$field_id}.email"] = wpforms_setting(
+                    'validation-email',
+                    __( 'Please enter a valid email address.', 'wpforms-lite' )
+                );
+            }
+
+            if ( $mapped_type === 'number' || $mapped_type === 'number_slider' ) {
+                $messages["{$field_id}.numeric"] = wpforms_setting(
+                    'validation-number',
+                    __( 'Please enter a valid number.', 'wpforms-lite' )
+                );
+            }
+
+            if ( $mapped_type === 'text' && ! empty( $field['limit_enabled'] ) && ! empty( $field['limit_count'] ) ) {
+                $msg = wpforms_setting(
+                    'validation-character-limit',
+                    ''
+                );
+                if ( ! empty( $msg ) ) {
+                    $msg = str_replace( [ '{limit}', '{remaining}' ], [ ':max', '' ], $msg );
+                    $msg = trim( preg_replace( '/\s+/', ' ', $msg ), " \t\n\r\0\x0B," );
+                    $messages["{$field_id}.max"] = $msg;
+                }
+            } else {
+                if ( $this->field_has_min_rule( $field, $mapped_type ) ) {
+                    $msg = wpforms_setting(
+                        'validation-min',
+                        __( 'Please enter a value greater than or equal to {value}.', 'wpforms-lite' )
+                    );
+                    $messages["{$field_id}.min"] = str_replace( '{value}', ':min', $msg );
+                }
+
+                if ( $this->field_has_max_rule( $field, $mapped_type ) ) {
+                    $msg = wpforms_setting(
+                        'validation-max',
+                        __( 'Please enter a value less than or equal to {value}.', 'wpforms-lite' )
+                    );
+                    $messages["{$field_id}.max"] = str_replace( '{value}', ':max', $msg );
+                }
+            }
+        }
+
+        return $messages;
+    }
+
+    private function field_has_min_rule( array $field, string $mapped_type ): bool {
+        if ( ! isset( $field['min'] ) || $field['min'] === '' ) {
+            return false;
+        }
+
+        return in_array( $mapped_type, [ 'number', 'number_slider' ], true );
+    }
+
+    private function field_has_max_rule( array $field, string $mapped_type ): bool {
+        if ( ! isset( $field['max'] ) || $field['max'] === '' ) {
+            return false;
+        }
+
+        return in_array( $mapped_type, [ 'number', 'number_slider' ], true );
+    }
+
     public function form_submit( Request $request ) {
         $form = $this->get_form( $request->get_param( 'form_id' ) );
         if ( ! $form ) {
@@ -184,7 +273,13 @@ class WPForms extends Form {
             }
         }
 
-        $request->validate( $this->get_validation_rules( $form ) );
+        $validation = $request->make(
+            $request,
+            $this->get_validation_rules( $form ),
+            $this->get_validation_messages( $form )
+        );
+        $validation->throw_if_fails();
+        $request->errors = $validation->errors();
 
         $this->submit( $request, $form );
     }

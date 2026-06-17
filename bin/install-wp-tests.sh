@@ -66,7 +66,8 @@ set -ex
 
 install_wp() {
 
-	if [ ! -d $WP_CORE_DIR ]; then
+	if [ ! -d $WP_CORE_DIR ] || [ ! -f "$WP_CORE_DIR/wp-settings.php" ]; then
+		rm -rf $WP_CORE_DIR
 		mkdir -p $WP_CORE_DIR
 
 		if [[ $WP_VERSION == 'nightly' || $WP_VERSION == 'trunk' ]]; then
@@ -120,6 +121,16 @@ install_wp() {
 	if [ ! -d "$WP_CORE_DIR"/wp-content/plugins/contact-form-7 ]; then
 		download https://downloads.wordpress.org/plugin/contact-form-7.zip $TMPDIR/contact-form-7.zip
 		unzip -q $TMPDIR/contact-form-7.zip -d "$WP_CORE_DIR"/wp-content/plugins/
+	fi
+
+	if [ ! -d "$WP_CORE_DIR"/wp-content/plugins/wpforms-lite ]; then
+		download https://downloads.wordpress.org/plugin/wpforms-lite.zip $TMPDIR/wpforms-lite.zip
+		unzip -q $TMPDIR/wpforms-lite.zip -d "$WP_CORE_DIR"/wp-content/plugins/
+	fi
+
+	if [ ! -d "$WP_CORE_DIR"/wp-content/plugins/sureforms ]; then
+		download https://downloads.wordpress.org/plugin/sureforms.zip $TMPDIR/sureforms.zip
+		unzip -q $TMPDIR/sureforms.zip -d "$WP_CORE_DIR"/wp-content/plugins/
 	fi
 }
 

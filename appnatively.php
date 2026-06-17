@@ -20,7 +20,15 @@ use AppNatively\Database\Setup;
  * Domain Path:       /languages
  */
 
-require_once __DIR__ . '/vendor/vendor-src/autoload.php';
+if ( ! defined( 'APPNATIVELY_VENDOR_LOADED' ) ) {
+    define( 'APPNATIVELY_VENDOR_LOADED', true );
+    if ( file_exists( __DIR__ . '/vendor/vendor-src/autoload.php' ) ) {
+        require_once __DIR__ . '/vendor/vendor-src/autoload.php';
+    } elseif ( file_exists( __DIR__ . '/vendor-src/autoload.php' ) ) {
+        require_once __DIR__ . '/vendor-src/autoload.php';
+    }
+}
+
 require_once __DIR__ . '/app/Helpers/helper.php';
 
 final class Appnatively

@@ -3,8 +3,6 @@
  * PHPUnit bootstrap file
  */
 
-require_once dirname( __DIR__ ) . '/vendor/vendor-src/autoload.php';
-
 // Path to the PHPUnit Polyfills.
 if ( ! defined( 'WP_TESTS_PHPUNIT_POLYFILLS_PATH' ) ) {
     define( 'WP_TESTS_PHPUNIT_POLYFILLS_PATH', dirname( __DIR__ ) . '/vendor/vendor-src/yoast/phpunit-polyfills' );
