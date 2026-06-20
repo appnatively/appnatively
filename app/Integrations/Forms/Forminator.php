@@ -58,12 +58,21 @@ class Forminator extends Form {
             'checkbox' => 'checkbox',
             'select'   => 'select',
             'date'     => 'date',
-            'time'     => 'date',
             'rating'   => 'rating',
             'slider'   => 'slider',
         ];
 
-        return $map[ $type ] ?? null;
+        $mapped = array_search( $type, $map, true );
+
+        if ( false !== $mapped ) {
+            return $mapped;
+        }
+
+        $extra = [
+            'time' => 'date',
+        ];
+
+        return $extra[ $type ] ?? null;
     }
 
     private function get_text_rules( array $field ): array {

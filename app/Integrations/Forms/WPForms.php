@@ -43,10 +43,11 @@ class WPForms extends Form {
             'email'         => 'email',
             'checkbox'      => 'checkbox',
             'select'        => 'select',
-            'number-slider' => 'number_slider',
+            'number_slider' => 'number-slider',
         ];
 
-        return $map[$type] ?? null;
+        $mapped = array_search( $type, $map, true );
+        return false !== $mapped ? $mapped : null;
     }
 
     private function get_text_rules( array $field ): array {

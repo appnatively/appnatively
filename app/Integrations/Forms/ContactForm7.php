@@ -35,20 +35,27 @@ class ContactForm7 extends Form {
 
     private function map_field_type( string $type ) {
         $map = [
-            'text'     => 'text',
-            'email'    => 'email',
-            'url'      => 'url',
-            'number'   => 'number',
-            'date'     => 'date',
-            'checkbox' => 'checkbox',
-            'radio'    => 'radio',
-            'select'   => 'single_select',
-            'textarea' => 'text',
-            'tel'      => 'text',
-            'range'    => 'number',
+            'text'          => 'text',
+            'email'         => 'email',
+            'url'           => 'url',
+            'number'        => 'number',
+            'date'          => 'date',
+            'checkbox'      => 'checkbox',
+            'radio'         => 'radio',
+            'single_select' => 'select',
         ];
 
-        return $map[$type] ?? null;
+        $mapped = array_search( $type, $map, true );
+
+        if ( false !== $mapped ) {
+            return $mapped;
+        }
+
+        $extra = [
+            'range' => 'number',
+        ];
+
+        return $extra[$type] ?? null;
     }
 
     private function get_text_rules( \WPCF7_FormTag $tag ): array {

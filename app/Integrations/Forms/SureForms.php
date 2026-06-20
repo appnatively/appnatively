@@ -63,16 +63,17 @@ class SureForms extends Form {
 
     private function map_field_type( string $type ) {
         $map = [
-            'input'    => 'text',
+            'text'     => 'input',
             'email'    => 'email',
             'number'   => 'number',
             'url'      => 'url',
             'checkbox' => 'checkbox',
             'gdpr'     => 'gdpr',
-            'dropdown' => 'select',
+            'select'   => 'dropdown',
         ];
 
-        return $map[$type] ?? null;
+        $mapped = array_search( $type, $map, true );
+        return false !== $mapped ? $mapped : null;
     }
 
     private function get_text_rules( array $field ): array {

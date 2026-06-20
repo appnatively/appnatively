@@ -8,6 +8,7 @@ use AppNatively\App\Integrations\Forms\FluentForm;
 use AppNatively\App\Integrations\Forms\FormGent;
 use AppNatively\App\Integrations\Forms\Forminator;
 use AppNatively\App\Integrations\Forms\ContactForm7;
+use AppNatively\App\Integrations\Forms\Formidable;
 use AppNatively\App\Integrations\Forms\SureForms;
 use AppNatively\App\Integrations\Forms\WPForms;
 use AppNatively\App\Providers\Admin\MenuServiceProvider;
@@ -67,6 +68,7 @@ return [
         FormGent::class,
         Forminator::class,
         ContactForm7::class,
+        Formidable::class,
         FluentForm::class,
         SureForms::class,
         WPForms::class,
