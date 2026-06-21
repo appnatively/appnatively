@@ -29,12 +29,13 @@ class Formidable extends Form {
 
         foreach ( $fields as $field ) {
             $fields_array[] = [
-                'id'        => (int) $field->id,
-                'type'      => $field->type,
-                'name'      => $field->name,
-                'field_key' => $field->field_key,
-                'required'  => ! empty( $field->required ),
-                'options'   => $field->options,
+                'id'            => (int) $field->id,
+                'type'          => $field->type,
+                'name'          => $field->name,
+                'field_key'     => $field->field_key,
+                'required'      => ! empty( $field->required ),
+                'options'       => $field->options,
+                'field_options' => (array) ( $field->field_options ?? [] ),
             ];
         }
 
@@ -158,6 +159,82 @@ class Formidable extends Form {
         return $rules;
     }
 
+    protected function get_validation_messages( array $form ): array {
+        if ( empty( $form['fields'] ) ) {
+            return [];
+        }
+
+        $default_required = [
+            'text'     => 'This field cannot be blank.',
+            'email'    => 'This field cannot be blank.',
+            'url'      => 'This field cannot be blank.',
+            'number'   => 'This field cannot be blank.',
+            'radio'    => 'Please select a value.',
+            'checkbox' => 'Please select a value.',
+            'select'   => 'Please select a value.',
+        ];
+
+        $messages = [];
+
+        foreach ( $form['fields'] as $field ) {
+            $name   = $field['field_key'];
+            $type   = $field['type'];
+            $mapped = $this->map_field_type( $type );
+
+            if ( ! $mapped || ! $name ) {
+                continue;
+            }
+
+            $field_options = $field['field_options'] ?? [];
+
+            if ( ! empty( $field['required'] ) ) {
+                $msg = ! empty( $field_options['blank'] )
+                    ? str_replace( '[field_name]', $field['name'], $field_options['blank'] )
+                    : ( $default_required[ $type ] ?? 'This field cannot be blank.' );
+
+                $messages[ "{$name}.required" ] = $msg;
+            }
+
+            if ( $mapped === 'email' ) {
+                $msg = ! empty( $field_options['invalid'] )
+                    ? str_replace( '[field_name]', $field['name'], $field_options['invalid'] )
+                    : 'This is not a valid email.';
+
+                $messages[ "{$name}.email" ] = $msg;
+            }
+
+            if ( $mapped === 'url' ) {
+                $msg = ! empty( $field_options['invalid'] )
+                    ? str_replace( '[field_name]', $field['name'], $field_options['invalid'] )
+                    : 'Please enter a valid URL.';
+
+                $messages[ "{$name}.url" ] = $msg;
+            }
+
+            if ( $mapped === 'number' ) {
+                $msg = ! empty( $field_options['invalid'] )
+                    ? str_replace( '[field_name]', $field['name'], $field_options['invalid'] )
+                    : 'This is not a valid number.';
+
+                $messages[ "{$name}.numeric" ] = $msg;
+
+                if ( isset( $field['min'] ) && $field['min'] !== '' ) {
+                    $messages[ "{$name}.min" ] = ! empty( $field_options['invalid'] )
+                        ? str_replace( '[field_name]', $field['name'], $field_options['invalid'] )
+                        : 'Value must be at least :min.';
+                }
+
+                if ( isset( $field['max'] ) && $field['max'] !== '' ) {
+                    $messages[ "{$name}.max" ] = ! empty( $field_options['invalid'] )
+                        ? str_replace( '[field_name]', $field['name'], $field_options['invalid'] )
+                        : 'Value must be at most :max.';
+                }
+            }
+        }
+
+        return $messages;
+    }
+
     public function form_submit( Request $request ) {
         $form = $this->get_form( $request->get_param( 'form_id' ) );
 
@@ -166,6 +243,7 @@ class Formidable extends Form {
         }
 
         foreach ( $form['fields'] as $field ) {
+            error_log( 'field: ' . print_r( $field, true ), 0 );
             error_log( 'field: ' . print_r( $field, true ), 0 );
             if ( empty( $field['type'] ) || empty( $field['field_key'] ) ) {
                 continue;
@@ -192,7 +270,13 @@ class Formidable extends Form {
             }
         }
 
-        $request->validate( $this->get_validation_rules( $form ) );
+        $validation = $request->make(
+            $request,
+            $this->get_validation_rules( $form ),
+            $this->get_validation_messages( $form )
+        );
+        $validation->throw_if_fails();
+        $request->errors = $validation->errors();
 
         $this->submit( $request, $form );
     }

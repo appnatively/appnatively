@@ -137,6 +137,11 @@ install_wp() {
 		download https://downloads.wordpress.org/plugin/forminator.zip $TMPDIR/forminator.zip
 		unzip -q $TMPDIR/forminator.zip -d "$WP_CORE_DIR"/wp-content/plugins/
 	fi
+
+	if [ ! -d "$WP_CORE_DIR"/wp-content/plugins/formidable ]; then
+		download https://downloads.wordpress.org/plugin/formidable.zip $TMPDIR/formidable.zip
+		unzip -q $TMPDIR/formidable.zip -d "$WP_CORE_DIR"/wp-content/plugins/
+	fi
 }
 
 install_test_suite() {
