@@ -10,6 +10,7 @@ use AppNatively\App\Integrations\Forms\Forminator;
 use AppNatively\App\Integrations\Forms\ContactForm7;
 use AppNatively\App\Integrations\Forms\EverestForms;
 use AppNatively\App\Integrations\Forms\Formidable;
+use AppNatively\App\Integrations\Forms\GutenaForms;
 use AppNatively\App\Integrations\Forms\HappyForms;
 use AppNatively\App\Integrations\Forms\SureForms;
 use AppNatively\App\Integrations\Forms\WPForms;
@@ -76,6 +77,7 @@ return [
         WPForms::class,
         EverestForms::class,
         HappyForms::class,
+        GutenaForms::class,
     ],
 
     /**

@@ -88,6 +88,19 @@ function _manually_load_plugin() {
     }
     unset( $_happyforms_path );
 
+    // Load Gutena Forms
+    $_gutenaforms_path = '';
+    if ( file_exists( $wp_plugins_dir . '/gutena-forms/gutena-forms.php' ) ) {
+        $_gutenaforms_path = $wp_plugins_dir . '/gutena-forms/gutena-forms.php';
+    } elseif ( file_exists( dirname( __DIR__, 2 ) . '/gutena-forms/gutena-forms.php' ) ) {
+        $_gutenaforms_path = dirname( __DIR__, 2 ) . '/gutena-forms/gutena-forms.php';
+    }
+
+    if ( $_gutenaforms_path ) {
+        require_once $_gutenaforms_path;
+    }
+    unset( $_gutenaforms_path );
+
     // Load Contact Form 7
     if ( file_exists( $wp_plugins_dir . '/contact-form-7/wp-contact-form-7.php' ) ) {
         require_once $wp_plugins_dir . '/contact-form-7/wp-contact-form-7.php';

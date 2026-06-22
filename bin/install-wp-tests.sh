@@ -152,6 +152,11 @@ install_wp() {
 		download https://downloads.wordpress.org/plugin/happyforms.zip $TMPDIR/happyforms.zip
 		unzip -q $TMPDIR/happyforms.zip -d "$WP_CORE_DIR"/wp-content/plugins/
 	fi
+
+	if [ ! -d "$WP_CORE_DIR"/wp-content/plugins/gutena-forms ]; then
+		download https://downloads.wordpress.org/plugin/gutena-forms.zip $TMPDIR/gutena-forms.zip
+		unzip -q $TMPDIR/gutena-forms.zip -d "$WP_CORE_DIR"/wp-content/plugins/
+	fi
 }
 
 install_test_suite() {
