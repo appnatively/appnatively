@@ -147,6 +147,11 @@ install_wp() {
 		download https://downloads.wordpress.org/plugin/everest-forms.zip $TMPDIR/everest-forms.zip
 		unzip -q $TMPDIR/everest-forms.zip -d "$WP_CORE_DIR"/wp-content/plugins/
 	fi
+
+	if [ ! -d "$WP_CORE_DIR"/wp-content/plugins/happyforms ]; then
+		download https://downloads.wordpress.org/plugin/happyforms.zip $TMPDIR/happyforms.zip
+		unzip -q $TMPDIR/happyforms.zip -d "$WP_CORE_DIR"/wp-content/plugins/
+	fi
 }
 
 install_test_suite() {

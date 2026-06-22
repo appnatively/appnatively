@@ -75,6 +75,19 @@ function _manually_load_plugin() {
     }
     unset( $_everestforms_path );
 
+    // Load HappyForms
+    $_happyforms_path = '';
+    if ( file_exists( $wp_plugins_dir . '/happyforms/happyforms.php' ) ) {
+        $_happyforms_path = $wp_plugins_dir . '/happyforms/happyforms.php';
+    } elseif ( file_exists( dirname( __DIR__, 2 ) . '/happyforms/happyforms.php' ) ) {
+        $_happyforms_path = dirname( __DIR__, 2 ) . '/happyforms/happyforms.php';
+    }
+
+    if ( $_happyforms_path ) {
+        require_once $_happyforms_path;
+    }
+    unset( $_happyforms_path );
+
     // Load Contact Form 7
     if ( file_exists( $wp_plugins_dir . '/contact-form-7/wp-contact-form-7.php' ) ) {
         require_once $wp_plugins_dir . '/contact-form-7/wp-contact-form-7.php';
