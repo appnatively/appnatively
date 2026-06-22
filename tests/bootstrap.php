@@ -62,6 +62,19 @@ function _manually_load_plugin() {
     }
     unset( $_forminator_path );
 
+    // Load Everest Forms
+    $_everestforms_path = '';
+    if ( file_exists( $wp_plugins_dir . '/everest-forms/everest-forms.php' ) ) {
+        $_everestforms_path = $wp_plugins_dir . '/everest-forms/everest-forms.php';
+    } elseif ( file_exists( dirname( __DIR__, 2 ) . '/everest-forms/everest-forms.php' ) ) {
+        $_everestforms_path = dirname( __DIR__, 2 ) . '/everest-forms/everest-forms.php';
+    }
+
+    if ( $_everestforms_path ) {
+        require_once $_everestforms_path;
+    }
+    unset( $_everestforms_path );
+
     // Load Contact Form 7
     if ( file_exists( $wp_plugins_dir . '/contact-form-7/wp-contact-form-7.php' ) ) {
         require_once $wp_plugins_dir . '/contact-form-7/wp-contact-form-7.php';

@@ -142,6 +142,11 @@ install_wp() {
 		download https://downloads.wordpress.org/plugin/formidable.zip $TMPDIR/formidable.zip
 		unzip -q $TMPDIR/formidable.zip -d "$WP_CORE_DIR"/wp-content/plugins/
 	fi
+
+	if [ ! -d "$WP_CORE_DIR"/wp-content/plugins/everest-forms ]; then
+		download https://downloads.wordpress.org/plugin/everest-forms.zip $TMPDIR/everest-forms.zip
+		unzip -q $TMPDIR/everest-forms.zip -d "$WP_CORE_DIR"/wp-content/plugins/
+	fi
 }
 
 install_test_suite() {

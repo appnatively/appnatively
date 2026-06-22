@@ -243,8 +243,6 @@ class Formidable extends Form {
         }
 
         foreach ( $form['fields'] as $field ) {
-            error_log( 'field: ' . print_r( $field, true ), 0 );
-            error_log( 'field: ' . print_r( $field, true ), 0 );
             if ( empty( $field['type'] ) || empty( $field['field_key'] ) ) {
                 continue;
             }
@@ -253,8 +251,6 @@ class Formidable extends Form {
             if ( ! $mapped_type ) {
                 continue;
             }
-
-            // error_log( "Processing field: " . $field['field_key'] . " of type: " . $field['type'] );
 
             $field_name = $field['field_key'];
             $value      = $request->get_param( $field_name );
