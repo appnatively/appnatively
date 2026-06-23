@@ -43,6 +43,7 @@ class ContactForm7 extends Form {
             'checkbox'      => 'checkbox',
             'radio'         => 'radio',
             'single_select' => 'select',
+            'gdpr'          => 'acceptance',
         ];
 
         $mapped = array_search( $type, $map, true );
@@ -126,6 +127,10 @@ class ContactForm7 extends Form {
         return [ 'string', 'max:255' ];
     }
 
+    private function get_gdpr_rules( \WPCF7_FormTag $tag ): array {
+        return [ 'string', 'in:1' ];
+    }
+
     protected function get_validation_rules( array $form ): array {
         if ( ! $this->cf7_form ) {
             return [];
@@ -171,11 +176,17 @@ class ContactForm7 extends Form {
                 case 'radio':
                     $field_rules = $this->get_radio_rules( $tag );
                     break;
+                case 'gdpr':
+                    $field_rules = $this->get_gdpr_rules( $tag );
+                    if ( ! $tag->has_option( 'optional' ) ) {
+                        $field_rules[] = 'required';
+                    }
+                    break;
                 default:
                     continue 2;
             }
 
-            if ( $tag->is_required() ) {
+            if ( 'gdpr' !== $mapped_type && $tag->is_required() ) {
                 $field_rules[] = 'required';
             }
 
@@ -187,13 +198,93 @@ class ContactForm7 extends Form {
         return $rules;
     }
 
+    protected function get_validation_messages( array $form ): array {
+        if ( ! $this->cf7_form ) {
+            return [];
+        }
+
+        $tags = $this->cf7_form->scan_form_tags();
+        $messages = [];
+
+        foreach ( $tags as $tag ) {
+            if ( empty( $tag->name ) || empty( $tag->basetype ) ) {
+                continue;
+            }
+
+            $mapped_type = $this->map_field_type( $tag->basetype );
+            if ( ! $mapped_type ) {
+                continue;
+            }
+
+            $name = $tag->name;
+
+            $is_required = 'gdpr' === $mapped_type
+                ? ! $tag->has_option( 'optional' )
+                : $tag->is_required();
+
+            if ( $is_required ) {
+                $msg = $this->cf7_form->message( 'invalid_required' );
+                $messages[ "{$name}.required" ] = $msg ?: 'Please fill out this field.';
+            }
+
+            switch ( $mapped_type ) {
+                case 'email':
+                    $msg = $this->cf7_form->message( 'invalid_email' );
+                    $messages[ "{$name}.email" ] = $msg ?: 'The e-mail address entered is invalid.';
+                    break;
+                case 'url':
+                    $msg = $this->cf7_form->message( 'invalid_url' );
+                    $messages[ "{$name}.url" ] = $msg ?: 'The URL is invalid.';
+                    break;
+                case 'number':
+                    $msg = $this->cf7_form->message( 'invalid_number' );
+                    $messages[ "{$name}.numeric" ] = $msg ?: 'The number format is invalid.';
+                    break;
+                case 'gdpr':
+                    $msg = $this->cf7_form->message( 'accept_terms' );
+                    $messages[ "{$name}.in" ] = $msg ?: 'You must accept the terms and conditions before sending your message.';
+                    break;
+                case 'date':
+                    $maxlength = $tag->get_maxlength_option();
+                    if ( $maxlength ) {
+                        $msg = $this->cf7_form->message( 'invalid_too_long' );
+                        $messages[ "{$name}.max" ] = $msg ?: 'This field has a too long input.';
+                    }
+                    $minlength = $tag->get_minlength_option();
+                    if ( $minlength ) {
+                        $msg = $this->cf7_form->message( 'invalid_too_short' );
+                        $messages[ "{$name}.min" ] = $msg ?: 'This field has a too short input.';
+                    }
+                    break;
+            }
+        }
+
+        return $messages;
+    }
+
     public function form_submit( Request $request ) {
         $form = $this->get_form( $request->get_param( 'form_id' ) );
         if ( ! $form ) {
             throw new \Exception( __( 'Form not found', 'appnatively' ) );
         }
 
-        $request->validate( $this->get_validation_rules( $form ) );
+        $tags = $this->cf7_form->scan_form_tags();
+        foreach ( $tags as $tag ) {
+            if ( $tag->basetype === 'acceptance' && $tag->name ) {
+                $value = $request->get_param( $tag->name );
+                if ( $value !== null ) {
+                    $request->set_param( $tag->name, (int) $value ? '1' : '' );
+                }
+            }
+        }
+
+        $validation = $request->make(
+            $request,
+            $this->get_validation_rules( $form ),
+            $this->get_validation_messages( $form )
+        );
+        $validation->throw_if_fails();
+        $request->errors = $validation->errors();
 
         $this->submit( $request, $form );
     }
@@ -227,6 +318,12 @@ class ContactForm7 extends Form {
                 } else {
                     $posted_data[$tag->name] = $value;
                 }
+            }
+        }
+
+        foreach ( $tags as $tag ) {
+            if ( $tag->basetype === 'acceptance' && $tag->name && ! isset( $posted_data[$tag->name] ) ) {
+                $posted_data[$tag->name] = '0';
             }
         }
 
@@ -272,7 +369,18 @@ class ContactForm7 extends Form {
         add_filter( 'wpcf7_validate', $filter, 10, 2 );
 
         try {
-            $this->cf7_form->submit();
+            $result = $this->cf7_form->submit();
+
+            if ( 'mail_sent' !== $result['status'] ) {
+                throw new \Exception(
+                    sprintf(
+                        /* translators: %1$s: CF7 submission status, %2$s: CF7 response message */
+                        __( 'CF7 submission failed (status: %1$s) — %2$s', 'appnatively' ),
+                        $result['status'],
+                        $result['message']
+                    )
+                );
+            }
         } finally {
             remove_filter( 'wpcf7_validate', $filter, 10 );
             $_POST = $original_post;

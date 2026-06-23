@@ -323,8 +323,6 @@ class FluentForm extends Form {
             throw new \Exception( __( 'Form not found', 'appnatively' ) );
         }
 
-        error_log( 'FluentForm submission request: ' . print_r( $form, true ) );
-
         $validation = $request->make(
             $request,
             $this->get_validation_rules( $form ),
