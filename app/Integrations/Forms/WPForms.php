@@ -44,10 +44,10 @@ class WPForms extends Form {
             'checkbox'      => 'checkbox',
             'select'        => 'select',
             'number_slider' => 'number-slider',
+            'gdpr-checkbox' => 'gdpr',
         ];
 
-        $mapped = array_search( $type, $map, true );
-        return false !== $mapped ? $mapped : null;
+        return $map[$type] ?? null;
     }
 
     private function get_text_rules( array $field ): array {
@@ -76,6 +76,10 @@ class WPForms extends Form {
 
     private function get_email_rules( array $field ): array {
         return [ 'string', 'email' ];
+    }
+
+    private function get_gdpr_rules( array $field ): array {
+        return [ 'integer', 'in:0,1' ];
     }
 
     private function get_checkbox_rules( array $field ): array {
@@ -138,6 +142,9 @@ class WPForms extends Form {
                 case 'select':
                     $field_rules = $this->get_select_rules( $field );
                     break;
+                case 'gdpr':
+                    $field_rules = $this->get_gdpr_rules( $field );
+                    break;
                 case 'number_slider':
                     $field_rules = $this->get_number_slider_rules( $field );
                     break;
@@ -198,6 +205,15 @@ class WPForms extends Form {
                 );
             }
 
+            if ( $mapped_type === 'gdpr' ) {
+                $gdpr_msg = wpforms_setting(
+                    'validation-required',
+                    __( 'This field is required.', 'wpforms-lite' )
+                );
+                $messages["{$field_id}.integer"] = $gdpr_msg;
+                $messages["{$field_id}.in"] = $gdpr_msg;
+            }
+
             if ( $mapped_type === 'text' && ! empty( $field['limit_enabled'] ) && ! empty( $field['limit_count'] ) ) {
                 $msg = wpforms_setting(
                     'validation-character-limit',
@@ -254,6 +270,7 @@ class WPForms extends Form {
 
         if ( ! empty( $form['fields'] ) ) {
             foreach ( $form['fields'] as $field ) {
+                error_log( 'Processing field: ' . json_encode( $field ) );
                 if ( empty( $field['type'] ) || empty( $field['id'] ) ) {
                     continue;
                 }
@@ -270,6 +287,10 @@ class WPForms extends Form {
 
                 if ( $mapped_type === 'number_slider' && is_array( $value ) ) {
                     $request->set_param( $field['id'], isset( $value['max'] ) && $value['max'] !== '' ? (int) $value['max'] : 0 );
+                }
+
+                if ( $mapped_type === 'gdpr' ) {
+                    $request->set_param( $field_name, (int) $value );
                 }
             }
         }
@@ -300,14 +321,21 @@ class WPForms extends Form {
                 continue;
             }
 
-            if ( ! $this->map_field_type( $field['type'] ) ) {
+            $mapped_type = $this->map_field_type( $field['type'] );
+            if ( ! $mapped_type ) {
                 continue;
             }
 
             $field_name = $field['id'];
             $value = $request->get_param( $field_name );
             if ( $value !== null ) {
-                $entry['fields'][ $field['id'] ] = $value;
+                if ( $mapped_type === 'gdpr' ) {
+                    if ( (int) $value ) {
+                        $entry['fields'][ $field['id'] ] = $field['choices'][1]['label'] ?? '1';
+                    }
+                } else {
+                    $entry['fields'][ $field['id'] ] = $value;
+                }
             }
         }
 
