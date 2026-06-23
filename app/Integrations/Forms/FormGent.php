@@ -25,6 +25,7 @@ class FormGent extends Form {
     }
 
     private function map_field_type( string $type ) {
+        // appnatively => formgent
         $map = [
             'text'          => 'text',
             'number'        => 'number',
@@ -36,8 +37,7 @@ class FormGent extends Form {
             'range'         => 'range-slider',
             'rating'        => 'rating',
             'date_time_picker' => 'date-picker',
-            // 'switch'        => 'gdpr', //TODO: checkbox
-            // 'password'      => 'password',
+            'gdpr'             => 'gdpr',
         ];
 
         $key = array_search( $type, $map, true );
@@ -138,9 +138,9 @@ class FormGent extends Form {
         return [ 'string' ];
     }
 
-    // private function get_switch_rules( array $field ): array {
-    //     return [ 'integer', 'in:0,1' ];
-    // }
+    private function get_gdpr_rules( array $field ): array {
+        return [ 'integer', 'in:0,1' ];
+    }
 
     protected function get_validation_rules( array $form ) : array {
         if ( empty( $form ) ) {
@@ -196,12 +196,9 @@ class FormGent extends Form {
                 case 'date_time_picker':
                     $field_rules = $this->get_date_time_picker_rules( $field );
                     break;
-                // case 'switch':
-                //     $field_rules = $this->get_switch_rules( $field );
-                //     break;
-                // case 'password':
-                //     $field_rules = $this->get_password_rules( $field );
-                //     break;
+                case 'gdpr':
+                    $field_rules = $this->get_gdpr_rules( $field );
+                    break;
                 default:
                     continue 2;
             }
@@ -216,6 +213,68 @@ class FormGent extends Form {
         }
 
         return $rules;
+    }
+
+    protected function get_validation_messages( array $form ): array {
+        if ( empty( $form ) ) {
+            return [];
+        }
+
+        $form_object        = (object) $form;
+        $fields             = formgent_get_form_fields( $form_object );
+        $validation_messages = formgent_get_setting( 'validation_messages', [] );
+        $messages           = [];
+
+        foreach ( $fields as $field ) {
+            if ( empty( $field['name'] ) || empty( $field['field_type'] ) ) {
+                continue;
+            }
+
+            $mapped_type = $this->map_field_type( $field['field_type'] );
+            if ( ! $mapped_type ) {
+                continue;
+            }
+
+            $field_name = $field['name'];
+
+            if ( isset( $field['required'] ) && $field['required'] ) {
+                $messages[ "{$field_name}.required" ] = $validation_messages['required'] ?? 'This field is required';
+            }
+
+            switch ( $mapped_type ) {
+                case 'email':
+                    $messages[ "{$field_name}.email" ] = $validation_messages['email'] ?? 'This field must contain a valid email';
+                    break;
+                case 'url':
+                    $messages[ "{$field_name}.url" ] = $validation_messages['url'] ?? 'Please enter a valid URL';
+                    break;
+                case 'number':
+                    $messages[ "{$field_name}.numeric" ] = $validation_messages['number'] ?? 'This field must contain numeric value';
+                    if ( isset( $field['min_value'] ) && $field['min_value'] !== '' ) {
+                        $min_msg = str_replace( '{limit}', $field['min_value'], $validation_messages['min'] ?? 'This value is below the minimum {limit}' );
+                        $messages[ "{$field_name}.min" ] = $min_msg;
+                    }
+                    if ( isset( $field['max_value'] ) && $field['max_value'] !== '' ) {
+                        $max_msg = str_replace( '{limit}', $field['max_value'], $validation_messages['max'] ?? 'This value exceeds the maximum {limit}' );
+                        $messages[ "{$field_name}.max" ] = $max_msg;
+                    }
+                    break;
+                case 'gdpr':
+                    $gdpr_msg = $validation_messages['gdpr'] ?? 'You must agree to proceed';
+                    $messages[ "{$field_name}.integer" ] = $gdpr_msg;
+                    $messages[ "{$field_name}.in" ] = $gdpr_msg;
+                    break;
+                case 'rating':
+                    $messages[ "{$field_name}.integer" ] = $validation_messages['number'] ?? 'This field must contain numeric value';
+                    if ( ! empty( $field['rating_limit'] ) ) {
+                        $max_msg = str_replace( '{limit}', $field['rating_limit'], $validation_messages['max'] ?? 'This value exceeds the maximum {limit}' );
+                        $messages[ "{$field_name}.max" ] = $max_msg;
+                    }
+                    break;
+            }
+        }
+
+        return $messages;
     }
 
     public function form_submit( Request $request ) {
@@ -253,9 +312,19 @@ class FormGent extends Form {
             if ( $mapped_type === 'range' && is_array( $value ) ) {
                 $request->set_param( $field_name, isset( $value['max'] ) && $value['max'] !== '' ? (int) $value['max'] : 0 );
             }
+
+            if ( $mapped_type === 'gdpr' ) {
+                $request->set_param( $field_name, (int) $value );
+            }
         }
 
-        $request->validate( $this->get_validation_rules( $form ) );
+        $validation = $request->make(
+            $request,
+            $this->get_validation_rules( $form ),
+            $this->get_validation_messages( $form )
+        );
+        $validation->throw_if_fails();
+        $request->errors = $validation->errors();
 
         $this->submit( $request, $form );
     }
