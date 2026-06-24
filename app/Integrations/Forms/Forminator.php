@@ -60,19 +60,11 @@ class Forminator extends Form {
             'date'     => 'date',
             'rating'   => 'rating',
             'slider'   => 'slider',
+            'time'     => 'date',
+            'consent'  => 'gdpr',
         ];
 
-        $mapped = array_search( $type, $map, true );
-
-        if ( false !== $mapped ) {
-            return $mapped;
-        }
-
-        $extra = [
-            'time' => 'date',
-        ];
-
-        return $extra[ $type ] ?? null;
+        return $map[$type] ?? null;
     }
 
     private function get_text_rules( array $field ): array {
@@ -133,6 +125,10 @@ class Forminator extends Form {
         return [ 'string' ];
     }
 
+    private function get_gdpr_rules( array $field ): array {
+        return [ 'integer', 'in:0,1' ];
+    }
+
     private function get_slider_rules( array $field ): array {
         $rules = [ 'numeric' ];
 
@@ -175,7 +171,8 @@ class Forminator extends Form {
         $messages = [];
 
         foreach ( $form['fields'] as $field ) {
-            $name   = $field['element_id'] ?? $field['id'] ?? '';
+            error_log( 'Processing field for validation messages: ' . json_encode( $field ) );
+            $name   = $field['id'] ?? '';
             $type   = $field['type'] ?? '';
             $mapped = $this->map_field_type( $type );
 
@@ -203,6 +200,14 @@ class Forminator extends Form {
 
             if ( $mapped === 'date' ) {
                 $messages[ "{$name}.date" ] = $default_format['date'];
+            }
+
+            if ( $mapped === 'gdpr' ) {
+                $gdpr_msg = ! empty( $field['required_message'] )
+                    ? $field['required_message']
+                    : __( 'This field is required. Please check it.', 'forminator' );
+                $messages[ "{$name}.integer" ] = $gdpr_msg;
+                $messages[ "{$name}.in" ] = $gdpr_msg;
             }
 
             if ( in_array( $mapped, [ 'number', 'slider' ], true ) ) {
@@ -270,6 +275,9 @@ class Forminator extends Form {
                 case 'slider':
                     $field_rules = $this->get_slider_rules( $field );
                     break;
+                case 'gdpr':
+                    $field_rules = $this->get_gdpr_rules( $field );
+                    break;
                 default:
                     continue 2;
             }
@@ -318,6 +326,10 @@ class Forminator extends Form {
             if ( $mapped_type === 'slider' && is_array( $value ) ) {
                 $request->set_param( $field_name, isset( $value['max'] ) && $value['max'] !== '' ? (int) $value['max'] : 0 );
             }
+
+            if ( $mapped_type === 'gdpr' ) {
+                $request->set_param( $field_name, (int) $value );
+            }
         }
 
         $validation = $request->make(
@@ -355,6 +367,10 @@ class Forminator extends Form {
             $value      = $request->get_param( $field_name );
 
             if ( $value !== null ) {
+                if ( $mapped_type === 'gdpr' ) {
+                    $value = (int) $value ? 'checked' : '';
+                }
+
                 $entry_meta[] = [
                     'name'  => $field_name,
                     'value' => $value,

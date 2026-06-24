@@ -270,7 +270,6 @@ class WPForms extends Form {
 
         if ( ! empty( $form['fields'] ) ) {
             foreach ( $form['fields'] as $field ) {
-                error_log( 'Processing field: ' . json_encode( $field ) );
                 if ( empty( $field['type'] ) || empty( $field['id'] ) ) {
                     continue;
                 }
