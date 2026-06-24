@@ -13,6 +13,7 @@ use AppNatively\App\Integrations\Forms\Formidable;
 use AppNatively\App\Integrations\Forms\GutenaForms;
 use AppNatively\App\Integrations\Forms\HappyForms;
 use AppNatively\App\Integrations\Forms\SureForms;
+use AppNatively\App\Integrations\Forms\WeForms;
 use AppNatively\App\Integrations\Forms\WPForms;
 use AppNatively\App\Providers\Admin\MenuServiceProvider;
 use AppNatively\App\Models\Comment;
@@ -74,6 +75,7 @@ return [
         Formidable::class,
         FluentForm::class,
         SureForms::class,
+        WeForms::class,
         WPForms::class,
         EverestForms::class,
         HappyForms::class,

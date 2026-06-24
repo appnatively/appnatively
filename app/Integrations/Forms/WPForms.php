@@ -43,7 +43,7 @@ class WPForms extends Form {
             'email'         => 'email',
             'checkbox'      => 'checkbox',
             'select'        => 'select',
-            'number_slider' => 'number-slider',
+            'number-slider' => 'number_slider',
             'gdpr-checkbox' => 'gdpr',
         ];
 

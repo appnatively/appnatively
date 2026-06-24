@@ -273,8 +273,6 @@ class Formidable extends Form {
             $field_name = $field['field_key'];
             $value      = $request->get_param( $field_name );
 
-            // error_log( "Value for field " . $field_name . ": " . print_r( $value, true ) );
-
             if ( $value === null ) {
                 continue;
             }

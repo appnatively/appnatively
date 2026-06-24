@@ -157,6 +157,11 @@ install_wp() {
 		download https://downloads.wordpress.org/plugin/gutena-forms.zip $TMPDIR/gutena-forms.zip
 		unzip -q $TMPDIR/gutena-forms.zip -d "$WP_CORE_DIR"/wp-content/plugins/
 	fi
+
+	if [ ! -d "$WP_CORE_DIR"/wp-content/plugins/weforms ]; then
+		download https://downloads.wordpress.org/plugin/weforms.zip $TMPDIR/weforms.zip
+		unzip -q $TMPDIR/weforms.zip -d "$WP_CORE_DIR"/wp-content/plugins/
+	fi
 }
 
 install_test_suite() {

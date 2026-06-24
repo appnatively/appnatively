@@ -101,6 +101,15 @@ function _manually_load_plugin() {
     }
     unset( $_gutenaforms_path );
 
+    // Load weForms
+    if ( file_exists( $wp_plugins_dir . '/weforms/weforms.php' ) ) {
+        require_once $wp_plugins_dir . '/weforms/weforms.php';
+        if ( function_exists( 'weforms' ) ) {
+            require_once WEFORMS_INCLUDES . '/class-installer.php';
+            ( new \WeForms_Installer() )->create_tables();
+        }
+    }
+
     // Load Contact Form 7
     if ( file_exists( $wp_plugins_dir . '/contact-form-7/wp-contact-form-7.php' ) ) {
         require_once $wp_plugins_dir . '/contact-form-7/wp-contact-form-7.php';
