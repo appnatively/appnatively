@@ -56,6 +56,7 @@ class Formidable extends Form {
             'checkbox' => 'checkbox',
             'radio'    => 'radio',
             'select'   => 'select',
+            'gdpr'     => 'gdpr',
         ];
 
         $mapped = array_search( $type, $map, true );
@@ -101,6 +102,10 @@ class Formidable extends Form {
         return [ 'string', 'max:255' ];
     }
 
+    private function get_gdpr_rules( array $field ): array {
+        return [ 'integer', 'in:0,1' ];
+    }
+
     protected function get_validation_rules( array $form ): array {
         if ( empty( $form['fields'] ) ) {
             return [];
@@ -143,6 +148,9 @@ class Formidable extends Form {
                 case 'select':
                     $field_rules = $this->get_select_rules( $field );
                     break;
+                case 'gdpr':
+                    $field_rules = $this->get_gdpr_rules( $field );
+                    break;
                 default:
                     continue 2;
             }
@@ -172,6 +180,7 @@ class Formidable extends Form {
             'radio'    => 'Please select a value.',
             'checkbox' => 'Please select a value.',
             'select'   => 'Please select a value.',
+            'gdpr'     => 'You must agree to proceed.',
         ];
 
         $messages = [];
@@ -209,6 +218,15 @@ class Formidable extends Form {
                     : 'Please enter a valid URL.';
 
                 $messages[ "{$name}.url" ] = $msg;
+            }
+
+            if ( $mapped === 'gdpr' ) {
+                $gdpr_msg = ! empty( $field_options['blank'] )
+                    ? str_replace( '[field_name]', $field['name'], $field_options['blank'] )
+                    : 'You must agree to proceed.';
+
+                $messages[ "{$name}.integer" ] = $gdpr_msg;
+                $messages[ "{$name}.in" ] = $gdpr_msg;
             }
 
             if ( $mapped === 'number' ) {
@@ -263,6 +281,10 @@ class Formidable extends Form {
 
             if ( $mapped_type === 'checkbox' && is_array( $value ) ) {
                 $request->set_param( $field_name, ! empty( $value ) ? array_combine( $value, $value ) : [] );
+            }
+
+            if ( $mapped_type === 'gdpr' ) {
+                $request->set_param( $field_name, (int) $value );
             }
         }
 
