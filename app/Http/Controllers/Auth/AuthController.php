@@ -67,7 +67,7 @@ class AuthController extends Controller {
         $user_id  = wp_create_user( $username, $request->get_param( 'password' ), $email );
 
         if ( is_wp_error( $user_id ) ) {
-            throw new Exception( $user_id->get_error_message(), 400 );
+            throw new Exception( esc_html( $user_id->get_error_message() ), 400 );
         }
 
         $first_name = sanitize_text_field( $request->get_param( 'first_name' ) );
@@ -149,7 +149,7 @@ class AuthController extends Controller {
         $errors = retrieve_password( $user->user_login );
 
         if ( is_wp_error( $errors ) ) {
-            throw new Exception( $errors->get_error_message(), 400 );
+            throw new Exception( esc_html( $errors->get_error_message() ), 400 );
         }
 
         return Response::send( [ 'success' => true ] );
