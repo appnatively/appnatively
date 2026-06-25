@@ -41,7 +41,7 @@ class OrderItemDTO {
      *
      * @var string|null
      */
-    public $variantTitle;
+    public $variant_title;
 
     /**
      * Item image details.
@@ -56,11 +56,11 @@ class OrderItemDTO {
      * @param array $data Item data.
      */
     public function __construct( array $data ) {
-        $this->title        = $data['title'] ?? '';
-        $this->quantity     = (int) ( $data['quantity'] ?? 1 );
-        $this->price        = $data['price'] ?? [ 'amount' => '0', 'currencyCode' => 'USD' ];
-        $this->variantTitle = $data['variantTitle'] ?? null;
-        $this->image        = $data['image'] ?? null;
+        $this->title         = $data['title'] ?? '';
+        $this->quantity      = (int) ( $data['quantity'] ?? 1 );
+        $this->price         = $data['price'] ?? [ 'amount' => '0', 'currencyCode' => 'USD' ];
+        $this->variant_title = $data['variantTitle'] ?? null;
+        $this->image         = $data['image'] ?? null;
     }
 
     /**
@@ -73,7 +73,7 @@ class OrderItemDTO {
             'title'        => $this->title,
             'quantity'     => $this->quantity,
             'price'        => $this->price,
-            'variantTitle' => $this->variantTitle,
+            'variantTitle' => $this->variant_title,
             'image'        => $this->image,
         ];
     }

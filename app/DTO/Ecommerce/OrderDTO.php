@@ -34,28 +34,28 @@ class OrderDTO {
      *
      * @var string
      */
-    public $processedAt;
+    public $processed_at;
 
     /**
      * Financial status.
      *
      * @var string
      */
-    public $financialStatus;
+    public $financial_status;
 
     /**
      * Fulfillment status.
      *
      * @var string
      */
-    public $fulfillmentStatus;
+    public $fulfillment_status;
 
     /**
      * Total price details.
      *
      * @var array
      */
-    public $totalPrice;
+    public $total_price;
 
     /**
      * Line items.
@@ -68,28 +68,28 @@ class OrderDTO {
      *
      * @var OrderItemDTO[]
      */
-    public $lineItems = [];
+    public $line_items = [];
 
     /**
      * Subtotal price details.
      *
      * @var array
      */
-    public $subtotalPrice;
+    public $subtotal_price;
 
     /**
      * Total tax details.
      *
      * @var array
      */
-    public $totalTax;
+    public $total_tax;
 
     /**
      * Total shipping price details.
      *
      * @var array
      */
-    public $totalShippingPrice;
+    public $total_shipping_price;
 
     /**
      * Shipping address.
@@ -103,21 +103,21 @@ class OrderDTO {
      *
      * @var array
      */
-    public $totalDiscount;
+    public $total_discount;
 
     /**
      * Payment method title.
      *
      * @var string
      */
-    public $paymentMethod;
+    public $payment_method;
 
     /**
      * Discount code used.
      *
      * @var string
      */
-    public $discountCode;
+    public $discount_code;
 
     /**
      * OrderDTO constructor.
@@ -125,27 +125,27 @@ class OrderDTO {
      * @param array $data Order data.
      */
     public function __construct( array $data ) {
-        $this->id                 = (string) ( $data['id'] ?? '' );
-        $this->name               = $data['name'] ?? '';
-        $this->processedAt        = $data['processedAt'] ?? '';
-        $this->financialStatus    = $data['financialStatus'] ?? '';
-        $this->fulfillmentStatus  = $data['fulfillmentStatus'] ?? '';
-        $this->totalPrice         = $data['totalPrice'] ?? [ 'amount' => '0', 'currencyCode' => 'USD' ];
-        $this->subtotalPrice      = $data['subtotalPrice'] ?? null;
-        $this->totalTax           = $data['totalTax'] ?? null;
-        $this->totalShippingPrice = $data['totalShippingPrice'] ?? null;
-        $this->shipping           = $data['shipping'] ?? null;
-        $this->totalDiscount      = $data['totalDiscount'] ?? null;
-        $this->paymentMethod      = $data['paymentMethod'] ?? '';
-        $this->discountCode       = $data['discountCode'] ?? '';
+        $this->id                   = (string) ( $data['id'] ?? '' );
+        $this->name                 = $data['name'] ?? '';
+        $this->processed_at         = $data['processedAt'] ?? '';
+        $this->financial_status     = $data['financialStatus'] ?? '';
+        $this->fulfillment_status   = $data['fulfillmentStatus'] ?? '';
+        $this->total_price          = $data['totalPrice'] ?? [ 'amount' => '0', 'currencyCode' => 'USD' ];
+        $this->subtotal_price       = $data['subtotalPrice'] ?? null;
+        $this->total_tax            = $data['totalTax'] ?? null;
+        $this->total_shipping_price = $data['totalShippingPrice'] ?? null;
+        $this->shipping             = $data['shipping'] ?? null;
+        $this->total_discount       = $data['totalDiscount'] ?? null;
+        $this->payment_method       = $data['paymentMethod'] ?? '';
+        $this->discount_code        = $data['discountCode'] ?? '';
 
 
         if ( isset( $data['lineItems'] ) && is_array( $data['lineItems'] ) ) {
             foreach ( $data['lineItems'] as $item ) {
                 if ( $item instanceof OrderItemDTO ) {
-                    $this->lineItems[] = $item;
+                    $this->line_items[] = $item;
                 } else {
-                    $this->lineItems[] = new OrderItemDTO( $item );
+                    $this->line_items[] = new OrderItemDTO( $item );
                 }
             }
         }
@@ -160,23 +160,21 @@ class OrderDTO {
         return [
             'id'                 => $this->id,
             'name'               => $this->name,
-            'processedAt'        => $this->processedAt,
-            'financialStatus'    => $this->financialStatus,
-            'fulfillmentStatus'  => $this->fulfillmentStatus,
-            'totalPrice'         => $this->totalPrice,
-            'subtotalPrice'      => $this->subtotalPrice,
-            'totalTax'           => $this->totalTax,
-            'totalShippingPrice' => $this->totalShippingPrice,
+            'processedAt'        => $this->processed_at,
+            'financialStatus'    => $this->financial_status,
+            'fulfillmentStatus'  => $this->fulfillment_status,
+            'totalPrice'         => $this->total_price,
+            'subtotalPrice'      => $this->subtotal_price,
+            'totalTax'           => $this->total_tax,
+            'totalShippingPrice' => $this->total_shipping_price,
             'shipping'           => $this->shipping,
-            'totalDiscount'      => $this->totalDiscount,
-            'paymentMethod'      => $this->paymentMethod,
-            'discountCode'       => $this->discountCode,
-
-
+            'totalDiscount'      => $this->total_discount,
+            'paymentMethod'      => $this->payment_method,
+            'discountCode'       => $this->discount_code,
             'lineItems'          => array_map(
                 function( $item ) {
                     return $item->to_array();
-                }, $this->lineItems 
+                }, $this->line_items 
             ),
         ];
     }

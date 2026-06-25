@@ -12,7 +12,6 @@ use AppNatively\App\DTO\Ecommerce\CategoryPaginatorDTO;
 use AppNatively\App\DTO\Ecommerce\ProductDTO;
 use AppNatively\App\DTO\Ecommerce\ProductDimensionDTO;
 use AppNatively\App\DTO\Ecommerce\ProductImageDTO;
-use AppNatively\App\DTO\Ecommerce\ProductOptionDTO;
 use AppNatively\App\DTO\Ecommerce\ProductPaginatorDTO;
 use AppNatively\App\DTO\Ecommerce\ProductVariantDTO;
 use AppNatively\App\DTO\Ecommerce\OrderDTO;
@@ -21,7 +20,6 @@ use AppNatively\App\Models\Term;
 use AppNatively\WpMVC\Contracts\Provider;
 use AppNatively\WpMVC\RequestValidator\Request;
 use AppNatively\WpMVC\Exceptions\Exception;
-use Automattic\WooCommerce\Enums\OrderInternalStatus;
 
 class Woocommerce extends Provider {
     /**
@@ -62,8 +60,9 @@ class Woocommerce extends Provider {
      * @return void
      */
     public function handle_autologin(): void {
+        // phpcs:ignore WordPress.Security.NonceVerification.Recommended
         if ( ! empty( $_GET['appnatively_token'] ) && ! is_user_logged_in() ) {
-            $token        = sanitize_text_field( $_GET['appnatively_token'] );
+            $token        = sanitize_text_field( wp_unslash( $_GET['appnatively_token'] ) );
             $hashed_token = hash( 'sha256', $token );
             $users        = get_users(
                 [

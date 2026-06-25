@@ -40,14 +40,12 @@ class CategoryController extends Controller {
                 "per_page"    => "nullable|integer|min:1|max:100",
                 "search"      => "nullable|string",
                 "sort"        => "nullable|string",
-                "fields"      => "nullable|string",
                 "integration" => "required|string",
             ]
         );
 
         $integration       = sanitize_text_field( $request->get_param( "integration" ) );
-        $fields            = appnatively_get_verified_fields( $request->get_param( "fields" ), $this->allowed_fields );
-        $product_paginator = apply_filters( "appnatively_ecommerce_{$integration}_categories", null, $request, $fields );
+        $product_paginator = apply_filters( "appnatively_ecommerce_{$integration}_categories", null, $request, $this->allowed_fields );
 
         if ( ! $product_paginator instanceof CategoryPaginatorDTO ) {
             throw new Exception( esc_html__( "Category paginator not found" ) );
@@ -67,14 +65,12 @@ class CategoryController extends Controller {
         $request->validate(
             [
                 "id"          => "required|numeric",
-                "fields"      => "nullable|string",
                 "integration" => "required|string",
             ]
         );
 
         $integration = sanitize_text_field( $request->get_param( "integration" ) );
-        $fields      = appnatively_get_verified_fields( $request->get_param( "fields" ), $this->allowed_fields );
-        $product     = apply_filters( "appnatively_ecommerce_{$integration}_category", null, $request, $fields );
+        $product     = apply_filters( "appnatively_ecommerce_{$integration}_category", null, $request, $this->allowed_fields );
 
         if ( ! $product instanceof CategoryDTO ) {
             throw new Exception( esc_html__( "Category not found" ) );
