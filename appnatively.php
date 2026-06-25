@@ -8,7 +8,7 @@ use AppNatively\Database\Setup;
 /**
  * Plugin Name:       App Natively
  * Description:       Turn your WordPress site into a native iOS and Android mobile app. Seamlessly sync WooCommerce, FluentCart.
- * Version:           0.0.1
+ * Version:           0.0.2
  * Requires at least: 6.5
  * Requires PHP:      7.4
  * Tested up to:      7.0
