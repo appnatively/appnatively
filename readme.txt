@@ -12,7 +12,7 @@ Turn your WordPress site into a native iOS and Android mobile app. Seamlessly sy
 
 == Description ==
 
-App Natively is a powerful, modern WordPress plugin that bridges your website with the App Natively Studio mobile app builder. It automatically generates high-performance REST API endpoints for your WordPress data, enabling you to build premium, fast, and fully-synchronized native mobile applications.
+App Natively is a powerful, modern plugin for WordPress that bridges your website with the App Natively Studio mobile app builder. It automatically generates high-performance REST API endpoints for your WordPress data, enabling you to build premium, fast, and fully-synchronized native mobile applications.
 
 Whether you run a WooCommerce store or use FluentCart, App Natively integrates deeply into your setup to power mobile cart operations, product catalogs, order tracking, and customer accounts natively.
 
@@ -27,7 +27,7 @@ Whether you run a WooCommerce store or use FluentCart, App Natively integrates d
 Currently, App Natively supports WooCommerce and FluentCart.
 
 = Where can I find the plugin repository? =
-The source code and public repository for this plugin is available on GitHub at https://github.com/appnatively/appnatively.
+The source code and public repository for this plugin is available on GitHub at [App Natively](https://github.com/appnatively/appnatively).
 
 == Screenshots ==
 
