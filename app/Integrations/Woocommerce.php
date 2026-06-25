@@ -63,21 +63,16 @@ class Woocommerce extends Provider {
         // phpcs:ignore WordPress.Security.NonceVerification.Recommended
         if ( ! empty( $_GET['appnatively_token'] ) && ! is_user_logged_in() ) {
             // phpcs:ignore WordPress.Security.NonceVerification.Recommended
-            $token        = sanitize_text_field( wp_unslash( $_GET['appnatively_token'] ) );
-            $hashed_token = hash( 'sha256', $token );
-            $users        = get_users(
-                [
-                    //phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
-                    'meta_key'    => 'appnatively_auth_token',
-                    //phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value
-                    'meta_value'  => $hashed_token,
-                    'number'      => 1,
-                    'count_total' => false,
-                ] 
-            );
+            $token         = sanitize_text_field( wp_unslash( $_GET['appnatively_token'] ) );
+            $hashed_token  = hash( 'sha256', $token );
+            $transient_key = 'appnatively_autologin_' . $hashed_token;
 
-            if ( ! empty( $users ) ) {
-                wp_set_auth_cookie( $users[0]->ID );
+            // One-time-use: read and immediately delete the transient
+            $user_id = get_transient( $transient_key );
+
+            if ( $user_id ) {
+                delete_transient( $transient_key ); // Invalidate immediately — cannot be replayed
+                wp_set_auth_cookie( (int) $user_id );
                 wp_safe_redirect( remove_query_arg( 'appnatively_token' ) );
                 exit;
             }

@@ -14,5 +14,6 @@ Route::group(
         Route::post( '/update-profile', [AuthController::class, 'update_profile'] );
         Route::post( '/update-password', [AuthController::class, 'updatePassword'] );
         Route::get( '/me', [AuthController::class, 'me'] );
+        Route::get( '/autologin-token', [AuthController::class, 'autologin_token'] );
     }
 );

@@ -48,6 +48,10 @@ class AuthController extends Controller {
      * @return array
      */
     public function register( Request $request ): array {
+        if ( ! get_option( 'users_can_register' ) ) {
+            throw new Exception( esc_html__( 'User registration is not allowed on this site.', 'appnatively' ), 403 );
+        }
+
         $request->validate(
             [
                 'email'      => 'required|email|max:255',
@@ -107,6 +111,33 @@ class AuthController extends Controller {
         }
 
         return Response::send( $this->transform_user( $user ) );
+    }
+
+    /**
+     * Generate a short-lived, one-time-use autologin token for WebView checkout.
+     *
+     * This token is separate from the API auth token and is stored as a
+     * transient (expires in 5 minutes). It is deleted immediately after use
+     * in handle_autologin(), so even if it leaks from URL logs it cannot
+     * be replayed.
+     *
+     * @param Request $request
+     * @return array
+     */
+    public function autologin_token( Request $request ): array {
+        $user = $this->get_authenticated_user( $request );
+
+        if ( ! $user ) {
+            throw new Exception( esc_html__( 'Unauthorized', 'appnatively' ), 401 );
+        }
+
+        $token        = bin2hex( random_bytes( 32 ) );
+        $hashed_token = hash( 'sha256', $token );
+
+        // Store as a transient — auto-expires in 5 minutes, one-time use
+        set_transient( 'appnatively_autologin_' . $hashed_token, $user->ID, 5 * MINUTE_IN_SECONDS );
+
+        return Response::send( [ 'autologin_token' => $token ] );
     }
 
     /**
