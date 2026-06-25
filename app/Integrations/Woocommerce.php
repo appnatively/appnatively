@@ -62,11 +62,14 @@ class Woocommerce extends Provider {
     public function handle_autologin(): void {
         // phpcs:ignore WordPress.Security.NonceVerification.Recommended
         if ( ! empty( $_GET['appnatively_token'] ) && ! is_user_logged_in() ) {
+            // phpcs:ignore WordPress.Security.NonceVerification.Recommended
             $token        = sanitize_text_field( wp_unslash( $_GET['appnatively_token'] ) );
             $hashed_token = hash( 'sha256', $token );
             $users        = get_users(
                 [
+                    //phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
                     'meta_key'    => 'appnatively_auth_token',
+                    //phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value
                     'meta_value'  => $hashed_token,
                     'number'      => 1,
                     'count_total' => false,
@@ -96,7 +99,9 @@ class Woocommerce extends Provider {
                 $hashed_token = hash( 'sha256', $token );
                 $users        = get_users(
                     [
+                        //phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
                         'meta_key'    => 'appnatively_auth_token',
+                        //phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value
                         'meta_value'  => $hashed_token,
                         'number'      => 1,
                         'count_total' => false,
@@ -543,7 +548,7 @@ class Woocommerce extends Provider {
             ->find( $id );
 
         if ( ! $post ) {
-            throw new Exception( __( "Product not found.", "appnatively" ), 404 );
+            throw new Exception( esc_html__( "Product not found.", "appnatively" ), 404 );
         }
 
         return $this->map_post_to_product_dto( $post, $fields );
@@ -802,7 +807,7 @@ class Woocommerce extends Provider {
             ->first();
 
         if ( ! $term ) {
-            throw new Exception( __( "Category not found.", "appnatively" ), 404 );
+            throw new Exception( esc_html__( "Category not found.", "appnatively" ), 404 );
         }
 
         return $this->map_term_to_category_dto( $term, $fields );

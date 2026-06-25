@@ -60,7 +60,7 @@ class AuthController extends Controller {
         $email = sanitize_email( $request->get_param( 'email' ) );
 
         if ( email_exists( $email ) ) {
-            throw new Exception( __( 'Email already exists.' ), 400 );
+            throw new Exception( esc_html__( 'Email already exists.' ), 400 );
         }
 
         $username = $email; // Use email as username
@@ -103,7 +103,7 @@ class AuthController extends Controller {
         $user = $this->get_authenticated_user( $request );
 
         if ( ! $user ) {
-            throw new Exception( __( 'Unauthorized' ), 401 );
+            throw new Exception( esc_html__( 'Unauthorized' ), 401 );
         }
 
         return Response::send( $this->transform_user( $user ) );
@@ -165,7 +165,7 @@ class AuthController extends Controller {
         $user = $this->get_authenticated_user( $request );
 
         if ( ! $user ) {
-            throw new Exception( __( 'Unauthorized' ), 401 );
+            throw new Exception( esc_html__( 'Unauthorized' ), 401 );
         }
 
         $request->validate(
@@ -206,7 +206,7 @@ class AuthController extends Controller {
         $user = $this->get_authenticated_user( $request );
 
         if ( ! $user ) {
-            throw new Exception( __( 'Unauthorized' ), 401 );
+            throw new Exception( esc_html__( 'Unauthorized' ), 401 );
         }
 
         $request->validate(
@@ -248,7 +248,9 @@ class AuthController extends Controller {
 
         $users = get_users(
             [
+                //phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
                 'meta_key'    => 'appnatively_auth_token',
+                //phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value
                 'meta_value'  => $hashed_token,
                 'number'      => 1,
                 'count_total' => false,

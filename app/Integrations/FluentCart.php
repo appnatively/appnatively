@@ -112,7 +112,7 @@ class FluentCart extends Provider {
         $product = Product::with( [ 'detail', 'variants' ] )->find( $id );
 
         if ( ! $product || $product->post_status !== 'publish' ) {
-            throw new Exception( __( "Product not found.", "appnatively" ), 404 );
+            throw new Exception( esc_html__( "Product not found.", "appnatively" ), 404 );
         }
 
         return $this->map_to_product_dto( $product, $fields );
@@ -141,7 +141,7 @@ class FluentCart extends Provider {
         ];
 
         $terms            = get_terms( $args );
-        $total_categories = wp_count_terms( 'product-categories', [ 'search' => $search ] );
+        $total_categories = wp_count_terms( 'product-categories' ); //TODO: need to add search
 
         if ( empty( $terms ) || is_wp_error( $terms ) ) {
             return new CategoryPaginatorDTO( $page, $per_page, 0, 0, [] );
@@ -180,7 +180,7 @@ class FluentCart extends Provider {
         $term = get_term( $id, 'product-categories' );
 
         if ( ! $term || is_wp_error( $term ) ) {
-            throw new Exception( __( "Category not found.", "appnatively" ), 404 );
+            throw new Exception( esc_html__( "Category not found.", "appnatively" ), 404 );
         }
 
         return $this->map_to_category_dto( $term, $fields );
