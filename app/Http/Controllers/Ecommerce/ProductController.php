@@ -55,7 +55,7 @@ class ProductController extends Controller {
         $product_paginator = apply_filters( "appnatively_ecommerce_{$integration}_products", null, $request, $this->allowed_fields );
 
         if ( ! $product_paginator instanceof ProductPaginatorDTO ) {
-            throw new Exception( esc_html__( "Products integration not found" ) );
+            throw new Exception( esc_html__( "Products integration not found", 'appnatively' ) );
         }
 
         return Response::send( ["data" => $product_paginator] );
@@ -80,7 +80,7 @@ class ProductController extends Controller {
         $product     = apply_filters( "appnatively_ecommerce_{$integration}_product", null, $request, $this->allowed_fields );
 
         if ( ! $product instanceof ProductDTO ) {
-            throw new Exception( esc_html__( "Product not found" ) );
+            throw new Exception( esc_html__( "Product not found", 'appnatively' ) );
         }
 
         return Response::send(
