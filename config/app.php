@@ -68,7 +68,7 @@ return [
      * Service providers for the admin area of the plugin.
      */
     'admin_providers'             => [
-        MenuServiceProvider::class,
+        // MenuServiceProvider::class,
     ],
 
     /**
