@@ -66,45 +66,56 @@ set -ex
 
 install_wp() {
 
-	if [ -d $WP_CORE_DIR ]; then
-		return;
-	fi
+	if [ ! -d $WP_CORE_DIR ]; then
+		mkdir -p $WP_CORE_DIR
 
-	mkdir -p $WP_CORE_DIR
-
-	if [[ $WP_VERSION == 'nightly' || $WP_VERSION == 'trunk' ]]; then
-		mkdir -p $TMPDIR/wordpress-trunk
-		rm -rf $TMPDIR/wordpress-trunk/*
-        check_svn_installed
-		svn export --quiet https://core.svn.wordpress.org/trunk $TMPDIR/wordpress-trunk/wordpress
-		mv $TMPDIR/wordpress-trunk/wordpress/* $WP_CORE_DIR
-	else
-		if [ $WP_VERSION == 'latest' ]; then
-			local ARCHIVE_NAME='latest'
-		elif [[ $WP_VERSION =~ [0-9]+\.[0-9]+ ]]; then
-			# https serves multiple offers, whereas http serves single.
-			download https://api.wordpress.org/core/version-check/1.7/ $TMPDIR/wp-latest.json
-			if [[ $WP_VERSION =~ [0-9]+\.[0-9]+\.[0] ]]; then
-				# version x.x.0 means the first release of the major version, so strip off the .0 and download version x.x
-				LATEST_VERSION=${WP_VERSION%??}
-			else
-				# otherwise, scan the releases and get the most up to date minor version of the major release
-				local VERSION_ESCAPED=`echo $WP_VERSION | sed 's/\./\\\\./g'`
-				LATEST_VERSION=$(grep -o '"version":"'$VERSION_ESCAPED'[^"]*' $TMPDIR/wp-latest.json | sed 's/"version":"//' | head -1)
-			fi
-			if [[ -z "$LATEST_VERSION" ]]; then
-				local ARCHIVE_NAME="wordpress-$WP_VERSION"
-			else
-				local ARCHIVE_NAME="wordpress-$LATEST_VERSION"
-			fi
+		if [[ $WP_VERSION == 'nightly' || $WP_VERSION == 'trunk' ]]; then
+			mkdir -p $TMPDIR/wordpress-trunk
+			rm -rf $TMPDIR/wordpress-trunk/*
+			check_svn_installed
+			svn export --quiet https://core.svn.wordpress.org/trunk $TMPDIR/wordpress-trunk/wordpress
+			mv $TMPDIR/wordpress-trunk/wordpress/* $WP_CORE_DIR
 		else
-			local ARCHIVE_NAME="wordpress-$WP_VERSION"
+			if [ $WP_VERSION == 'latest' ]; then
+				local ARCHIVE_NAME='latest'
+			elif [[ $WP_VERSION =~ [0-9]+\.[0-9]+ ]]; then
+				# https serves multiple offers, whereas http serves single.
+				download https://api.wordpress.org/core/version-check/1.7/ $TMPDIR/wp-latest.json
+				if [[ $WP_VERSION =~ [0-9]+\.[0-9]+\.[0] ]]; then
+					# version x.x.0 means the first release of the major version, so strip off the .0 and download version x.x
+					LATEST_VERSION=${WP_VERSION%??}
+				else
+					# otherwise, scan the releases and get the most up to date minor version of the major release
+					local VERSION_ESCAPED=`echo $WP_VERSION | sed 's/\./\\\\./g'`
+					LATEST_VERSION=$(grep -o '"version":"'$VERSION_ESCAPED'[^"]*' $TMPDIR/wp-latest.json | sed 's/"version":"//' | head -1)
+				fi
+				if [[ -z "$LATEST_VERSION" ]]; then
+					local ARCHIVE_NAME="wordpress-$WP_VERSION"
+				else
+					local ARCHIVE_NAME="wordpress-$LATEST_VERSION"
+				fi
+			else
+				local ARCHIVE_NAME="wordpress-$WP_VERSION"
+			fi
+			download https://wordpress.org/${ARCHIVE_NAME}.tar.gz  $TMPDIR/wordpress.tar.gz
+			tar --strip-components=1 -zxmf $TMPDIR/wordpress.tar.gz -C $WP_CORE_DIR
 		fi
-		download https://wordpress.org/${ARCHIVE_NAME}.tar.gz  $TMPDIR/wordpress.tar.gz
-		tar --strip-components=1 -zxmf $TMPDIR/wordpress.tar.gz -C $WP_CORE_DIR
+
+		download https://raw.githubusercontent.com/markoheijnen/wp-mysqli/master/db.php $WP_CORE_DIR/wp-content/db.php
 	fi
 
-	download https://raw.githubusercontent.com/markoheijnen/wp-mysqli/master/db.php $WP_CORE_DIR/wp-content/db.php
+	# Download and extract fluentform and formgent plugins for testing
+	mkdir -p "$WP_CORE_DIR"/wp-content/plugins
+	
+	if [ ! -d "$WP_CORE_DIR"/wp-content/plugins/fluentform ]; then
+		download https://downloads.wordpress.org/plugin/fluentform.zip $TMPDIR/fluentform.zip
+		unzip -q $TMPDIR/fluentform.zip -d "$WP_CORE_DIR"/wp-content/plugins/
+	fi
+	
+	if [ ! -d "$WP_CORE_DIR"/wp-content/plugins/formgent ]; then
+		download https://downloads.wordpress.org/plugin/formgent.zip $TMPDIR/formgent.zip
+		unzip -q $TMPDIR/formgent.zip -d "$WP_CORE_DIR"/wp-content/plugins/
+	fi
 }
 
 install_test_suite() {

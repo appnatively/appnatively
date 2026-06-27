@@ -20,18 +20,12 @@ class AuthController extends Controller {
     public function login( Request $request ): array {
         $request->validate(
             [
-                'email'    => 'required|email',
-                'password' => 'required|string',
-            ] 
+                'email'    => 'required|email|max:255',
+                'password' => 'required|string|max:255',
+            ]
         );
 
-        $credentials = [
-            'user_login'    => sanitize_email( $request->get_param( 'email' ) ),
-            'user_password' => $request->get_param( 'password' ),
-            'remember'      => true,
-        ];
-
-        $user = wp_authenticate( $credentials['user_login'], $credentials['user_password'] );
+        $user = wp_authenticate( sanitize_email( $request->get_param( 'email' ) ), $request->get_param( 'password' ) );
 
         if ( is_wp_error( $user ) ) {
             throw new Exception( "Invalid email or password", 401 );
@@ -54,37 +48,41 @@ class AuthController extends Controller {
      * @return array
      */
     public function register( Request $request ): array {
+        if ( ! get_option( 'users_can_register' ) ) {
+            throw new Exception( esc_html__( 'User registration is not allowed on this site.', 'appnatively' ), 403 );
+        }
+
         $request->validate(
             [
-                'email'      => 'required|email',
-                'password'   => 'required|string|min:6',
-                'first_name' => 'required|string|min:3',
-                'last_name'  => 'required|string',
+                'email'      => 'required|email|max:255',
+                'password'   => 'required|string|min:6|max:255',
+                'first_name' => 'required|string|min:3|max:255',
+                'last_name'  => 'required|string|max:255',
             ] 
         );
 
-        $email      = sanitize_email( $request->get_param( 'email' ) );
-        $password   = $request->get_param( 'password' );
-        $first_name = sanitize_text_field( $request->get_param( 'first_name' ) );
-        $last_name  = sanitize_text_field( $request->get_param( 'last_name' ) );
+        $email = sanitize_email( $request->get_param( 'email' ) );
 
         if ( email_exists( $email ) ) {
-            throw new Exception( __( 'Email already exists.' ), 400 );
+            throw new Exception( esc_html__( 'Email already exists.', 'appnatively' ), 400 );
         }
 
         $username = $email; // Use email as username
-        $user_id  = wp_create_user( $username, $password, $email );
+        $user_id  = wp_create_user( $username, $request->get_param( 'password' ), $email );
 
         if ( is_wp_error( $user_id ) ) {
-            throw new Exception( $user_id->get_error_message(), 400 );
+            throw new Exception( esc_html( $user_id->get_error_message() ), 400 );
         }
+
+        $first_name = sanitize_text_field( $request->get_param( 'first_name' ) );
+        $last_name  = sanitize_text_field( $request->get_param( 'last_name' ) );
 
         wp_update_user(
             [
                 'ID'           => $user_id,
                 'first_name'   => $first_name,
                 'last_name'    => $last_name,
-                'display_name' => trim( "$first_name $last_name" ),
+                'display_name' => trim( $first_name . ' ' . $last_name ),
             ] 
         );
 
@@ -109,10 +107,37 @@ class AuthController extends Controller {
         $user = $this->get_authenticated_user( $request );
 
         if ( ! $user ) {
-            throw new Exception( __( 'Unauthorized' ), 401 );
+            throw new Exception( esc_html__( 'Unauthorized', 'appnatively' ), 401 );
         }
 
         return Response::send( $this->transform_user( $user ) );
+    }
+
+    /**
+     * Generate a short-lived, one-time-use autologin token for WebView checkout.
+     *
+     * This token is separate from the API auth token and is stored as a
+     * transient (expires in 5 minutes). It is deleted immediately after use
+     * in handle_autologin(), so even if it leaks from URL logs it cannot
+     * be replayed.
+     *
+     * @param Request $request
+     * @return array
+     */
+    public function autologin_token( Request $request ): array {
+        $user = $this->get_authenticated_user( $request );
+
+        if ( ! $user ) {
+            throw new Exception( esc_html__( 'Unauthorized', 'appnatively' ), 401 );
+        }
+
+        $token        = bin2hex( random_bytes( 32 ) );
+        $hashed_token = hash( 'sha256', $token );
+
+        // Store as a transient — auto-expires in 5 minutes, one-time use
+        set_transient( 'appnatively_autologin_' . $hashed_token, $user->ID, 5 * MINUTE_IN_SECONDS );
+
+        return Response::send( [ 'autologin_token' => $token ] );
     }
 
     /**
@@ -138,15 +163,14 @@ class AuthController extends Controller {
      * @param Request $request
      * @return array
      */
-    public function forgotPassword( Request $request ): array {
+    public function forgot_password( Request $request ): array {
         $request->validate(
             [
-                'email' => 'required|email',
+                'email' => 'required|email|max:255',
             ] 
         );
 
-        $email = sanitize_email( $request->get_param( 'email' ) );
-        $user  = get_user_by( 'email', $email );
+        $user = get_user_by( 'email', sanitize_email( $request->get_param( 'email' ) ) );
 
         if ( ! $user ) {
             // Don't reveal if user exists for security, just return success
@@ -156,7 +180,7 @@ class AuthController extends Controller {
         $errors = retrieve_password( $user->user_login );
 
         if ( is_wp_error( $errors ) ) {
-            throw new Exception( $errors->get_error_message(), 400 );
+            throw new Exception( esc_html( $errors->get_error_message() ), 400 );
         }
 
         return Response::send( [ 'success' => true ] );
@@ -168,18 +192,18 @@ class AuthController extends Controller {
      * @param Request $request
      * @return array
      */
-    public function updateProfile( Request $request ): array {
+    public function update_profile( Request $request ): array {
         $user = $this->get_authenticated_user( $request );
 
         if ( ! $user ) {
-            throw new Exception( __( 'Unauthorized' ), 401 );
+            throw new Exception( esc_html__( 'Unauthorized', 'appnatively' ), 401 );
         }
 
         $request->validate(
             [
-                'firstName' => 'required|string',
-                'lastName'  => 'nullable|string',
-                'phone'     => 'nullable|string',
+                'firstName' => 'required|string|min:3|max:255',
+                'lastName'  => 'nullable|string|max:255',
+                'phone'     => 'nullable|string|max:255',
             ] 
         );
 
@@ -209,11 +233,11 @@ class AuthController extends Controller {
      * @param Request $request
      * @return array
      */
-    public function updatePassword( Request $request ): array {
+    public function update_password( Request $request ): array {
         $user = $this->get_authenticated_user( $request );
 
         if ( ! $user ) {
-            throw new Exception( __( 'Unauthorized' ), 401 );
+            throw new Exception( esc_html__( 'Unauthorized', 'appnatively' ), 401 );
         }
 
         $request->validate(
@@ -255,7 +279,9 @@ class AuthController extends Controller {
 
         $users = get_users(
             [
+                //phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
                 'meta_key'    => 'appnatively_auth_token',
+                //phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value
                 'meta_value'  => $hashed_token,
                 'number'      => 1,
                 'count_total' => false,

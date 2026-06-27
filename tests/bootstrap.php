@@ -29,6 +29,28 @@ require_once $_tests_dir . '/includes/functions.php';
  * Manually load the plugin being tested.
  */
 function _manually_load_plugin() {
+    $wp_core_dir = getenv( 'WP_CORE_DIR' );
+    if ( ! $wp_core_dir ) {
+        $wp_core_dir = rtrim( sys_get_temp_dir(), '/\\' ) . '/wordpress';
+    }
+    $wp_plugins_dir = $wp_core_dir . '/wp-content/plugins';
+
+    // Load FluentForm
+    if ( file_exists( $wp_plugins_dir . '/fluentform/fluentform.php' ) ) {
+        require_once $wp_plugins_dir . '/fluentform/fluentform.php';
+        if ( class_exists( '\FluentForm\Database\DBMigrator' ) ) {
+            \FluentForm\Database\DBMigrator::run();
+        }
+    }
+
+    // Load FormGent
+    if ( file_exists( $wp_plugins_dir . '/formgent/formgent.php' ) ) {
+        require_once $wp_plugins_dir . '/formgent/formgent.php';
+        if ( class_exists( '\FormGent\Database\Setup' ) ) {
+            ( new \FormGent\Database\Setup() )->execute();
+        }
+    }
+
     require dirname( __DIR__ ) . '/appnatively.php';
 
     // Reset and create database tables for tests

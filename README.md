@@ -1,11 +1,27 @@
-<p align="center">
-<a href="https://packagist.org/packages/wpmvc/wpmvc"><img src="https://img.shields.io/packagist/dt/wpmvc/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/wpmvc/wpmvc"><img src="https://img.shields.io/packagist/v/wpmvc/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/wpmvc/wpmvc"><img src="https://img.shields.io/packagist/l/wpmvc/framework" alt="License"></a>
-</p>
+## Installation
 
-# WpMVC
+1. Clone Github Repository
 
-The core foundation for building powerful and maintainable WordPress plugins. It integrates all WpMVC components—routing, database, request validation, helpers, and more—into a cohesive, modern development experience inspired by Laravel.
+   ```sh
+   git clone https://github.com/appnatively/appnatively.git
+   ```
 
-For a full list of available features and detailed usage guides, please refer to the [WpMVC Documentation](https://wpmvc.com).
+2. Install composer dependencies
+   ```sh
+   composer setup
+   ```
+
+3. Install npm dependencies (Node v20.10.x)
+   ```sh
+   pnpm install
+   ```
+
+4. Compile Scripts
+   ```sh
+   pnpm start
+   ```
+
+4. Build plugin
+   ```sh
+   pnpm build
+   ```

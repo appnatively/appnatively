@@ -47,17 +47,15 @@ class ProductController extends Controller {
                 "per_page"    => "nullable|integer|min:1|max:100",
                 "search"      => "nullable|string",
                 "sort"        => "nullable|string",
-                "fields"      => "nullable|string",
                 "integration" => "required|string",
             ]
         );
 
         $integration       = sanitize_text_field( $request->get_param( "integration" ) );
-        $fields            = appnatively_get_verified_fields( $request->get_param( "fields" ), $this->allowed_fields );
-        $product_paginator = apply_filters( "appnatively_ecommerce_{$integration}_products", null, $request, $fields );
+        $product_paginator = apply_filters( "appnatively_ecommerce_{$integration}_products", null, $request, $this->allowed_fields );
 
         if ( ! $product_paginator instanceof ProductPaginatorDTO ) {
-            throw new Exception( esc_html__( "Products integration not found" ) );
+            throw new Exception( esc_html__( "Products integration not found", 'appnatively' ) );
         }
 
         return Response::send( ["data" => $product_paginator] );
@@ -74,17 +72,15 @@ class ProductController extends Controller {
         $request->validate(
             [
                 "id"          => "required|numeric",
-                "fields"      => "nullable|string",
                 "integration" => "required|string",
             ]
         );
 
         $integration = sanitize_text_field( $request->get_param( "integration" ) );
-        $fields      = appnatively_get_verified_fields( $request->get_param( "fields" ), $this->allowed_fields );
-        $product     = apply_filters( "appnatively_ecommerce_{$integration}_product", null, $request, $fields );
+        $product     = apply_filters( "appnatively_ecommerce_{$integration}_product", null, $request, $this->allowed_fields );
 
         if ( ! $product instanceof ProductDTO ) {
-            throw new Exception( esc_html__( "Product not found" ) );
+            throw new Exception( esc_html__( "Product not found", 'appnatively' ) );
         }
 
         return Response::send(

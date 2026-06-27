@@ -37,8 +37,8 @@ class OrderController extends Controller {
             ]
         );
 
-        $integration  = sanitize_text_field( $request->get_param( "integration" ) );
-        
+        $integration = sanitize_text_field( $request->get_param( "integration" ) );
+
         // Apply filter to get orders from specific integration (e.g. WooCommerce)
         $order_paginator = apply_filters( "appnatively_ecommerce_{$integration}_orders_get", null, $request );
 
@@ -66,7 +66,7 @@ class OrderController extends Controller {
 
         $integration = sanitize_text_field( $request->get_param( "integration" ) );
         $id          = $request->get_param( "id" );
-        
+
         // Apply filter to get order from specific integration (e.g. WooCommerce)
         $order = apply_filters( "appnatively_ecommerce_{$integration}_order_get", null, $id, $request );
 
@@ -77,4 +77,3 @@ class OrderController extends Controller {
         return Response::send( [ "data" => $order ] );
     }
 }
-

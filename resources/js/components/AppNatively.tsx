@@ -1,5 +1,5 @@
 export function AppNatively() {
-	const platformUrl = 'https://local.appnatively.com/studio';
+	const platformUrl = 'https://appnatively.com/studio';
 	const embedUrl = `${ platformUrl }?source=wordpress`;
 
 	return (

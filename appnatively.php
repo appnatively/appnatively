@@ -7,13 +7,13 @@ use AppNatively\Database\Setup;
 
 /**
  * Plugin Name:       App Natively
- * Description:       This plugin is build with WpMVC framework
- * Version:           0.0.1
+ * Description:       Turn your WordPress site into a native iOS and Android mobile app. Seamlessly sync WooCommerce, FluentCart.
+ * Version:           0.0.2
  * Requires at least: 6.5
  * Requires PHP:      7.4
- * Tested up to:      6.9
- * Author:            WpMVC
- * Author URI:        http://github.com/wpmvc
+ * Tested up to:      7.0
+ * Author:            Crafium
+ * Author URI:        https://crafium.com
  * License:           GPL v3 or later
  * License URI:       http://www.gnu.org/licenses/gpl-3.0.html
  * Text Domain:       appnatively
