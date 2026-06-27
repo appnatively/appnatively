@@ -6,6 +6,15 @@ use AppNatively\App\Http\Middleware\EnsureIsUserAdmin;
 use AppNatively\App\Integrations\FluentCart;
 use AppNatively\App\Integrations\Forms\FluentForm;
 use AppNatively\App\Integrations\Forms\FormGent;
+use AppNatively\App\Integrations\Forms\Forminator;
+use AppNatively\App\Integrations\Forms\ContactForm7;
+use AppNatively\App\Integrations\Forms\EverestForms;
+use AppNatively\App\Integrations\Forms\Formidable;
+use AppNatively\App\Integrations\Forms\GutenaForms;
+use AppNatively\App\Integrations\Forms\HappyForms;
+use AppNatively\App\Integrations\Forms\SureForms;
+use AppNatively\App\Integrations\Forms\WeForms;
+use AppNatively\App\Integrations\Forms\WPForms;
 use AppNatively\App\Providers\Admin\MenuServiceProvider;
 use AppNatively\App\Models\Comment;
 use AppNatively\App\Models\Post;
@@ -63,7 +72,16 @@ return [
 
         // Form Integrations
         FormGent::class,
+        Forminator::class,
+        ContactForm7::class,
+        Formidable::class,
         FluentForm::class,
+        SureForms::class,
+        WeForms::class,
+        WPForms::class,
+        EverestForms::class,
+        HappyForms::class,
+        GutenaForms::class,
     ],
 
     /**

@@ -36,14 +36,23 @@ class FluentForm extends Form {
             'radio'         => 'input_radio',
             'checkbox'      => 'input_checkbox',
             'single_select' => 'select',
-            'range'         => 'rangeslider',
             'rating'        => 'ratings',
-            'switch'        => '',
+            'date_time_picker' => 'input_date',
             'password'      => 'input_password',
+            'gdpr_agreement' => 'gdpr',
         ];
 
         $key = array_search( $type, $map, true );
         return false !== $key ? $key : null;
+    }
+
+    private function get_form_fields_array( array $form ): array {
+        $form_fields = $form['form_fields'] ?? '';
+        if ( is_array( $form_fields ) ) {
+            return $form_fields;
+        }
+        $decoded = json_decode( $form_fields, true );
+        return is_array( $decoded ) ? $decoded : [];
     }
 
     private function get_base_rules( array $field ): array {
@@ -125,12 +134,19 @@ class FluentForm extends Form {
         return $this->get_base_rules( $field );
     }
 
-    protected function get_validation_rules( array $form ) : array {
-        if ( empty( $form['form_fields'] ) ) {
-            return [];
-        }
+    private function get_date_time_picker_rules( array $field ): array {
+        return $this->get_base_rules( $field );
+    }
 
-        $form_fields = json_decode( $form['form_fields'], true );
+    private function get_gdpr_rules( array $field ): array {
+        $rules   = $this->get_base_rules( $field );
+        $rules[] = 'integer';
+        $rules[] = 'in:0,1';
+        return $rules;
+    }
+
+    protected function get_validation_rules( array $form ) : array {
+        $form_fields = $this->get_form_fields_array( $form );
         if ( empty( $form_fields['fields'] ) ) {
             return [];
         }
@@ -186,6 +202,12 @@ class FluentForm extends Form {
                 case 'password':
                     $field_rules = $this->get_password_rules( $field );
                     break;
+                case 'date_time_picker':
+                    $field_rules = $this->get_date_time_picker_rules( $field );
+                    break;
+                case 'gdpr':
+                    $field_rules = $this->get_gdpr_rules( $field );
+                    break;
                 default:
                     continue 2;
             }
@@ -196,6 +218,80 @@ class FluentForm extends Form {
         }
 
         return $rules;
+    }
+
+    protected function get_validation_messages( array $form ): array {
+        $form_fields = $this->get_form_fields_array( $form );
+        if ( empty( $form_fields['fields'] ) ) {
+            return [];
+        }
+
+        $flattened_fields = $this->extract_fluentform_fields( $form_fields['fields'] );
+        $default_messages = [];
+        if ( class_exists( '\FluentForm\App\Helpers\Helper' ) && method_exists( '\FluentForm\App\Helpers\Helper', 'getAllGlobalDefaultMessages' ) ) {
+            $default_messages = \FluentForm\App\Helpers\Helper::getAllGlobalDefaultMessages();
+        }
+        $messages = [];
+
+        $resolve_message = function ( array $rule, string $rule_key, string $fallback ) use ( $default_messages ): string {
+            if ( ! empty( $rule['global'] ) ) {
+                return $rule['global_message'] ?? ( $default_messages[ $rule_key ] ?? $fallback );
+            }
+            return $rule['message'] ?? ( $default_messages[ $rule_key ] ?? $fallback );
+        };
+
+        foreach ( $flattened_fields as $field ) {
+            $field_name = $field['attributes']['name'] ?? $field['name'] ?? '';
+            if ( ! $field_name ) {
+                continue;
+            }
+
+            $element_type = $field['element'] ?? '';
+            $mapped_type  = $this->map_field_type( $element_type );
+            if ( ! $mapped_type ) {
+                continue;
+            }
+
+            $validation_rules = $field['settings']['validation_rules'] ?? [];
+
+            $is_required = ! empty( $validation_rules['required']['value'] );
+            if ( $is_required ) {
+                $messages[ "{$field_name}.required" ] = $resolve_message( $validation_rules['required'], 'required', 'This field is required' );
+            }
+
+            switch ( $mapped_type ) {
+                case 'email':
+                    if ( ! empty( $validation_rules['email']['value'] ) ) {
+                        $messages[ "{$field_name}.email" ] = $resolve_message( $validation_rules['email'], 'email', 'This field must contain a valid email' );
+                    }
+                    break;
+                case 'url':
+                    $messages[ "{$field_name}.url" ] = $default_messages['url'] ?? 'This field must contain a valid url';
+                    break;
+                case 'number':
+                    $messages[ "{$field_name}.numeric" ] = $default_messages['numeric'] ?? 'This field must contain numeric value';
+                    if ( ! empty( $validation_rules['min']['value'] ) ) {
+                        $messages[ "{$field_name}.min" ] = $resolve_message( $validation_rules['min'], 'min', 'Validation fails for minimum value' );
+                    }
+                    if ( ! empty( $validation_rules['max']['value'] ) ) {
+                        $messages[ "{$field_name}.max" ] = $resolve_message( $validation_rules['max'], 'max', 'Validation fails for maximum value' );
+                    }
+                    break;
+                case 'gdpr':
+                    $gdpr_msg = $default_messages['required'] ?? 'This field is required';
+                    $messages[ "{$field_name}.integer" ] = $gdpr_msg;
+                    $messages[ "{$field_name}.in" ] = $gdpr_msg;
+                    break;
+                case 'rating':
+                    $messages[ "{$field_name}.integer" ] = $default_messages['numeric'] ?? 'This field must contain numeric value';
+                    if ( ! empty( $validation_rules['max']['value'] ) ) {
+                        $messages[ "{$field_name}.max" ] = $resolve_message( $validation_rules['max'], 'max', 'Validation fails for maximum value' );
+                    }
+                    break;
+            }
+        }
+
+        return $messages;
     }
 
     private function extract_fluentform_fields( array $elements ) : array {
@@ -220,8 +316,26 @@ class FluentForm extends Form {
         return $fields;
     }
 
+    public function form_submit( Request $request ) {
+        $form = $this->get_form( $request->get_param( "form_id" ) );
+
+        if ( ! $form ) {
+            throw new \Exception( __( 'Form not found', 'appnatively' ) );
+        }
+
+        $validation = $request->make(
+            $request,
+            $this->get_validation_rules( $form ),
+            $this->get_validation_messages( $form )
+        );
+        $validation->throw_if_fails();
+        $request->errors = $validation->errors();
+
+        $this->submit( $request, $form );
+    }
+
     protected function submit( Request $request, array $form ) {
-        $form_fields = json_decode( $form['form_fields'], true );
+        $form_fields = $this->get_form_fields_array( $form );
         if ( empty( $form_fields['fields'] ) ) {
             return;
         }
@@ -238,7 +352,10 @@ class FluentForm extends Form {
             $field_name = $field['attributes']['name'] ?? $field['name'] ?? '';
             if ( $field_name ) {
                 $value = $request->get_param( $field_name );
-                if ( $value !== null ) {
+                if ( $element_type === 'gdpr_agreement' && $value !== null ) {
+                    $value = (int) $value ? 'on' : 'off';
+                }
+                if ( $value !== null && $value !== '' && $value !== [] ) {
                     $form_data[$field_name] = $value;
                 }
             }

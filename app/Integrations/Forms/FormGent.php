@@ -25,6 +25,7 @@ class FormGent extends Form {
     }
 
     private function map_field_type( string $type ) {
+        // appnatively => formgent
         $map = [
             'text'          => 'text',
             'number'        => 'number',
@@ -35,8 +36,8 @@ class FormGent extends Form {
             'single_select' => 'dropdown',
             'range'         => 'range-slider',
             'rating'        => 'rating',
-            'switch'        => 'gdpr', //TODO: checkbox
-            'password'      => 'password',
+            'date_time_picker' => 'date-picker',
+            'gdpr'             => 'gdpr',
         ];
 
         $key = array_search( $type, $map, true );
@@ -51,16 +52,16 @@ class FormGent extends Form {
         return $rules;
     }
 
-    private function get_password_rules( array $field ): array {
-        $rules = [ 'string' ];
-        if ( ! empty( $field['character_limit'] ) && ! empty( $field['limit'] ) ) {
-            $rules[] = 'max:' . absint( $field['limit'] );
-        }
-        if ( ! empty( $field['limit_min'] ) && ! empty( $field['min'] ) ) {
-            $rules[] = 'min:' . absint( $field['min'] );
-        }
-        return $rules;
-    }
+    // private function get_password_rules( array $field ): array {
+    //     $rules = [ 'string' ];
+    //     if ( ! empty( $field['character_limit'] ) && ! empty( $field['limit'] ) ) {
+    //         $rules[] = 'max:' . absint( $field['limit'] );
+    //     }
+    //     if ( ! empty( $field['limit_min'] ) && ! empty( $field['min'] ) ) {
+    //         $rules[] = 'min:' . absint( $field['min'] );
+    //     }
+    //     return $rules;
+    // }
 
     private function get_email_rules( array $field ): array {
         $rules = [ 'string', 'email' ];
@@ -133,7 +134,11 @@ class FormGent extends Form {
         return $rules;
     }
 
-    private function get_switch_rules( array $field ): array {
+    private function get_date_time_picker_rules( array $field ): array {
+        return [ 'string' ];
+    }
+
+    private function get_gdpr_rules( array $field ): array {
         return [ 'integer', 'in:0,1' ];
     }
 
@@ -188,11 +193,11 @@ class FormGent extends Form {
                 case 'rating':
                     $field_rules = $this->get_rating_rules( $field );
                     break;
-                case 'switch':
-                    $field_rules = $this->get_switch_rules( $field );
+                case 'date_time_picker':
+                    $field_rules = $this->get_date_time_picker_rules( $field );
                     break;
-                case 'password':
-                    $field_rules = $this->get_password_rules( $field );
+                case 'gdpr':
+                    $field_rules = $this->get_gdpr_rules( $field );
                     break;
                 default:
                     continue 2;
@@ -210,6 +215,120 @@ class FormGent extends Form {
         return $rules;
     }
 
+    protected function get_validation_messages( array $form ): array {
+        if ( empty( $form ) ) {
+            return [];
+        }
+
+        $form_object        = (object) $form;
+        $fields             = formgent_get_form_fields( $form_object );
+        $validation_messages = formgent_get_setting( 'validation_messages', [] );
+        $messages           = [];
+
+        foreach ( $fields as $field ) {
+            if ( empty( $field['name'] ) || empty( $field['field_type'] ) ) {
+                continue;
+            }
+
+            $mapped_type = $this->map_field_type( $field['field_type'] );
+            if ( ! $mapped_type ) {
+                continue;
+            }
+
+            $field_name = $field['name'];
+
+            if ( isset( $field['required'] ) && $field['required'] ) {
+                $messages[ "{$field_name}.required" ] = $validation_messages['required'] ?? 'This field is required';
+            }
+
+            switch ( $mapped_type ) {
+                case 'email':
+                    $messages[ "{$field_name}.email" ] = $validation_messages['email'] ?? 'This field must contain a valid email';
+                    break;
+                case 'url':
+                    $messages[ "{$field_name}.url" ] = $validation_messages['url'] ?? 'Please enter a valid URL';
+                    break;
+                case 'number':
+                    $messages[ "{$field_name}.numeric" ] = $validation_messages['number'] ?? 'This field must contain numeric value';
+                    if ( isset( $field['min_value'] ) && $field['min_value'] !== '' ) {
+                        $min_msg = str_replace( '{limit}', $field['min_value'], $validation_messages['min'] ?? 'This value is below the minimum {limit}' );
+                        $messages[ "{$field_name}.min" ] = $min_msg;
+                    }
+                    if ( isset( $field['max_value'] ) && $field['max_value'] !== '' ) {
+                        $max_msg = str_replace( '{limit}', $field['max_value'], $validation_messages['max'] ?? 'This value exceeds the maximum {limit}' );
+                        $messages[ "{$field_name}.max" ] = $max_msg;
+                    }
+                    break;
+                case 'gdpr':
+                    $gdpr_msg = $validation_messages['gdpr'] ?? 'You must agree to proceed';
+                    $messages[ "{$field_name}.integer" ] = $gdpr_msg;
+                    $messages[ "{$field_name}.in" ] = $gdpr_msg;
+                    break;
+                case 'rating':
+                    $messages[ "{$field_name}.integer" ] = $validation_messages['number'] ?? 'This field must contain numeric value';
+                    if ( ! empty( $field['rating_limit'] ) ) {
+                        $max_msg = str_replace( '{limit}', $field['rating_limit'], $validation_messages['max'] ?? 'This value exceeds the maximum {limit}' );
+                        $messages[ "{$field_name}.max" ] = $max_msg;
+                    }
+                    break;
+            }
+        }
+
+        return $messages;
+    }
+
+    public function form_submit( Request $request ) {
+        $form = $this->get_form( $request->get_param( "form_id" ) );
+
+        if ( ! $form ) {
+            throw new \Exception( __( 'Form not found', 'appnatively' ) );
+        }
+
+        $form_object = (object) $form;
+        $fields      = formgent_get_form_fields( $form_object );
+
+        foreach ( $fields as $field ) {
+            if ( empty( $field['name'] ) || empty( $field['field_type'] ) ) {
+                continue;
+            }
+
+            $type        = $field['field_type'];
+            $mapped_type = $this->map_field_type( $type );
+            if ( ! $mapped_type ) {
+                continue;
+            }
+
+            $field_name = $field['name'];
+            $value      = $request->get_param( $field_name );
+
+            if ( $value === null ) {
+                continue;
+            }
+
+            if ( $mapped_type === 'checkbox' && is_array( $value ) ) {
+                $request->set_param( $field_name, ! empty( $value ) ? array_combine( $value, $value ) : [] );
+            }
+
+            if ( $mapped_type === 'range' && is_array( $value ) ) {
+                $request->set_param( $field_name, isset( $value['max'] ) && $value['max'] !== '' ? (int) $value['max'] : 0 );
+            }
+
+            if ( $mapped_type === 'gdpr' ) {
+                $request->set_param( $field_name, (int) $value );
+            }
+        }
+
+        $validation = $request->make(
+            $request,
+            $this->get_validation_rules( $form ),
+            $this->get_validation_messages( $form )
+        );
+        $validation->throw_if_fails();
+        $request->errors = $validation->errors();
+
+        $this->submit( $request, $form );
+    }
+
     protected function submit( Request $request, array $form ) {
         if ( empty( $form ) ) {
             return;
@@ -217,7 +336,6 @@ class FormGent extends Form {
 
         $form_id = (int) ( isset( $form['id'] ) ? $form['id'] : ( isset( $form['ID'] ) ? $form['ID'] : 0 ) );
 
-        // Create ResponseDTO
         $response_dto = new \FormGent\App\DTO\ResponseDTO();
         $response_dto->set_status( \FormGent\App\EnumeratedList\ResponseStatus::PUBLISH )
             ->set_is_completed( 1 )
@@ -245,7 +363,6 @@ class FormGent extends Form {
         $response_repository = formgent_response_repository();
         $response_id         = $response_repository->create( $response_dto );
 
-        // Parse form fields and construct AnswerDTO instances
         $form_object = (object) $form;
         $fields      = formgent_get_form_fields( $form_object );
         $field_dtos  = [];
@@ -255,8 +372,9 @@ class FormGent extends Form {
                 continue;
             }
 
-            $type = $field['field_type'];
-            if ( ! $this->map_field_type( $type ) ) {
+            $type        = $field['field_type'];
+            $mapped_type = $this->map_field_type( $type );
+            if ( ! $mapped_type ) {
                 continue;
             }
 
@@ -279,7 +397,6 @@ class FormGent extends Form {
             $answer_repository->creates( $response_id, $field_dtos );
         }
 
-        // Trigger FormGent submission hooks so email notifications and integrations run
         do_action( "formgent_after_create_form_response", $response_id, $form_object, $request );
     }
 }

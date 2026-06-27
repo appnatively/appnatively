@@ -30,9 +30,45 @@ class FormGentTest extends \WP_UnitTestCase {
         }
 
         $post_content = '
-<!-- wp:formgent/text {"name":"first_name","required":true,"character_limit":true,"limit":50} /-->
-<!-- wp:formgent/email {"name":"email","required":true} /-->
-<!-- wp:formgent/file-upload {"name":"unsupported"} /-->
+<!-- wp:formgent/text {"id":"X6iDs9UygXoi","name":"full_name"} /-->
+
+<!-- wp:formgent/text {"id":"f1PR7nP-Dq3F","name":"full_name-1","required":true} /-->
+
+<!-- wp:formgent/email {"id":"eat_0vnQlL4y"} /-->
+
+<!-- wp:formgent/email {"id":"PFCDBQYJJYpX","name":"email-1","required":true} /-->
+
+<!-- wp:formgent/number {"id":"QA1J8l_hryr7"} /-->
+
+<!-- wp:formgent/number {"id":"JKyYwgCc7MVc","name":"number-1","required":true} /-->
+
+<!-- wp:formgent/website {"id":"Ejh4esjqMNGx"} /-->
+
+<!-- wp:formgent/website {"id":"-IMAkkAeOYKC","name":"website-1","required":true} /-->
+
+<!-- wp:formgent/single-choice {"id":"L1AvyM6ciPpo","name":"radio"} /-->
+
+<!-- wp:formgent/single-choice {"id":"MmAqLwz-q-K3","name":"radio-1","required":true} /-->
+
+<!-- wp:formgent/dropdown {"id":"pVq-X9chFLyx","name":"single_select","options":[{"id":"YB5SxjY63LyupxDhGv3pa","label":"New Option","value":"xLofrTuvFjdoEZCqwQ6Zq"}]} /-->
+
+<!-- wp:formgent/dropdown {"id":"RuvfyUHrzqV-","name":"single_select-1","options":[{"id":"YB5SxjY63LyupxDhGv3pa","label":"New Option","value":"xLofrTuvFjdoEZCqwQ6Zq"}],"required":true} /-->
+
+<!-- wp:formgent/multiple-choice {"id":"dxeVhqg5Q8C-","name":"multiple_choice","options":[{"id":"yToh1u7tCszcZ6U-uyOFm","label":"New Option","value":"new_option_1780941272219"},{"label":"New Item 2","id":1,"collapsed":true,"is_default":false,"value":"new-item-2"}]} /-->
+
+<!-- wp:formgent/multiple-choice {"id":"diY5DWX-qPIY","name":"multiple_choice-1","options":[{"id":"yToh1u7tCszcZ6U-uyOFm","label":"New Option","value":"new_option_1780941272219"},{"label":"New Item 2","id":1,"collapsed":true,"is_default":false,"value":"new-item-2"}],"required":true} /-->
+
+<!-- wp:formgent/range-slider {"id":"qnZ3HYgCIjEq","name":"rangeslider"} /-->
+
+<!-- wp:formgent/range-slider {"id":"8jIh6bR6PBVZ","name":"rangeslider-1","required":true} /-->
+
+<!-- wp:formgent/rating {"id":"ZOHkZmb3-2J5","label_alignment":"justify"} /-->
+
+<!-- wp:formgent/rating {"id":"edclJJAbyyCk","name":"rating-1","label_alignment":"justify","required":true} /-->
+
+<!-- wp:formgent/date-picker {"id":"cOXv5HpiOMgu","name":"datetime"} /-->
+
+<!-- wp:formgent/date-picker {"id":"Qk0SOdiv9oif","name":"datetime-1","required":true} /-->
 ';
 
         $this->form_id = wp_insert_post(
@@ -74,21 +110,39 @@ class FormGentTest extends \WP_UnitTestCase {
         $form     = $formgent->expose_get_form( $this->form_id );
         $rules    = $formgent->expose_get_validation_rules( $form );
 
-        $this->assertArrayHasKey( 'first_name', $rules );
-        $this->assertArrayHasKey( 'email', $rules );
+        $expected_fields = [
+            'full_name', 'full_name-1', 'email', 'email-1', 'number', 'number-1',
+            'website', 'website-1', 'radio', 'radio-1', 'single_select', 'single_select-1',
+            'multiple_choice', 'multiple_choice-1', 'rangeslider', 'rangeslider-1',
+            'rating', 'rating-1', 'datetime', 'datetime-1',
+        ];
+        foreach ( $expected_fields as $field ) {
+            $this->assertArrayHasKey( $field, $rules );
+        }
         $this->assertArrayNotHasKey( 'unsupported', $rules );
 
-        $first_name_rules = explode( '|', $rules['first_name'] );
-        $this->assertContains( 'string', $first_name_rules );
-        $this->assertContains( 'max:50', $first_name_rules );
-        $this->assertContains( 'required', $first_name_rules );
-        $this->assertCount( 3, $first_name_rules );
+        // full_name: text, no required, no limit → string
+        $full_name_rules = explode( '|', $rules['full_name'] );
+        $this->assertEquals( [ 'string' ], $full_name_rules );
 
+        // full_name-1: text, required → string|required
+        $full_name_1_rules = explode( '|', $rules['full_name-1'] );
+        $this->assertContains( 'string', $full_name_1_rules );
+        $this->assertContains( 'required', $full_name_1_rules );
+        $this->assertCount( 2, $full_name_1_rules );
+
+        // email: default name, no required → string|email
         $email_rules = explode( '|', $rules['email'] );
         $this->assertContains( 'string', $email_rules );
         $this->assertContains( 'email', $email_rules );
-        $this->assertContains( 'required', $email_rules );
-        $this->assertCount( 3, $email_rules );
+        $this->assertCount( 2, $email_rules );
+
+        // email-1: required → string|email|required
+        $email_1_rules = explode( '|', $rules['email-1'] );
+        $this->assertContains( 'string', $email_1_rules );
+        $this->assertContains( 'email', $email_1_rules );
+        $this->assertContains( 'required', $email_1_rules );
+        $this->assertCount( 3, $email_1_rules );
     }
 
     public function test_submit() {
@@ -101,7 +155,7 @@ class FormGentTest extends \WP_UnitTestCase {
         $wp_request = new \WP_REST_Request();
         $wp_request->set_param( 'form_id', $this->form_id );
         $wp_request->set_param( 'integration', 'formgent' );
-        $wp_request->set_param( 'first_name', 'Jane' );
+        $wp_request->set_param( 'full_name', 'Jane' );
         $wp_request->set_param( 'email', 'jane@example.com' );
         $wp_request->set_param( 'unsupported', 'should be skipped' );
         $request = new Request( $wp_request );
@@ -132,7 +186,7 @@ class FormGentTest extends \WP_UnitTestCase {
 
         $this->assertCount( 2, $answers );
         $names = wp_list_pluck( $answers, 'field_name' );
-        $this->assertContains( 'first_name', $names );
+        $this->assertContains( 'full_name', $names );
         $this->assertContains( 'email', $names );
         $this->assertNotContains( 'unsupported', $names );
 
