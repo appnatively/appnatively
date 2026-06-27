@@ -464,10 +464,11 @@ class Woocommerce extends Provider {
      * @return ProductPaginatorDTO
      */
     public function products( ?ProductPaginatorDTO $product_paginator, Request $request, array $fields = [] ): ProductPaginatorDTO {
-        $page     = (int) $request->get_param( "page" ) ?: 1;
-        $per_page = (int) $request->get_param( "per_page" ) ?: 10;
-        $search   = $request->get_param( "search" );
-        $sort     = $request->get_param( "sort" );
+        $page        = (int) $request->get_param( "page" ) ?: 1;
+        $per_page    = (int) $request->get_param( "per_page" ) ?: 10;
+        $search      = $request->get_param( "search" );
+        $sort        = $request->get_param( "sort" );
+        $category_id = $request->get_param( "categoryId" ) ?: $request->get_param( "category_id" );
 
         $order_by = "date";
         $order    = "DESC";
@@ -484,6 +485,15 @@ class Woocommerce extends Provider {
 
         $query = Post::where( "post_type", "product" )
             ->where( "post_status", "publish" );
+
+        if ( ! empty( $category_id ) ) {
+            $query->where_has(
+                'terms', function( $q ) use ( $category_id ) {
+                    $q->where( 'taxonomy', 'product_cat' )
+                    ->where( 'term_id', (int) $category_id );
+                } 
+            );
+        }
 
         // SQL select optimization
         $columns = $this->get_columns_from_fields( $fields );

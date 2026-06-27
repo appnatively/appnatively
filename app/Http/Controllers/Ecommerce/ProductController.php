@@ -47,6 +47,7 @@ class ProductController extends Controller {
                 "per_page"    => "nullable|integer|min:1|max:100",
                 "search"      => "nullable|string",
                 "sort"        => "nullable|string",
+                "categoryId"  => "nullable",
                 "integration" => "required|string",
             ]
         );
