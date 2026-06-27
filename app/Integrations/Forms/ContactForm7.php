@@ -60,7 +60,7 @@ class ContactForm7 extends Form {
     }
 
     private function get_text_rules( \WPCF7_FormTag $tag ): array {
-        $rules = [ 'string' ];
+        $rules     = [ 'string' ];
         $maxlength = $tag->get_maxlength_option();
         if ( $maxlength ) {
             $rules[] = 'max:' . absint( $maxlength );
@@ -73,7 +73,7 @@ class ContactForm7 extends Form {
     }
 
     private function get_email_rules( \WPCF7_FormTag $tag ): array {
-        $rules = [ 'string', 'email' ];
+        $rules     = [ 'string', 'email' ];
         $maxlength = $tag->get_maxlength_option();
         if ( $maxlength ) {
             $rules[] = 'max:' . absint( $maxlength );
@@ -86,7 +86,7 @@ class ContactForm7 extends Form {
     }
 
     private function get_url_rules( \WPCF7_FormTag $tag ): array {
-        $rules = [ 'string', 'url' ];
+        $rules     = [ 'string', 'url' ];
         $maxlength = $tag->get_maxlength_option();
         if ( $maxlength ) {
             $rules[] = 'max:' . absint( $maxlength );
@@ -100,7 +100,7 @@ class ContactForm7 extends Form {
 
     private function get_number_rules( \WPCF7_FormTag $tag ): array {
         $rules = [ 'numeric' ];
-        $min = $tag->get_option( 'min', 'signed_num', true );
+        $min   = $tag->get_option( 'min', 'signed_num', true );
         if ( false !== $min ) {
             $rules[] = 'min:' . $min;
         }
@@ -136,7 +136,7 @@ class ContactForm7 extends Form {
             return [];
         }
 
-        $tags = $this->cf7_form->scan_form_tags();
+        $tags  = $this->cf7_form->scan_form_tags();
         $rules = [];
 
         foreach ( $tags as $tag ) {
@@ -203,7 +203,7 @@ class ContactForm7 extends Form {
             return [];
         }
 
-        $tags = $this->cf7_form->scan_form_tags();
+        $tags     = $this->cf7_form->scan_form_tags();
         $messages = [];
 
         foreach ( $tags as $tag ) {
@@ -223,36 +223,36 @@ class ContactForm7 extends Form {
                 : $tag->is_required();
 
             if ( $is_required ) {
-                $msg = $this->cf7_form->message( 'invalid_required' );
+                $msg                            = $this->cf7_form->message( 'invalid_required' );
                 $messages[ "{$name}.required" ] = $msg ?: 'Please fill out this field.';
             }
 
             switch ( $mapped_type ) {
                 case 'email':
-                    $msg = $this->cf7_form->message( 'invalid_email' );
+                    $msg                         = $this->cf7_form->message( 'invalid_email' );
                     $messages[ "{$name}.email" ] = $msg ?: 'The e-mail address entered is invalid.';
                     break;
                 case 'url':
-                    $msg = $this->cf7_form->message( 'invalid_url' );
+                    $msg                       = $this->cf7_form->message( 'invalid_url' );
                     $messages[ "{$name}.url" ] = $msg ?: 'The URL is invalid.';
                     break;
                 case 'number':
-                    $msg = $this->cf7_form->message( 'invalid_number' );
+                    $msg                           = $this->cf7_form->message( 'invalid_number' );
                     $messages[ "{$name}.numeric" ] = $msg ?: 'The number format is invalid.';
                     break;
                 case 'gdpr':
-                    $msg = $this->cf7_form->message( 'accept_terms' );
+                    $msg                      = $this->cf7_form->message( 'accept_terms' );
                     $messages[ "{$name}.in" ] = $msg ?: 'You must accept the terms and conditions before sending your message.';
                     break;
                 case 'date':
                     $maxlength = $tag->get_maxlength_option();
                     if ( $maxlength ) {
-                        $msg = $this->cf7_form->message( 'invalid_too_long' );
+                        $msg                       = $this->cf7_form->message( 'invalid_too_long' );
                         $messages[ "{$name}.max" ] = $msg ?: 'This field has a too long input.';
                     }
                     $minlength = $tag->get_minlength_option();
                     if ( $minlength ) {
-                        $msg = $this->cf7_form->message( 'invalid_too_short' );
+                        $msg                       = $this->cf7_form->message( 'invalid_too_short' );
                         $messages[ "{$name}.min" ] = $msg ?: 'This field has a too short input.';
                     }
                     break;
@@ -297,7 +297,7 @@ class ContactForm7 extends Form {
         $tags = $this->cf7_form->scan_form_tags();
 
         $posted_data = [
-            '_wpcf7_unit_tag' => 'appnatively',
+            '_wpcf7_unit_tag'       => 'appnatively',
             '_wpcf7_container_post' => '0',
         ];
 
@@ -327,15 +327,14 @@ class ContactForm7 extends Form {
             }
         }
 
-        if (
-            $this->cf7_form->nonce_is_active() &&
+        if ( $this->cf7_form->nonce_is_active() &&
             is_user_logged_in()
         ) {
             $posted_data['_wpnonce'] = wpcf7_create_nonce();
         }
 
         $original_post = $_POST;
-        $_POST = $posted_data;
+        $_POST         = $posted_data;
 
         $original_server = $_SERVER;
 
@@ -354,7 +353,7 @@ class ContactForm7 extends Form {
 
         $filter = function ( $result, $tags ) {
             $invalid = $result->get_invalid_fields();
-            $clean = new \WPCF7_Validation();
+            $clean   = new \WPCF7_Validation();
 
             foreach ( $invalid as $field_name => $error ) {
                 if ( str_contains( $error['reason'], 'Undefined value' ) ) {
@@ -383,7 +382,7 @@ class ContactForm7 extends Form {
             }
         } finally {
             remove_filter( 'wpcf7_validate', $filter, 10 );
-            $_POST = $original_post;
+            $_POST   = $original_post;
             $_SERVER = $original_server;
         }
     }

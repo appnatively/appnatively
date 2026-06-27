@@ -137,9 +137,9 @@ class Directorist extends Provider {
         }
 
         $sort_map = [
-            "name" => "terms.name",
-            "id"   => "terms.term_id",
-            "slug" => "terms.slug",
+            "name"  => "terms.name",
+            "id"    => "terms.term_id",
+            "slug"  => "terms.slug",
             "count" => "term_taxonomy.count",
         ];
 
@@ -424,7 +424,7 @@ class Directorist extends Provider {
         if ( ! $image_id ) {
             $image_id = (int) get_post_meta( $listing_id, "_listing_prv_img", true );
         }
-        $src      = $image_id ? wp_get_attachment_url( $image_id ) : "";
+        $src = $image_id ? wp_get_attachment_url( $image_id ) : "";
 
         if ( ! $src ) {
             return [];

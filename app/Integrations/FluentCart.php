@@ -28,10 +28,10 @@ class FluentCart extends Provider {
      * @return void
      */
     public function boot(): void {
-        add_filter( "appnatively_ecommerce_fluentcart_products", [ $this, "products" ], 10, 3 );
-        add_filter( "appnatively_ecommerce_fluentcart_product", [ $this, "product" ], 10, 3 );
-        add_filter( "appnatively_ecommerce_fluentcart_categories", [ $this, "categories" ], 10, 3 );
-        add_filter( "appnatively_ecommerce_fluentcart_category", [ $this, "category" ], 10, 3 );
+        add_filter( "appnatively_ecommerce_fluent-cart_products", [ $this, "products" ], 10, 3 );
+        add_filter( "appnatively_ecommerce_fluent-cart_product", [ $this, "product" ], 10, 3 );
+        add_filter( "appnatively_ecommerce_fluent-cart_categories", [ $this, "categories" ], 10, 3 );
+        add_filter( "appnatively_ecommerce_fluent-cart_category", [ $this, "category" ], 10, 3 );
     }
 
     /**

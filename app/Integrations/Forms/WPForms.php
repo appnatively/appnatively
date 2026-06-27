@@ -8,7 +8,7 @@ use AppNatively\WpMVC\RequestValidator\Request;
 
 class WPForms extends Form {
     public function get_key(): string {
-        return 'wpforms';
+        return 'wpforms-lite';
     }
 
     public function boot(): void {
@@ -111,7 +111,7 @@ class WPForms extends Form {
             return [];
         }
 
-        $rules       = [];
+        $rules = [];
 
         foreach ( $form['fields'] as $field ) {
             if ( empty( $field['type'] ) || empty( $field['id'] ) ) {
@@ -206,12 +206,12 @@ class WPForms extends Form {
             }
 
             if ( $mapped_type === 'gdpr' ) {
-                $gdpr_msg = wpforms_setting(
+                $gdpr_msg                        = wpforms_setting(
                     'validation-required',
                     __( 'This field is required.', 'wpforms-lite' )
                 );
                 $messages["{$field_id}.integer"] = $gdpr_msg;
-                $messages["{$field_id}.in"] = $gdpr_msg;
+                $messages["{$field_id}.in"]      = $gdpr_msg;
             }
 
             if ( $mapped_type === 'text' && ! empty( $field['limit_enabled'] ) && ! empty( $field['limit_count'] ) ) {
@@ -220,13 +220,13 @@ class WPForms extends Form {
                     ''
                 );
                 if ( ! empty( $msg ) ) {
-                    $msg = str_replace( [ '{limit}', '{remaining}' ], [ ':max', '' ], $msg );
-                    $msg = trim( preg_replace( '/\s+/', ' ', $msg ), " \t\n\r\0\x0B," );
+                    $msg                         = str_replace( [ '{limit}', '{remaining}' ], [ ':max', '' ], $msg );
+                    $msg                         = trim( preg_replace( '/\s+/', ' ', $msg ), " \t\n\r\0\x0B," );
                     $messages["{$field_id}.max"] = $msg;
                 }
             } else {
                 if ( $this->field_has_min_rule( $field, $mapped_type ) ) {
-                    $msg = wpforms_setting(
+                    $msg                         = wpforms_setting(
                         'validation-min',
                         __( 'Please enter a value greater than or equal to {value}.', 'wpforms-lite' )
                     );
@@ -234,7 +234,7 @@ class WPForms extends Form {
                 }
 
                 if ( $this->field_has_max_rule( $field, $mapped_type ) ) {
-                    $msg = wpforms_setting(
+                    $msg                         = wpforms_setting(
                         'validation-max',
                         __( 'Please enter a value less than or equal to {value}.', 'wpforms-lite' )
                     );
@@ -279,7 +279,7 @@ class WPForms extends Form {
                     continue;
                 }
                 $field_name = $field['id'];
-                $value = $request->get_param( $field_name );
+                $value      = $request->get_param( $field_name );
                 if ( $value === null ) {
                     continue;
                 }
@@ -326,7 +326,7 @@ class WPForms extends Form {
             }
 
             $field_name = $field['id'];
-            $value = $request->get_param( $field_name );
+            $value      = $request->get_param( $field_name );
             if ( $value !== null ) {
                 if ( $mapped_type === 'gdpr' ) {
                     if ( (int) $value ) {

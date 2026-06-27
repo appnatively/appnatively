@@ -4,9 +4,15 @@ defined( 'ABSPATH' ) || exit;
 
 use AppNatively\App\Http\Controllers\PluginsController;
 use AppNatively\WpMVC\Routing\Route;
+use AppNatively\WpMVC\Routing\Response;
+
+Route::get(
+    'me', function(){
+        return Response::send( [] );
+    }
+);
 
 Route::get( 'plugins', [PluginsController::class, 'index'] );
-
 Route::group(
     'ecommerce', function() {
         require __DIR__ . '/ecommerce.php';

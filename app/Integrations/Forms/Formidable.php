@@ -24,7 +24,7 @@ class Formidable extends Form {
             return [];
         }
 
-        $fields = \FrmField::get_all_for_form( $id, 999 );
+        $fields       = \FrmField::get_all_for_form( $id, 999 );
         $fields_array = [];
 
         foreach ( $fields as $field ) {
@@ -226,7 +226,7 @@ class Formidable extends Form {
                     : 'You must agree to proceed.';
 
                 $messages[ "{$name}.integer" ] = $gdpr_msg;
-                $messages[ "{$name}.in" ] = $gdpr_msg;
+                $messages[ "{$name}.in" ]      = $gdpr_msg;
             }
 
             if ( $mapped === 'number' ) {

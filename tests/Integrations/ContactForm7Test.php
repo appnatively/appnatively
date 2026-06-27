@@ -66,8 +66,8 @@ class ContactForm7Test extends \WP_UnitTestCase {
     }
 
     public function test_get_form() {
-        $cf7   = $this->get_integration_instance();
-        $form  = $cf7->expose_get_form( $this->form_id );
+        $cf7  = $this->get_integration_instance();
+        $form = $cf7->expose_get_form( $this->form_id );
         $this->assertNotEmpty( $form );
         $this->assertEquals( $this->form_id, $form['id'] );
         $this->assertEquals( 'Test CF7 Form', $form['title'] );
@@ -134,14 +134,16 @@ class ContactForm7Test extends \WP_UnitTestCase {
         $request = new Request( $wp_request );
 
         $submission_data = [];
-        add_action( 'wpcf7_submit', function ( $cf7_form, $result ) use ( &$submission_data ) {
-            $submission = \WPCF7_Submission::get_instance();
-            $submission_data = [
-                'form_id'     => $cf7_form->id(),
-                'status'      => $result['status'],
-                'posted_data' => $submission ? $submission->get_posted_data() : [],
-            ];
-        }, 10, 2 );
+        add_action(
+            'wpcf7_submit', function ( $cf7_form, $result ) use ( &$submission_data ) {
+                $submission      = \WPCF7_Submission::get_instance();
+                $submission_data = [
+                    'form_id'     => $cf7_form->id(),
+                    'status'      => $result['status'],
+                    'posted_data' => $submission ? $submission->get_posted_data() : [],
+                ];
+            }, 10, 2 
+        );
 
         $cf7->expose_submit( $request, $form );
 

@@ -203,11 +203,11 @@ class Forminator extends Form {
             }
 
             if ( $mapped === 'gdpr' ) {
-                $gdpr_msg = ! empty( $field['required_message'] )
+                $gdpr_msg                      = ! empty( $field['required_message'] )
                     ? $field['required_message']
                     : __( 'This field is required. Please check it.', 'forminator' );
                 $messages[ "{$name}.integer" ] = $gdpr_msg;
-                $messages[ "{$name}.in" ] = $gdpr_msg;
+                $messages[ "{$name}.in" ]      = $gdpr_msg;
             }
 
             if ( in_array( $mapped, [ 'number', 'slider' ], true ) ) {

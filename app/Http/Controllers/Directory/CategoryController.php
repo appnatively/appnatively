@@ -33,9 +33,9 @@ class CategoryController extends Controller {
             ]
         );
 
-        $integration          = sanitize_text_field( $request->get_param( "integration" ) );
-        $fields               = appnatively_get_verified_fields( $request->get_param( "fields" ), $this->allowed_fields );
-        $category_paginator   = apply_filters( "appnatively_directory_{$integration}_categories", null, $request, $fields );
+        $integration        = sanitize_text_field( $request->get_param( "integration" ) );
+        $fields             = appnatively_get_verified_fields( $request->get_param( "fields" ), $this->allowed_fields );
+        $category_paginator = apply_filters( "appnatively_directory_{$integration}_categories", null, $request, $fields );
 
         if ( ! $category_paginator instanceof CategoryPaginatorDTO ) {
             throw new Exception( esc_html__( "Categories integration not found", "appnatively" ) );

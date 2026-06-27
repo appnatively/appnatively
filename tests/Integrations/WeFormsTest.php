@@ -21,6 +21,7 @@ class TestableWeForms extends WeForms {
 
 class WeFormsTest extends \WP_UnitTestCase {
     private $form_id;
+
     private $field_ids = [];
 
     public function setUp(): void {

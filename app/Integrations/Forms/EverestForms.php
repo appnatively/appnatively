@@ -29,17 +29,17 @@ class EverestForms extends Form {
 
         foreach ( $form_data['form_fields'] as $field_id => $field ) {
             $fields[] = [
-                'id'            => $field_id,
-                'type'          => $field['type'] ?? '',
-                'name'          => $field['label'] ?? '',
-                'meta_key'      => $field['meta-key'] ?? '',
-                'required'      => ! empty( $field['required'] ),
-                'min_value'     => $field['min_value'] ?? '',
-                'max_value'     => $field['max_value'] ?? '',
-                'number_of_stars' => $field['number_of_stars'] ?? 5,
-                'datetime_format' => $field['datetime_format'] ?? 'date',
+                'id'                             => $field_id,
+                'type'                           => $field['type'] ?? '',
+                'name'                           => $field['label'] ?? '',
+                'meta_key'                       => $field['meta-key'] ?? '',
+                'required'                       => ! empty( $field['required'] ),
+                'min_value'                      => $field['min_value'] ?? '',
+                'max_value'                      => $field['max_value'] ?? '',
+                'number_of_stars'                => $field['number_of_stars'] ?? 5,
+                'datetime_format'                => $field['datetime_format'] ?? 'date',
                 'required_field_message_setting' => $field['required_field_message_setting'] ?? 'global',
-                'required_field_message' => $field['required-field-message'] ?? '',
+                'required_field_message'         => $field['required-field-message'] ?? '',
             ];
         }
 

@@ -30,64 +30,78 @@ class SureFormsTest extends \WP_UnitTestCase {
         parent::setUp();
 
         $blocks = [
-            $this->make_block( 'srfm/input', [
-                'block_id' => '5f233a44',
-                'label'    => 'Single Line Text',
-                'slug'     => 'text-field',
-                'required' => false,
-                'textLength' => '',
-                'placeholder' => '',
-                'defaultValue' => '',
-            ] ),
-            $this->make_block( 'srfm/email', [
-                'block_id' => '846eafba',
-                'label'    => 'Email',
-                'slug'     => 'email',
-                'required' => true,
-                'placeholder' => '',
-                'defaultValue' => '',
-            ] ),
-            $this->make_block( 'srfm/number', [
-                'block_id'    => 'fe3d1169',
-                'label'       => 'Numbers',
-                'slug'        => 'number',
-                'required'    => false,
-                'minValue'    => '',
-                'maxValue'    => '',
-                'placeholder' => '',
-                'defaultValue' => '',
-            ] ),
-            $this->make_block( 'srfm/url', [
-                'block_id' => '766ee324',
-                'label'    => 'Website',
-                'slug'     => 'url',
-                'required' => true,
-                'placeholder' => '',
-                'defaultValue' => '',
-            ] ),
-            $this->make_block( 'srfm/checkbox', [
-                'block_id' => 'da780916',
-                'label'    => 'Checkboxes',
-                'slug'     => 'checkbox',
-                'required' => false,
-            ] ),
-            $this->make_block( 'srfm/gdpr', [
-                'block_id' => '6ec80c0e',
-                'label'    => 'I consent',
-                'slug'     => 'consent',
-                'required' => true,
-            ] ),
-            $this->make_block( 'srfm/dropdown', [
-                'block_id' => 'd1a53b24',
-                'label'    => 'Dropdown',
-                'slug'     => 'dropdown',
-                'required' => false,
-                'options'  => [
-                    [ 'label' => 'First Choice', 'value' => '' ],
-                    [ 'label' => 'Second Choice', 'value' => '' ],
-                    [ 'label' => 'Third Choice', 'value' => '' ],
-                ],
-            ] ),
+            $this->make_block(
+                'srfm/input', [
+                    'block_id'     => '5f233a44',
+                    'label'        => 'Single Line Text',
+                    'slug'         => 'text-field',
+                    'required'     => false,
+                    'textLength'   => '',
+                    'placeholder'  => '',
+                    'defaultValue' => '',
+                ] 
+            ),
+            $this->make_block(
+                'srfm/email', [
+                    'block_id'     => '846eafba',
+                    'label'        => 'Email',
+                    'slug'         => 'email',
+                    'required'     => true,
+                    'placeholder'  => '',
+                    'defaultValue' => '',
+                ] 
+            ),
+            $this->make_block(
+                'srfm/number', [
+                    'block_id'     => 'fe3d1169',
+                    'label'        => 'Numbers',
+                    'slug'         => 'number',
+                    'required'     => false,
+                    'minValue'     => '',
+                    'maxValue'     => '',
+                    'placeholder'  => '',
+                    'defaultValue' => '',
+                ] 
+            ),
+            $this->make_block(
+                'srfm/url', [
+                    'block_id'     => '766ee324',
+                    'label'        => 'Website',
+                    'slug'         => 'url',
+                    'required'     => true,
+                    'placeholder'  => '',
+                    'defaultValue' => '',
+                ] 
+            ),
+            $this->make_block(
+                'srfm/checkbox', [
+                    'block_id' => 'da780916',
+                    'label'    => 'Checkboxes',
+                    'slug'     => 'checkbox',
+                    'required' => false,
+                ] 
+            ),
+            $this->make_block(
+                'srfm/gdpr', [
+                    'block_id' => '6ec80c0e',
+                    'label'    => 'I consent',
+                    'slug'     => 'consent',
+                    'required' => true,
+                ] 
+            ),
+            $this->make_block(
+                'srfm/dropdown', [
+                    'block_id' => 'd1a53b24',
+                    'label'    => 'Dropdown',
+                    'slug'     => 'dropdown',
+                    'required' => false,
+                    'options'  => [
+                        [ 'label' => 'First Choice', 'value' => '' ],
+                        [ 'label' => 'Second Choice', 'value' => '' ],
+                        [ 'label' => 'Third Choice', 'value' => '' ],
+                    ],
+                ] 
+            ),
         ];
 
         $post_content = '';
@@ -95,12 +109,14 @@ class SureFormsTest extends \WP_UnitTestCase {
             $post_content .= $block . "\n";
         }
 
-        $this->form_id = wp_insert_post( [
-            'post_title'   => 'Test SureForms Form',
-            'post_type'    => 'sureforms_form',
-            'post_status'  => 'publish',
-            'post_content' => $post_content,
-        ] );
+        $this->form_id = wp_insert_post(
+            [
+                'post_title'   => 'Test SureForms Form',
+                'post_type'    => 'sureforms_form',
+                'post_status'  => 'publish',
+                'post_content' => $post_content,
+            ] 
+        );
 
         update_post_meta( $this->form_id, '_srfm_submit_button_text', 'Submit' );
         update_post_meta( $this->form_id, '_srfm_confirmation_type', 'message' );
@@ -232,9 +248,11 @@ class SureFormsTest extends \WP_UnitTestCase {
     }
 
     public function test_get_validation_messages_reads_settings_option() {
-        update_option( 'srfm_default_dynamic_block_option', [
-            'srfm_valid_email' => 'CUSTOM_EMAIL_MSG',
-        ] );
+        update_option(
+            'srfm_default_dynamic_block_option', [
+                'srfm_valid_email' => 'CUSTOM_EMAIL_MSG',
+            ] 
+        );
 
         $sureforms = $this->get_integration_instance();
         $form      = $sureforms->expose_get_form( $this->form_id );
@@ -255,8 +273,8 @@ class SureFormsTest extends \WP_UnitTestCase {
         $table = $wpdb->prefix . 'srfm_entries';
 
         $data = [
-            'form_id'   => $this->form_id,
-            'form_data' => [ 'field' => 'value' ],
+            'form_id'    => $this->form_id,
+            'form_data'  => [ 'field' => 'value' ],
             'created_at' => current_time( 'mysql' ),
         ];
 
@@ -293,19 +311,23 @@ class SureFormsTest extends \WP_UnitTestCase {
         $request = new Request( $wp_request );
 
         $passed_form_data = null;
-        add_filter( 'srfm_form_submit_data', function ( $form_data ) use ( &$passed_form_data ) {
-            $passed_form_data = $form_data;
-            return $form_data;
-        } );
+        add_filter(
+            'srfm_form_submit_data', function ( $form_data ) use ( &$passed_form_data ) {
+                $passed_form_data = $form_data;
+                return $form_data;
+            } 
+        );
 
         $captured_entry_id = null;
         $entry             = null;
-        add_action( 'srfm_form_submit', function ( $response ) use ( &$captured_entry_id, &$entry ) {
-            if ( ! empty( $response['entry_id'] ) ) {
-                $captured_entry_id = $response['entry_id'];
-                $entry             = \SRFM\Inc\Database\Tables\Entries::get( $captured_entry_id );
-            }
-        } );
+        add_action(
+            'srfm_form_submit', function ( $response ) use ( &$captured_entry_id, &$entry ) {
+                if ( ! empty( $response['entry_id'] ) ) {
+                    $captured_entry_id = $response['entry_id'];
+                    $entry             = \SRFM\Inc\Database\Tables\Entries::get( $captured_entry_id );
+                }
+            } 
+        );
 
         $sureforms->expose_submit( $request, $form );
 

@@ -29,17 +29,17 @@ class FluentForm extends Form {
 
     private function map_field_type( string $type ) {
         $map = [
-            'text'          => 'input_text',
-            'number'        => 'input_number',
-            'email'         => 'input_email',
-            'url'           => 'input_url',
-            'radio'         => 'input_radio',
-            'checkbox'      => 'input_checkbox',
-            'single_select' => 'select',
-            'rating'        => 'ratings',
+            'text'             => 'input_text',
+            'number'           => 'input_number',
+            'email'            => 'input_email',
+            'url'              => 'input_url',
+            'radio'            => 'input_radio',
+            'checkbox'         => 'input_checkbox',
+            'single_select'    => 'select',
+            'rating'           => 'ratings',
             'date_time_picker' => 'input_date',
-            'password'      => 'input_password',
-            'gdpr_agreement' => 'gdpr',
+            'password'         => 'input_password',
+            'gdpr_agreement'   => 'gdpr',
         ];
 
         $key = array_search( $type, $map, true );
@@ -278,9 +278,9 @@ class FluentForm extends Form {
                     }
                     break;
                 case 'gdpr':
-                    $gdpr_msg = $default_messages['required'] ?? 'This field is required';
+                    $gdpr_msg                            = $default_messages['required'] ?? 'This field is required';
                     $messages[ "{$field_name}.integer" ] = $gdpr_msg;
-                    $messages[ "{$field_name}.in" ] = $gdpr_msg;
+                    $messages[ "{$field_name}.in" ]      = $gdpr_msg;
                     break;
                 case 'rating':
                     $messages[ "{$field_name}.integer" ] = $default_messages['numeric'] ?? 'This field must contain numeric value';

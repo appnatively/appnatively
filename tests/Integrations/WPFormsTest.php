@@ -32,84 +32,84 @@ class WPFormsTest extends \WP_UnitTestCase {
         $form_data = [
             'field_id' => 16,
             'fields'   => [
-                '1' => [
-                    'id'          => '1',
-                    'type'        => 'text',
-                    'label'       => 'single text',
-                    'description' => '',
-                    'required'    => '1',
-                    'size'        => 'medium',
-                    'placeholder' => '',
-                    'limit_count' => '1',
-                    'limit_mode'  => 'characters',
+                '1'  => [
+                    'id'            => '1',
+                    'type'          => 'text',
+                    'label'         => 'single text',
+                    'description'   => '',
+                    'required'      => '1',
+                    'size'          => 'medium',
+                    'placeholder'   => '',
+                    'limit_count'   => '1',
+                    'limit_mode'    => 'characters',
                     'default_value' => '',
-                    'input_mask'  => '',
-                    'css'         => '',
+                    'input_mask'    => '',
+                    'css'           => '',
                 ],
                 '10' => [
-                    'id'          => '10',
-                    'type'        => 'text',
-                    'label'       => 'single text two',
-                    'description' => '',
-                    'size'        => 'medium',
-                    'placeholder' => '',
-                    'limit_count' => '1',
-                    'limit_mode'  => 'characters',
+                    'id'            => '10',
+                    'type'          => 'text',
+                    'label'         => 'single text two',
+                    'description'   => '',
+                    'size'          => 'medium',
+                    'placeholder'   => '',
+                    'limit_count'   => '1',
+                    'limit_mode'    => 'characters',
                     'default_value' => '',
-                    'input_mask'  => '',
-                    'css'         => '',
+                    'input_mask'    => '',
+                    'css'           => '',
                 ],
-                '7' => [
-                    'id'       => '7',
-                    'type'     => 'email',
-                    'label'    => 'Email',
-                    'description' => '',
-                    'required' => '1',
-                    'size'     => 'medium',
-                    'placeholder' => '',
+                '7'  => [
+                    'id'                       => '7',
+                    'type'                     => 'email',
+                    'label'                    => 'Email',
+                    'description'              => '',
+                    'required'                 => '1',
+                    'size'                     => 'medium',
+                    'placeholder'              => '',
                     'confirmation_placeholder' => '',
-                    'default_value' => false,
-                    'filter_type' => '',
-                    'allowlist' => '',
-                    'denylist' => '',
-                    'css'      => '',
+                    'default_value'            => false,
+                    'filter_type'              => '',
+                    'allowlist'                => '',
+                    'denylist'                 => '',
+                    'css'                      => '',
                 ],
                 '11' => [
-                    'id'       => '11',
-                    'type'     => 'email',
-                    'label'    => 'Email two',
-                    'description' => '',
-                    'size'     => 'medium',
-                    'placeholder' => '',
+                    'id'                       => '11',
+                    'type'                     => 'email',
+                    'label'                    => 'Email two',
+                    'description'              => '',
+                    'size'                     => 'medium',
+                    'placeholder'              => '',
                     'confirmation_placeholder' => '',
-                    'default_value' => false,
-                    'filter_type' => '',
-                    'allowlist' => '',
-                    'denylist' => '',
-                    'css'      => '',
+                    'default_value'            => false,
+                    'filter_type'              => '',
+                    'allowlist'                => '',
+                    'denylist'                 => '',
+                    'css'                      => '',
                 ],
-                '2' => [
-                    'id'      => '2',
-                    'type'    => 'select',
-                    'label'   => 'Dropdown',
-                    'choices' => [
+                '2'  => [
+                    'id'              => '2',
+                    'type'            => 'select',
+                    'label'           => 'Dropdown',
+                    'choices'         => [
                         '1' => [ 'label' => 'First Choice', 'value' => '', 'image' => '', 'icon' => 'face-smile', 'icon_style' => 'regular' ],
                         '2' => [ 'label' => 'Second Choice', 'value' => '', 'image' => '', 'icon' => 'face-smile', 'icon_style' => 'regular' ],
                         '3' => [ 'label' => 'Third Choice', 'value' => '', 'image' => '', 'icon' => 'face-smile', 'icon_style' => 'regular' ],
                     ],
-                    'description'    => '',
-                    'required'       => '1',
-                    'style'          => 'classic',
-                    'size'           => 'medium',
-                    'placeholder'    => '--- Select Choice ---',
+                    'description'     => '',
+                    'required'        => '1',
+                    'style'           => 'classic',
+                    'size'            => 'medium',
+                    'placeholder'     => '--- Select Choice ---',
                     'dynamic_choices' => '',
-                    'css'            => '',
+                    'css'             => '',
                 ],
                 '12' => [
-                    'id'      => '12',
-                    'type'    => 'select',
-                    'label'   => 'Dropdown two',
-                    'choices' => [
+                    'id'              => '12',
+                    'type'            => 'select',
+                    'label'           => 'Dropdown two',
+                    'choices'         => [
                         '1' => [ 'label' => 'First Choice', 'value' => '', 'image' => '', 'icon' => 'face-smile', 'icon_style' => 'regular' ],
                         '2' => [ 'label' => 'Second Choice', 'value' => '', 'image' => '', 'icon' => 'face-smile', 'icon_style' => 'regular' ],
                         '3' => [ 'label' => 'Third Choice', 'value' => '', 'image' => '', 'icon' => 'face-smile', 'icon_style' => 'regular' ],
@@ -121,11 +121,11 @@ class WPFormsTest extends \WP_UnitTestCase {
                     'dynamic_choices' => '',
                     'css'             => '',
                 ],
-                '4' => [
-                    'id'      => '4',
-                    'type'    => 'checkbox',
-                    'label'   => 'Checkboxes',
-                    'choices' => [
+                '4'  => [
+                    'id'                   => '4',
+                    'type'                 => 'checkbox',
+                    'label'                => 'Checkboxes',
+                    'choices'              => [
                         '1' => [ 'label' => 'First Choice', 'value' => '', 'image' => '', 'icon' => 'face-smile', 'icon_style' => 'regular' ],
                         '2' => [ 'label' => 'Second Choice', 'value' => '', 'image' => '', 'icon' => 'face-smile', 'icon_style' => 'regular' ],
                         '3' => [ 'label' => 'Third Choice', 'value' => '', 'image' => '', 'icon' => 'face-smile', 'icon_style' => 'regular' ],
@@ -142,10 +142,10 @@ class WPFormsTest extends \WP_UnitTestCase {
                     'css'                  => '',
                 ],
                 '13' => [
-                    'id'      => '13',
-                    'type'    => 'checkbox',
-                    'label'   => 'Checkboxes two',
-                    'choices' => [
+                    'id'                   => '13',
+                    'type'                 => 'checkbox',
+                    'label'                => 'Checkboxes two',
+                    'choices'              => [
                         '1' => [ 'label' => 'First Choice', 'value' => '', 'image' => '', 'icon' => 'face-smile', 'icon_style' => 'regular' ],
                         '2' => [ 'label' => 'Second Choice', 'value' => '', 'image' => '', 'icon' => 'face-smile', 'icon_style' => 'regular' ],
                         '3' => [ 'label' => 'Third Choice', 'value' => '', 'image' => '', 'icon' => 'face-smile', 'icon_style' => 'regular' ],
@@ -160,7 +160,7 @@ class WPFormsTest extends \WP_UnitTestCase {
                     'dynamic_choices'      => '',
                     'css'                  => '',
                 ],
-                '5' => [
+                '5'  => [
                     'id'            => '5',
                     'type'          => 'number',
                     'label'         => 'Numbers',
@@ -185,7 +185,7 @@ class WPFormsTest extends \WP_UnitTestCase {
                     'default_value' => '',
                     'css'           => '',
                 ],
-                '6' => [
+                '6'  => [
                     'id'            => '6',
                     'type'          => 'number-slider',
                     'label'         => 'Number Slider',
@@ -234,19 +234,19 @@ class WPFormsTest extends \WP_UnitTestCase {
                         'template'       => '',
                     ],
                 ],
-                'confirmations' => [
+                'confirmations'          => [
                     '1' => [
-                        'type'           => 'message',
-                        'message'        => '<p>Thanks for contacting us! We will be in touch with you shortly.</p>',
-                        'message_scroll' => '1',
-                        'page'           => 'previous_page',
+                        'type'                => 'message',
+                        'message'             => '<p>Thanks for contacting us! We will be in touch with you shortly.</p>',
+                        'message_scroll'      => '1',
+                        'page'                => 'previous_page',
                         'page_url_parameters' => '',
-                        'redirect'       => '',
+                        'redirect'            => '',
                     ],
                 ],
-                'antispam_v3'               => '1',
-                'store_spam_entries'        => '0',
-                'form_tags'                 => [],
+                'antispam_v3'            => '1',
+                'store_spam_entries'     => '0',
+                'form_tags'              => [],
             ],
         ];
 
@@ -320,8 +320,8 @@ class WPFormsTest extends \WP_UnitTestCase {
     }
 
     public function test_get_validation_messages() {
-        $wpforms = $this->get_integration_instance();
-        $form    = $wpforms->expose_get_form( $this->form_id );
+        $wpforms  = $this->get_integration_instance();
+        $form     = $wpforms->expose_get_form( $this->form_id );
         $messages = $wpforms->expose_get_validation_messages( $form );
 
         $this->assertArrayHasKey( '1.required', $messages );
@@ -374,13 +374,15 @@ class WPFormsTest extends \WP_UnitTestCase {
 
         $request = new Request( $wp_request );
 
-        $captured_entry = null;
+        $captured_entry     = null;
         $captured_form_data = null;
 
-        add_action( 'wpforms_process_before', function ( $entry, $form_data ) use ( &$captured_entry, &$captured_form_data ) {
-            $captured_entry     = $entry;
-            $captured_form_data = $form_data;
-        }, 10, 2 );
+        add_action(
+            'wpforms_process_before', function ( $entry, $form_data ) use ( &$captured_entry, &$captured_form_data ) {
+                $captured_entry     = $entry;
+                $captured_form_data = $form_data;
+            }, 10, 2 
+        );
 
         $wpforms->expose_submit( $request, $form );
 

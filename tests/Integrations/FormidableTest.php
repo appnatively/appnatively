@@ -33,7 +33,7 @@ class FormidableTest extends \WP_UnitTestCase {
         $formidable = $this->get_integration_instance();
 
         $form = [
-            'id'  => 1,
+            'id'     => 1,
             'fields' => [
                 [
                     'id'        => 25,

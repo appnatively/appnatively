@@ -29,10 +29,11 @@ class TestableGutenaForms extends GutenaForms {
 
 class GutenaFormTest extends \WP_UnitTestCase {
     private $form_id;
+
     private $block_form_id = 'gutena_forms_id_test123';
 
     private $schema = [
-        'form_attrs'  => [
+        'form_attrs'   => [
             'formID'            => 'gutena_forms_id_test123',
             'formName'          => 'Test Gutena Form',
             'emailNotifyAdmin'  => true,
@@ -42,36 +43,36 @@ class GutenaFormTest extends \WP_UnitTestCase {
             'replyToEmail'      => 'email_1',
             'emailFrom'         => 'admin@example.com',
         ],
-        'form_fields' => [],
+        'form_fields'  => [],
         'block_markup' => '',
     ];
 
     private $fields = [
-        'text_1'      => [
+        'text_1'     => [
             'nameAttr'   => 'text_1',
             'fieldName'  => 'Single Line Text',
             'fieldType'  => 'text',
             'isRequired' => false,
         ],
-        'text_2'      => [
+        'text_2'     => [
             'nameAttr'   => 'text_2',
             'fieldName'  => 'Single Line Text two',
             'fieldType'  => 'text',
             'isRequired' => true,
         ],
-        'email_1'     => [
+        'email_1'    => [
             'nameAttr'   => 'email_1',
             'fieldName'  => 'Email',
             'fieldType'  => 'email',
             'isRequired' => true,
         ],
-        'email_2'     => [
+        'email_2'    => [
             'nameAttr'   => 'email_2',
             'fieldName'  => 'Email two',
             'fieldType'  => 'email',
             'isRequired' => false,
         ],
-        'radio_1'     => [
+        'radio_1'    => [
             'nameAttr'      => 'radio_1',
             'fieldName'     => 'Multiple Choice',
             'fieldType'     => 'radio',
@@ -82,7 +83,7 @@ class GutenaFormTest extends \WP_UnitTestCase {
                 'Third Choice',
             ],
         ],
-        'radio_2'     => [
+        'radio_2'    => [
             'nameAttr'      => 'radio_2',
             'fieldName'     => 'Multiple Choice two',
             'fieldType'     => 'radio',
@@ -93,7 +94,7 @@ class GutenaFormTest extends \WP_UnitTestCase {
                 'Option C',
             ],
         ],
-        'checkbox_1'  => [
+        'checkbox_1' => [
             'nameAttr'      => 'checkbox_1',
             'fieldName'     => 'Checkboxes',
             'fieldType'     => 'checkbox',
@@ -104,7 +105,7 @@ class GutenaFormTest extends \WP_UnitTestCase {
                 'Third Choice',
             ],
         ],
-        'checkbox_2'  => [
+        'checkbox_2' => [
             'nameAttr'      => 'checkbox_2',
             'fieldName'     => 'Checkboxes two',
             'fieldType'     => 'checkbox',
@@ -114,7 +115,7 @@ class GutenaFormTest extends \WP_UnitTestCase {
                 'Option 2',
             ],
         ],
-        'select_1'    => [
+        'select_1'   => [
             'nameAttr'      => 'select_1',
             'fieldName'     => 'Dropdown',
             'fieldType'     => 'select',
@@ -125,7 +126,7 @@ class GutenaFormTest extends \WP_UnitTestCase {
                 'Third Choice',
             ],
         ],
-        'select_2'    => [
+        'select_2'   => [
             'nameAttr'      => 'select_2',
             'fieldName'     => 'Dropdown two',
             'fieldType'     => 'select',
@@ -135,7 +136,7 @@ class GutenaFormTest extends \WP_UnitTestCase {
                 'Option Y',
             ],
         ],
-        'range_1'       => [
+        'range_1'    => [
             'nameAttr'   => 'range_1',
             'fieldName'  => 'Range',
             'fieldType'  => 'range',
@@ -146,19 +147,19 @@ class GutenaFormTest extends \WP_UnitTestCase {
                 'step' => 1,
             ],
         ],
-        'range_2'       => [
+        'range_2'    => [
             'nameAttr'   => 'range_2',
             'fieldName'  => 'Range two',
             'fieldType'  => 'range',
             'isRequired' => false,
         ],
-        'number_1'      => [
+        'number_1'   => [
             'nameAttr'   => 'number_1',
             'fieldName'  => 'Number',
             'fieldType'  => 'number',
             'isRequired' => true,
         ],
-        'number_2'      => [
+        'number_2'   => [
             'nameAttr'   => 'number_2',
             'fieldName'  => 'Number two',
             'fieldType'  => 'number',
@@ -289,8 +290,8 @@ class GutenaFormTest extends \WP_UnitTestCase {
     }
 
     public function test_get_validation_messages() {
-        $gutena = $this->get_integration_instance();
-        $form   = $gutena->expose_get_form( $this->form_id );
+        $gutena   = $this->get_integration_instance();
+        $form     = $gutena->expose_get_form( $this->form_id );
         $messages = $gutena->expose_get_validation_messages( $form );
 
         $required_fields = [ 'text_2', 'email_1', 'radio_1', 'checkbox_1', 'select_1', 'range_1', 'number_1' ];
@@ -458,7 +459,7 @@ class GutenaFormTest extends \WP_UnitTestCase {
     public function test_form_submit_skips_email_when_emailNotifyAdmin_false() {
         $gutena = $this->get_integration_instance();
 
-        $schema = get_option( 'gutena_forms_schema_' . $this->block_form_id );
+        $schema                                   = get_option( 'gutena_forms_schema_' . $this->block_form_id );
         $schema['form_attrs']['emailNotifyAdmin'] = false;
         update_option( 'gutena_forms_schema_' . $this->block_form_id, $schema );
 

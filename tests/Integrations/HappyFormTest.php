@@ -34,31 +34,31 @@ class HappyFormTest extends \WP_UnitTestCase {
     ];
 
     private $parts = [
-        'text_1'             => [
+        'text_1'            => [
             'type'     => 'single_line_text',
             'label'    => 'Single Line Text',
             'required' => 0,
             'id'       => 'text_1',
         ],
-        'text_2'             => [
+        'text_2'            => [
             'type'     => 'single_line_text',
             'label'    => 'Single Line Text two',
             'required' => 1,
             'id'       => 'text_2',
         ],
-        'email_1'            => [
+        'email_1'           => [
             'type'     => 'email',
             'label'    => 'Email',
             'required' => 1,
             'id'       => 'email_1',
         ],
-        'email_2'            => [
+        'email_2'           => [
             'type'     => 'email',
             'label'    => 'Email two',
             'required' => 0,
             'id'       => 'email_2',
         ],
-        'radio_1'            => [
+        'radio_1'           => [
             'type'     => 'radio',
             'label'    => 'Multiple Choice',
             'required' => 1,
@@ -69,7 +69,7 @@ class HappyFormTest extends \WP_UnitTestCase {
                 2 => [ 'label' => 'Third Choice', 'is_default' => 0, 'description' => '', 'is_heading' => 0 ],
             ],
         ],
-        'radio_2'            => [
+        'radio_2'           => [
             'type'     => 'radio',
             'label'    => 'Multiple Choice two',
             'required' => 0,
@@ -80,7 +80,7 @@ class HappyFormTest extends \WP_UnitTestCase {
                 2 => [ 'label' => 'Option C', 'is_default' => 0, 'description' => '', 'is_heading' => 0 ],
             ],
         ],
-        'checkbox_1'         => [
+        'checkbox_1'        => [
             'type'     => 'checkbox',
             'label'    => 'Checkboxes',
             'required' => 1,
@@ -91,7 +91,7 @@ class HappyFormTest extends \WP_UnitTestCase {
                 2 => [ 'label' => 'Third Choice', 'is_default' => 0, 'description' => '', 'is_heading' => 0 ],
             ],
         ],
-        'checkbox_2'         => [
+        'checkbox_2'        => [
             'type'     => 'checkbox',
             'label'    => 'Checkboxes two',
             'required' => 0,
@@ -101,7 +101,7 @@ class HappyFormTest extends \WP_UnitTestCase {
                 1 => [ 'label' => 'Option 2', 'is_default' => 0, 'description' => '', 'is_heading' => 0 ],
             ],
         ],
-        'select_1'           => [
+        'select_1'          => [
             'type'     => 'select',
             'label'    => 'Dropdown',
             'required' => 1,
@@ -112,7 +112,7 @@ class HappyFormTest extends \WP_UnitTestCase {
                 2 => [ 'label' => 'Third Choice', 'is_default' => 0, 'description' => '', 'is_heading' => 0 ],
             ],
         ],
-        'select_2'           => [
+        'select_2'          => [
             'type'     => 'select',
             'label'    => 'Dropdown two',
             'required' => 0,
@@ -122,7 +122,7 @@ class HappyFormTest extends \WP_UnitTestCase {
                 1 => [ 'label' => 'Option Y', 'is_default' => 0, 'description' => '', 'is_heading' => 0 ],
             ],
         ],
-        'number_1'           => [
+        'number_1'          => [
             'type'      => 'number',
             'label'     => 'Number',
             'required'  => 1,
@@ -130,7 +130,7 @@ class HappyFormTest extends \WP_UnitTestCase {
             'min_value' => 10,
             'max_value' => 100,
         ],
-        'number_2'           => [
+        'number_2'          => [
             'type'      => 'number',
             'label'     => 'Number two',
             'required'  => 0,

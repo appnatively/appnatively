@@ -37,16 +37,16 @@ class SureForms extends Form {
             $attrs      = $block['attrs'] ?? [];
 
             $fields[] = [
-                'type'     => $block_type,
-                'label'    => $attrs['label'] ?? '',
-                'block_id' => $attrs['block_id'] ?? '',
-                'slug'     => $attrs['slug'] ?? $block_type,
-                'required' => ! empty( $attrs['required'] ),
-                'options'  => $attrs['options'] ?? [],
-                'min'      => $attrs['minValue'] ?? '',
-                'max'      => $attrs['maxValue'] ?? '',
-                'text_length' => $attrs['textLength'] ?? '',
-                'placeholder' => $attrs['placeholder'] ?? '',
+                'type'          => $block_type,
+                'label'         => $attrs['label'] ?? '',
+                'block_id'      => $attrs['block_id'] ?? '',
+                'slug'          => $attrs['slug'] ?? $block_type,
+                'required'      => ! empty( $attrs['required'] ),
+                'options'       => $attrs['options'] ?? [],
+                'min'           => $attrs['minValue'] ?? '',
+                'max'           => $attrs['maxValue'] ?? '',
+                'text_length'   => $attrs['textLength'] ?? '',
+                'placeholder'   => $attrs['placeholder'] ?? '',
                 'default_value' => $attrs['defaultValue'] ?? '',
             ];
         }
@@ -236,12 +236,12 @@ class SureForms extends Form {
 
             if ( $mapped_type === 'number' ) {
                 if ( isset( $field['min'] ) && $field['min'] !== '' ) {
-                    $msg = \SRFM\Inc\Helper::get_default_dynamic_block_option( 'srfm_input_min_value' );
+                    $msg                     = \SRFM\Inc\Helper::get_default_dynamic_block_option( 'srfm_input_min_value' );
                     $messages["{$slug}.min"] = str_replace( '%s', ':min', $msg );
                 }
 
                 if ( isset( $field['max'] ) && $field['max'] !== '' ) {
-                    $msg = \SRFM\Inc\Helper::get_default_dynamic_block_option( 'srfm_input_max_value' );
+                    $msg                     = \SRFM\Inc\Helper::get_default_dynamic_block_option( 'srfm_input_max_value' );
                     $messages["{$slug}.max"] = str_replace( '%s', ':max', $msg );
                 }
             }
@@ -329,7 +329,7 @@ class SureForms extends Form {
                 continue;
             }
 
-            $field_name = $this->build_sureforms_field_name( $field, $dropdown_counter );
+            $field_name             = $this->build_sureforms_field_name( $field, $dropdown_counter );
             $form_data[$field_name] = $value;
         }
 

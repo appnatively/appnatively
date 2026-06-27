@@ -27,15 +27,15 @@ class FormGent extends Form {
     private function map_field_type( string $type ) {
         // appnatively => formgent
         $map = [
-            'text'          => 'text',
-            'number'        => 'number',
-            'email'         => 'email',
-            'url'           => 'website',
-            'radio'         => 'single-choice',
-            'checkbox'      => 'multiple-choice',
-            'single_select' => 'dropdown',
-            'range'         => 'range-slider',
-            'rating'        => 'rating',
+            'text'             => 'text',
+            'number'           => 'number',
+            'email'            => 'email',
+            'url'              => 'website',
+            'radio'            => 'single-choice',
+            'checkbox'         => 'multiple-choice',
+            'single_select'    => 'dropdown',
+            'range'            => 'range-slider',
+            'rating'           => 'rating',
             'date_time_picker' => 'date-picker',
             'gdpr'             => 'gdpr',
         ];
@@ -220,10 +220,10 @@ class FormGent extends Form {
             return [];
         }
 
-        $form_object        = (object) $form;
-        $fields             = formgent_get_form_fields( $form_object );
+        $form_object         = (object) $form;
+        $fields              = formgent_get_form_fields( $form_object );
         $validation_messages = formgent_get_setting( 'validation_messages', [] );
-        $messages           = [];
+        $messages            = [];
 
         foreach ( $fields as $field ) {
             if ( empty( $field['name'] ) || empty( $field['field_type'] ) ) {
@@ -251,23 +251,23 @@ class FormGent extends Form {
                 case 'number':
                     $messages[ "{$field_name}.numeric" ] = $validation_messages['number'] ?? 'This field must contain numeric value';
                     if ( isset( $field['min_value'] ) && $field['min_value'] !== '' ) {
-                        $min_msg = str_replace( '{limit}', $field['min_value'], $validation_messages['min'] ?? 'This value is below the minimum {limit}' );
+                        $min_msg                         = str_replace( '{limit}', $field['min_value'], $validation_messages['min'] ?? 'This value is below the minimum {limit}' );
                         $messages[ "{$field_name}.min" ] = $min_msg;
                     }
                     if ( isset( $field['max_value'] ) && $field['max_value'] !== '' ) {
-                        $max_msg = str_replace( '{limit}', $field['max_value'], $validation_messages['max'] ?? 'This value exceeds the maximum {limit}' );
+                        $max_msg                         = str_replace( '{limit}', $field['max_value'], $validation_messages['max'] ?? 'This value exceeds the maximum {limit}' );
                         $messages[ "{$field_name}.max" ] = $max_msg;
                     }
                     break;
                 case 'gdpr':
-                    $gdpr_msg = $validation_messages['gdpr'] ?? 'You must agree to proceed';
+                    $gdpr_msg                            = $validation_messages['gdpr'] ?? 'You must agree to proceed';
                     $messages[ "{$field_name}.integer" ] = $gdpr_msg;
-                    $messages[ "{$field_name}.in" ] = $gdpr_msg;
+                    $messages[ "{$field_name}.in" ]      = $gdpr_msg;
                     break;
                 case 'rating':
                     $messages[ "{$field_name}.integer" ] = $validation_messages['number'] ?? 'This field must contain numeric value';
                     if ( ! empty( $field['rating_limit'] ) ) {
-                        $max_msg = str_replace( '{limit}', $field['rating_limit'], $validation_messages['max'] ?? 'This value exceeds the maximum {limit}' );
+                        $max_msg                         = str_replace( '{limit}', $field['rating_limit'], $validation_messages['max'] ?? 'This value exceeds the maximum {limit}' );
                         $messages[ "{$field_name}.max" ] = $max_msg;
                     }
                     break;

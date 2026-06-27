@@ -206,8 +206,8 @@ class GutenaForms extends Form {
             'max_value_msg'       => __( 'Input value should be less than', 'gutena-forms' ),
         ];
 
-        $global_messages   = get_option( 'gutena_forms__form_validation_messages', [] );
-        $form_messages     = isset( $form['form_attrs']['messages'] ) && is_array( $form['form_attrs']['messages'] )
+        $global_messages = get_option( 'gutena_forms__form_validation_messages', [] );
+        $form_messages   = isset( $form['form_attrs']['messages'] ) && is_array( $form['form_attrs']['messages'] )
             ? $form['form_attrs']['messages']
             : [];
 
@@ -372,12 +372,14 @@ class GutenaForms extends Form {
         }
 
         do_action( 'gutena_forms_submitted_data', $raw_data, $form['form_id'], $schema_fields );
-        do_action( 'gutena_forms_submission', [
-            'formName'      => $form['form_name'],
-            'formID'        => $form['form_id'],
-            'submit_data'   => $submission,
-            'raw_data'      => $raw_data,
-        ], $form['form_attrs'] );
+        do_action(
+            'gutena_forms_submission', [
+                'formName'    => $form['form_name'],
+                'formID'      => $form['form_id'],
+                'submit_data' => $submission,
+                'raw_data'    => $raw_data,
+            ], $form['form_attrs'] 
+        );
 
         $form_attrs = $form['form_attrs'];
 
@@ -425,11 +427,13 @@ class GutenaForms extends Form {
             $body .= '<p><strong>' . esc_html( $label ) . '</strong> <br />' . esc_html( $field_value ) . ' </p>';
         }
 
-        $body = apply_filters( 'gutena_forms_submit_admin_notification', $body, [
-            'formName'    => $form['form_name'],
-            'formID'      => $form['form_id'],
-            'submit_data' => $submission,
-        ] );
+        $body = apply_filters(
+            'gutena_forms_submit_admin_notification', $body, [
+                'formName'    => $form['form_name'],
+                'formID'      => $form['form_id'],
+                'submit_data' => $submission,
+            ] 
+        );
 
         $body = wpautop( $body, true );
 
