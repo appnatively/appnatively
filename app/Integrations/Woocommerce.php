@@ -468,7 +468,7 @@ class Woocommerce extends Provider {
         $per_page    = (int) $request->get_param( "per_page" ) ?: 10;
         $search      = $request->get_param( "search" );
         $sort        = $request->get_param( "sort" );
-        $category_id = $request->get_param( "categoryId" ) ?: $request->get_param( "category_id" );
+        $category_id = $request->get_param( "categoryId" );
 
         $order_by = "date";
         $order    = "DESC";
