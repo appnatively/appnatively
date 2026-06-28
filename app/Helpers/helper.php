@@ -11,7 +11,7 @@ use Crafium\AppNatively\WpMVC\Helpers\Date;
  *
  * @return App
  */
-function craf_appnatively(): App {
+function craf_appna(): App {
     return App::$instance;
 }
 
@@ -22,7 +22,7 @@ function craf_appnatively(): App {
  * @return mixed
  */
 function craf_appna_config( string $config_key ) {
-    return craf_appnatively()::get_config()->get( $config_key );
+    return craf_appna()::get_config()->get( $config_key );
 }
 
 /**
@@ -50,7 +50,7 @@ function craf_appna_version(): string {
  * @return Container
  */
 function craf_appna_container(): Container {
-    return craf_appnatively()::get_container();
+    return craf_appna()::get_container();
 }
 
 /**
@@ -84,7 +84,7 @@ function craf_appna_make( string $class, array $params = [] ) {
  * @return string
  */
 function craf_appna_url( string $url = '' ): string {
-    return craf_appnatively()->get_url( $url );
+    return craf_appna()->get_url( $url );
 }
 
 /**
@@ -94,7 +94,7 @@ function craf_appna_url( string $url = '' ): string {
  * @return string
  */
 function craf_appna_dir( string $dir = '' ): string {
-    return craf_appnatively()->get_dir( $dir );
+    return craf_appna()->get_dir( $dir );
 }
 
 /**
