@@ -1,12 +1,12 @@
 <?php
 
-namespace AppNatively\App\DTO;
+namespace Crafium\AppNatively\App\DTO;
 
 defined( "ABSPATH" ) || exit;
 
 use JsonSerializable;
 
-abstract class DTO extends \AppNatively\WpMVC\DTO\DTO implements JsonSerializable {
+abstract class DTO extends \Crafium\AppNatively\WpMVC\DTO\DTO implements JsonSerializable {
     protected array $exclude_to_array = [];
 
     /**

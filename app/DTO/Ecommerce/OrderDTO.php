@@ -2,10 +2,10 @@
 /**
  * OrderDTO class
  *
- * @package AppNatively\App\DTO\Ecommerce
+ * @package Crafium\AppNatively\App\DTO\Ecommerce
  */
 
-namespace AppNatively\App\DTO\Ecommerce;
+namespace Crafium\AppNatively\App\DTO\Ecommerce;
 
 defined( "ABSPATH" ) || exit;
 

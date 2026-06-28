@@ -1,15 +1,15 @@
 <?php
 
-namespace AppNatively\App\Http\Controllers\Ecommerce;
+namespace Crafium\AppNatively\App\Http\Controllers\Ecommerce;
 
 defined( "ABSPATH" ) || exit;
 
-use AppNatively\App\DTO\Ecommerce\CategoryDTO;
-use AppNatively\App\DTO\Ecommerce\CategoryPaginatorDTO;
-use AppNatively\App\Http\Controllers\Controller;
-use AppNatively\WpMVC\Exceptions\Exception;
-use AppNatively\WpMVC\Routing\Response;
-use AppNatively\WpMVC\RequestValidator\Request;
+use Crafium\AppNatively\App\DTO\Ecommerce\CategoryDTO;
+use Crafium\AppNatively\App\DTO\Ecommerce\CategoryPaginatorDTO;
+use Crafium\AppNatively\App\Http\Controllers\Controller;
+use Crafium\AppNatively\WpMVC\Exceptions\Exception;
+use Crafium\AppNatively\WpMVC\Routing\Response;
+use Crafium\AppNatively\WpMVC\RequestValidator\Request;
 
 class CategoryController extends Controller {
     /**
@@ -45,7 +45,7 @@ class CategoryController extends Controller {
         );
 
         $integration       = sanitize_text_field( $request->get_param( "integration" ) );
-        $product_paginator = apply_filters( "appnatively_ecommerce_{$integration}_categories", null, $request, $this->allowed_fields );
+        $product_paginator = apply_filters( "craf_appna_ecommerce_{$integration}_categories", null, $request, $this->allowed_fields );
 
         if ( ! $product_paginator instanceof CategoryPaginatorDTO ) {
             throw new Exception( esc_html__( "Category paginator not found", 'appnatively' ) );
@@ -70,7 +70,7 @@ class CategoryController extends Controller {
         );
 
         $integration = sanitize_text_field( $request->get_param( "integration" ) );
-        $product     = apply_filters( "appnatively_ecommerce_{$integration}_category", null, $request, $this->allowed_fields );
+        $product     = apply_filters( "craf_appna_ecommerce_{$integration}_category", null, $request, $this->allowed_fields );
 
         if ( ! $product instanceof CategoryDTO ) {
             throw new Exception( esc_html__( "Category not found", 'appnatively' ) );

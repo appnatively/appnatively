@@ -1,13 +1,13 @@
 <?php
 
-namespace AppNatively\App\Http\Controllers\Auth;
+namespace Crafium\AppNatively\App\Http\Controllers\Auth;
 
 defined( 'ABSPATH' ) || exit;
 
-use AppNatively\App\Http\Controllers\Controller;
-use AppNatively\WpMVC\Exceptions\Exception;
-use AppNatively\WpMVC\Routing\Response;
-use AppNatively\WpMVC\RequestValidator\Request;
+use Crafium\AppNatively\App\Http\Controllers\Controller;
+use Crafium\AppNatively\WpMVC\Exceptions\Exception;
+use Crafium\AppNatively\WpMVC\Routing\Response;
+use Crafium\AppNatively\WpMVC\RequestValidator\Request;
 use WP_User;
 
 class AuthController extends Controller {

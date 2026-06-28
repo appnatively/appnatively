@@ -1,14 +1,14 @@
 <?php
 
-namespace AppNatively\App\Http\Controllers\Directory;
+namespace Crafium\AppNatively\App\Http\Controllers\Directory;
 
 defined( "ABSPATH" ) || exit;
 
-use AppNatively\App\DTO\Directory\CategoryPaginatorDTO;
-use AppNatively\App\Http\Controllers\Controller;
-use AppNatively\WpMVC\Exceptions\Exception;
-use AppNatively\WpMVC\Routing\Response;
-use AppNatively\WpMVC\RequestValidator\Request;
+use Crafium\AppNatively\App\DTO\Directory\CategoryPaginatorDTO;
+use Crafium\AppNatively\App\Http\Controllers\Controller;
+use Crafium\AppNatively\WpMVC\Exceptions\Exception;
+use Crafium\AppNatively\WpMVC\Routing\Response;
+use Crafium\AppNatively\WpMVC\RequestValidator\Request;
 
 class CategoryController extends Controller {
     protected array $allowed_fields = [
@@ -34,8 +34,8 @@ class CategoryController extends Controller {
         );
 
         $integration        = sanitize_text_field( $request->get_param( "integration" ) );
-        $fields             = appnatively_get_verified_fields( $request->get_param( "fields" ), $this->allowed_fields );
-        $category_paginator = apply_filters( "appnatively_directory_{$integration}_categories", null, $request, $fields );
+        $fields             = craf_appna_get_verified_fields( $request->get_param( "fields" ), $this->allowed_fields );
+        $category_paginator = apply_filters( "craf_appna_directory_{$integration}_categories", null, $request, $fields );
 
         if ( ! $category_paginator instanceof CategoryPaginatorDTO ) {
             throw new Exception( esc_html__( "Categories integration not found", "appnatively" ) );

@@ -1,9 +1,9 @@
 <?php
 
-namespace AppNatively\Tests\Integrations;
+namespace Crafium\AppNatively\Tests\Integrations;
 
-use AppNatively\App\Integrations\Forms\HappyForms;
-use AppNatively\WpMVC\RequestValidator\Request;
+use Crafium\AppNatively\App\Integrations\Forms\HappyForms;
+use Crafium\AppNatively\WpMVC\RequestValidator\Request;
 
 class TestableHappyForms extends HappyForms {
     public function expose_get_validation_rules( array $form ) {
@@ -180,11 +180,11 @@ class HappyFormTest extends \WP_UnitTestCase {
     }
 
     private function get_integration_instance(): TestableHappyForms {
-        return new TestableHappyForms( \AppNatively\WpMVC\App::instance() );
+        return new TestableHappyForms( \Crafium\AppNatively\WpMVC\App::instance() );
     }
 
     public function test_get_key() {
-        $happyforms = new HappyForms( \AppNatively\WpMVC\App::instance() );
+        $happyforms = new HappyForms( \Crafium\AppNatively\WpMVC\App::instance() );
         $this->assertEquals( 'happyforms', $happyforms->get_key() );
     }
 

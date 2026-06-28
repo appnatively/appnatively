@@ -2,6 +2,6 @@
 
 require_once  __DIR__ . '/vendor/vendor-src/autoload.php';
 
-$artisan = new AppNatively\WpMVC\Artisan\Artisan( __DIR__ );
+$artisan = new Crafium\AppNatively\WpMVC\Artisan\Artisan( __DIR__ );
 
 $artisan->execute();

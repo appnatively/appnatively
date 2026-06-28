@@ -1,15 +1,15 @@
 <?php
 
-namespace AppNatively\App\Http\Controllers\Ecommerce;
+namespace Crafium\AppNatively\App\Http\Controllers\Ecommerce;
 
 defined( "ABSPATH" ) || exit;
 
-use AppNatively\App\DTO\Ecommerce\ProductDTO;
-use AppNatively\App\DTO\Ecommerce\ProductPaginatorDTO;
-use AppNatively\App\Http\Controllers\Controller;
-use AppNatively\WpMVC\Exceptions\Exception;
-use AppNatively\WpMVC\Routing\Response;
-use AppNatively\WpMVC\RequestValidator\Request;
+use Crafium\AppNatively\App\DTO\Ecommerce\ProductDTO;
+use Crafium\AppNatively\App\DTO\Ecommerce\ProductPaginatorDTO;
+use Crafium\AppNatively\App\Http\Controllers\Controller;
+use Crafium\AppNatively\WpMVC\Exceptions\Exception;
+use Crafium\AppNatively\WpMVC\Routing\Response;
+use Crafium\AppNatively\WpMVC\RequestValidator\Request;
 
 class ProductController extends Controller {
     /**
@@ -53,7 +53,7 @@ class ProductController extends Controller {
         );
 
         $integration       = sanitize_text_field( $request->get_param( "integration" ) );
-        $product_paginator = apply_filters( "appnatively_ecommerce_{$integration}_products", null, $request, $this->allowed_fields );
+        $product_paginator = apply_filters( "craf_appna_ecommerce_{$integration}_products", null, $request, $this->allowed_fields );
 
         if ( ! $product_paginator instanceof ProductPaginatorDTO ) {
             throw new Exception( esc_html__( "Products integration not found", 'appnatively' ) );
@@ -78,7 +78,7 @@ class ProductController extends Controller {
         );
 
         $integration = sanitize_text_field( $request->get_param( "integration" ) );
-        $product     = apply_filters( "appnatively_ecommerce_{$integration}_product", null, $request, $this->allowed_fields );
+        $product     = apply_filters( "craf_appna_ecommerce_{$integration}_product", null, $request, $this->allowed_fields );
 
         if ( ! $product instanceof ProductDTO ) {
             throw new Exception( esc_html__( "Product not found", 'appnatively' ) );

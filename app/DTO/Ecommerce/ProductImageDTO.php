@@ -1,10 +1,10 @@
 <?php
 
-namespace AppNatively\App\DTO\Ecommerce;
+namespace Crafium\AppNatively\App\DTO\Ecommerce;
 
 defined( "ABSPATH" ) || exit;
 
-use AppNatively\App\DTO\DTO;
+use Crafium\AppNatively\App\DTO\DTO;
 
 class ProductImageDTO extends DTO {
     private int $id;

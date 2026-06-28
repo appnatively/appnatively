@@ -2,18 +2,18 @@
 /**
  * OrderController class
  *
- * @package AppNatively\App\Http\Controllers\Ecommerce
+ * @package Crafium\AppNatively\App\Http\Controllers\Ecommerce
  */
 
-namespace AppNatively\App\Http\Controllers\Ecommerce;
+namespace Crafium\AppNatively\App\Http\Controllers\Ecommerce;
 
 defined( "ABSPATH" ) || exit;
 
-use AppNatively\App\Http\Controllers\Controller;
-use AppNatively\WpMVC\Exceptions\Exception;
-use AppNatively\WpMVC\Routing\Response;
-use AppNatively\WpMVC\RequestValidator\Request;
-use AppNatively\App\DTO\Ecommerce\OrderPaginatorDTO;
+use Crafium\AppNatively\App\Http\Controllers\Controller;
+use Crafium\AppNatively\WpMVC\Exceptions\Exception;
+use Crafium\AppNatively\WpMVC\Routing\Response;
+use Crafium\AppNatively\WpMVC\RequestValidator\Request;
+use Crafium\AppNatively\App\DTO\Ecommerce\OrderPaginatorDTO;
 
 /**
  * Class OrderController
@@ -40,7 +40,7 @@ class OrderController extends Controller {
         $integration = sanitize_text_field( $request->get_param( "integration" ) );
 
         // Apply filter to get orders from specific integration (e.g. WooCommerce)
-        $order_paginator = apply_filters( "appnatively_ecommerce_{$integration}_orders_get", null, $request );
+        $order_paginator = apply_filters( "craf_appna_ecommerce_{$integration}_orders_get", null, $request );
 
         if ( ! $order_paginator instanceof OrderPaginatorDTO ) {
             throw new Exception( esc_html__( "Failed to retrieve orders", "appnatively" ) );
@@ -68,7 +68,7 @@ class OrderController extends Controller {
         $id          = $request->get_param( "id" );
 
         // Apply filter to get order from specific integration (e.g. WooCommerce)
-        $order = apply_filters( "appnatively_ecommerce_{$integration}_order_get", null, $id, $request );
+        $order = apply_filters( "craf_appna_ecommerce_{$integration}_order_get", null, $id, $request );
 
         if ( ! $order ) {
             throw new Exception( esc_html__( "Order not found", "appnatively" ) );

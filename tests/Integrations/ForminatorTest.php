@@ -1,9 +1,9 @@
 <?php
 
-namespace AppNatively\Tests\Integrations;
+namespace Crafium\AppNatively\Tests\Integrations;
 
-use AppNatively\App\Integrations\Forms\Forminator;
-use AppNatively\WpMVC\RequestValidator\Request;
+use Crafium\AppNatively\App\Integrations\Forms\Forminator;
+use Crafium\AppNatively\WpMVC\RequestValidator\Request;
 
 class TestableForminator extends Forminator {
     public function expose_get_validation_rules( array $form ) {
@@ -322,11 +322,11 @@ class ForminatorTest extends \WP_UnitTestCase {
     }
 
     private function get_integration_instance(): TestableForminator {
-        return new TestableForminator( \AppNatively\WpMVC\App::instance() );
+        return new TestableForminator( \Crafium\AppNatively\WpMVC\App::instance() );
     }
 
     public function test_get_key() {
-        $forminator = new Forminator( \AppNatively\WpMVC\App::instance() );
+        $forminator = new Forminator( \Crafium\AppNatively\WpMVC\App::instance() );
         $this->assertEquals( 'forminator', $forminator->get_key() );
     }
 

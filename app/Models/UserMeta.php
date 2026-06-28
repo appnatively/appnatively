@@ -1,18 +1,18 @@
 <?php
 
-namespace AppNatively\App\Models;
+namespace Crafium\AppNatively\App\Models;
 
 defined( 'ABSPATH' ) || exit;
 
-use AppNatively\WpMVC\Database\Eloquent\Model;
-use AppNatively\WpMVC\Database\Resolver;
+use Crafium\AppNatively\WpMVC\Database\Eloquent\Model;
+use Crafium\AppNatively\WpMVC\Database\Resolver;
 
 /**
  * Class UserMeta
  *
  * Represents the WordPress usermeta table.
  *
- * @package AppNatively\App\Models
+ * @package Crafium\AppNatively\App\Models
  */
 class UserMeta extends Model {
     /**

@@ -1,10 +1,10 @@
 <?php
 
-namespace AppNatively\App\DTO\Directory;
+namespace Crafium\AppNatively\App\DTO\Directory;
 
 defined( "ABSPATH" ) || exit;
 
-use AppNatively\App\DTO\DTO;
+use Crafium\AppNatively\App\DTO\DTO;
 
 class ListingDTO extends DTO {
     private int $id;

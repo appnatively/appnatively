@@ -1,6 +1,6 @@
 <?php
 
-use AppNatively\WpMVC\Enqueue\Enqueue;
+use Crafium\AppNatively\WpMVC\Enqueue\Enqueue;
 
 defined( 'ABSPATH' ) || exit;
 

@@ -1,19 +1,19 @@
 <?php
 
-namespace AppNatively\App\Integrations;
+namespace Crafium\AppNatively\App\Integrations;
 
 defined( "ABSPATH" ) || exit;
 
 use WP_REST_Request;
-use AppNatively\WpMVC\Contracts\Provider;
-use AppNatively\App\DTO\Ecommerce\CategoryDTO;
-use AppNatively\App\DTO\Ecommerce\CategoryPaginatorDTO;
-use AppNatively\App\DTO\Ecommerce\ProductDTO;
-use AppNatively\App\DTO\Ecommerce\ProductDimensionDTO;
-use AppNatively\App\DTO\Ecommerce\ProductImageDTO;
-use AppNatively\App\DTO\Ecommerce\ProductPaginatorDTO;
-use AppNatively\App\DTO\Ecommerce\ProductVariantDTO;
-use AppNatively\WpMVC\Exceptions\Exception;
+use Crafium\AppNatively\WpMVC\Contracts\Provider;
+use Crafium\AppNatively\App\DTO\Ecommerce\CategoryDTO;
+use Crafium\AppNatively\App\DTO\Ecommerce\CategoryPaginatorDTO;
+use Crafium\AppNatively\App\DTO\Ecommerce\ProductDTO;
+use Crafium\AppNatively\App\DTO\Ecommerce\ProductDimensionDTO;
+use Crafium\AppNatively\App\DTO\Ecommerce\ProductImageDTO;
+use Crafium\AppNatively\App\DTO\Ecommerce\ProductPaginatorDTO;
+use Crafium\AppNatively\App\DTO\Ecommerce\ProductVariantDTO;
+use Crafium\AppNatively\WpMVC\Exceptions\Exception;
 use FluentCart\App\Helpers\Helper;
 
 // FluentCart Classes
@@ -28,10 +28,10 @@ class FluentCart extends Provider {
      * @return void
      */
     public function boot(): void {
-        add_filter( "appnatively_ecommerce_fluent-cart_products", [ $this, "products" ], 10, 3 );
-        add_filter( "appnatively_ecommerce_fluent-cart_product", [ $this, "product" ], 10, 3 );
-        add_filter( "appnatively_ecommerce_fluent-cart_categories", [ $this, "categories" ], 10, 3 );
-        add_filter( "appnatively_ecommerce_fluent-cart_category", [ $this, "category" ], 10, 3 );
+        add_filter( "craf_appna_ecommerce_fluent-cart_products", [ $this, "products" ], 10, 3 );
+        add_filter( "craf_appna_ecommerce_fluent-cart_product", [ $this, "product" ], 10, 3 );
+        add_filter( "craf_appna_ecommerce_fluent-cart_categories", [ $this, "categories" ], 10, 3 );
+        add_filter( "craf_appna_ecommerce_fluent-cart_category", [ $this, "category" ], 10, 3 );
     }
 
     /**

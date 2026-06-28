@@ -2,8 +2,8 @@
 
 defined( 'ABSPATH' ) || exit;
 
-use AppNatively\App\Http\Controllers\Auth\AuthController;
-use AppNatively\WpMVC\Routing\Route;
+use Crafium\AppNatively\App\Http\Controllers\Auth\AuthController;
+use Crafium\AppNatively\WpMVC\Routing\Route;
 
 Route::group(
     'auth', function() {

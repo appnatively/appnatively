@@ -2,16 +2,16 @@
 
 defined( 'ABSPATH' ) || exit;
 
-use AppNatively\WpMVC\App;
-use AppNatively\WpMVC\Container\Container;
-use AppNatively\WpMVC\Helpers\Date;
+use Crafium\AppNatively\WpMVC\App;
+use Crafium\AppNatively\WpMVC\Container\Container;
+use Crafium\AppNatively\WpMVC\Helpers\Date;
 
 /**
  * Get the application instance.
  *
  * @return App
  */
-function appnatively(): App {
+function craf_appnatively(): App {
     return App::$instance;
 }
 
@@ -21,8 +21,8 @@ function appnatively(): App {
  * @param string $config_key The configuration key.
  * @return mixed
  */
-function appnatively_config( string $config_key ) {
-    return appnatively()::get_config()->get( $config_key );
+function craf_appna_config( string $config_key ) {
+    return craf_appnatively()::get_config()->get( $config_key );
 }
 
 /**
@@ -31,8 +31,8 @@ function appnatively_config( string $config_key ) {
  * @param string $config_key The configuration key.
  * @return mixed
  */
-function appnatively_app_config( string $config_key ) {
-    return appnatively_config( "app.{$config_key}" );
+function craf_appna_app_config( string $config_key ) {
+    return craf_appna_config( "app.{$config_key}" );
 }
 
 /**
@@ -40,8 +40,8 @@ function appnatively_app_config( string $config_key ) {
  *
  * @return string
  */
-function appnatively_version(): string {
-    return appnatively_app_config( 'version' );
+function craf_appna_version(): string {
+    return craf_appna_app_config( 'version' );
 }
 
 /**
@@ -49,8 +49,8 @@ function appnatively_version(): string {
  *
  * @return Container
  */
-function appnatively_container(): Container {
-    return appnatively()::get_container();
+function craf_appna_container(): Container {
+    return craf_appnatively()::get_container();
 }
 
 /**
@@ -61,8 +61,8 @@ function appnatively_container(): Container {
  * @param array $params Parameters for resolution.
  * @return T
  */
-function appnatively_resolve( string $class, array $params = [] ) {
-    return appnatively_container()->get( $class, $params );
+function craf_appna_resolve( string $class, array $params = [] ) {
+    return craf_appna_container()->get( $class, $params );
 }
 
 /**
@@ -73,8 +73,8 @@ function appnatively_resolve( string $class, array $params = [] ) {
  * @param array $params Parameters for the constructor.
  * @return T A new instance.
  */
-function appnatively_make( string $class, array $params = [] ) {
-    return appnatively_container()->make( $class, $params );
+function craf_appna_make( string $class, array $params = [] ) {
+    return craf_appna_container()->make( $class, $params );
 }
 
 /**
@@ -83,8 +83,8 @@ function appnatively_make( string $class, array $params = [] ) {
  * @param string $url Optional. Extra path to append to the URL.
  * @return string
  */
-function appnatively_url( string $url = '' ): string {
-    return appnatively()->get_url( $url );
+function craf_appna_url( string $url = '' ): string {
+    return craf_appnatively()->get_url( $url );
 }
 
 /**
@@ -93,8 +93,8 @@ function appnatively_url( string $url = '' ): string {
  * @param string $dir Optional. Extra path to append to the directory.
  * @return string
  */
-function appnatively_dir( string $dir = '' ): string {
-    return appnatively()->get_dir( $dir );
+function craf_appna_dir( string $dir = '' ): string {
+    return craf_appnatively()->get_dir( $dir );
 }
 
 /**
@@ -103,7 +103,7 @@ function appnatively_dir( string $dir = '' ): string {
  * @param DateTimeZone|null $timezone Optional. The timezone. Defaults to wp_timezone().
  * @return Date
  */
-function appnatively_now( ?DateTimeZone $timezone = null ): Date {
+function craf_appna_now( ?DateTimeZone $timezone = null ): Date {
     return Date::now( $timezone );
 }
 
@@ -114,7 +114,7 @@ function appnatively_now( ?DateTimeZone $timezone = null ): Date {
  * @param array $allowed_fields The allowed fields.
  * @return array
  */
-function appnatively_get_verified_fields( ?string $fields, array $allowed_fields ): array {
+function craf_appna_get_verified_fields( ?string $fields, array $allowed_fields ): array {
     if ( empty( $fields ) ) {
         return $allowed_fields;
     }

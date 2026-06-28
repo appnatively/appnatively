@@ -1,6 +1,6 @@
 <?php
 
-namespace AppNatively\App\DTO;
+namespace Crafium\AppNatively\App\DTO;
 
 defined( "ABSPATH" ) || exit;
 

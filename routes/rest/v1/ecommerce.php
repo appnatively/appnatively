@@ -2,11 +2,11 @@
 
 defined( 'ABSPATH' ) || exit;
 
-use AppNatively\App\Http\Controllers\Ecommerce\CategoryController;
-use AppNatively\App\Http\Controllers\Ecommerce\ProductController;
-use AppNatively\App\Http\Controllers\Ecommerce\CartController;
-use AppNatively\App\Http\Controllers\Ecommerce\OrderController;
-use AppNatively\WpMVC\Routing\Route;
+use Crafium\AppNatively\App\Http\Controllers\Ecommerce\CategoryController;
+use Crafium\AppNatively\App\Http\Controllers\Ecommerce\ProductController;
+use Crafium\AppNatively\App\Http\Controllers\Ecommerce\CartController;
+use Crafium\AppNatively\App\Http\Controllers\Ecommerce\OrderController;
+use Crafium\AppNatively\WpMVC\Routing\Route;
 
 Route::group(
     'products', function() {

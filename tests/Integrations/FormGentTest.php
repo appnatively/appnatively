@@ -1,9 +1,9 @@
 <?php
 
-namespace AppNatively\Tests\Integrations;
+namespace Crafium\AppNatively\Tests\Integrations;
 
-use AppNatively\App\Integrations\Forms\FormGent;
-use AppNatively\WpMVC\RequestValidator\Request;
+use Crafium\AppNatively\App\Integrations\Forms\FormGent;
+use Crafium\AppNatively\WpMVC\RequestValidator\Request;
 
 class TestableFormGent extends FormGent {
     public function expose_get_validation_rules( array $form ) {
@@ -89,11 +89,11 @@ class FormGentTest extends \WP_UnitTestCase {
     }
 
     private function get_integration_instance(): TestableFormGent {
-        return new TestableFormGent( \AppNatively\WpMVC\App::instance() );
+        return new TestableFormGent( \Crafium\AppNatively\WpMVC\App::instance() );
     }
 
     public function test_get_key() {
-        $formgent = new FormGent( \AppNatively\WpMVC\App::instance() );
+        $formgent = new FormGent( \Crafium\AppNatively\WpMVC\App::instance() );
         $this->assertEquals( 'formgent', $formgent->get_key() );
     }
 

@@ -1,9 +1,9 @@
 <?php
 
-namespace AppNatively\Tests\Integrations;
+namespace Crafium\AppNatively\Tests\Integrations;
 
-use AppNatively\App\Integrations\Forms\Formidable;
-use AppNatively\WpMVC\RequestValidator\Request;
+use Crafium\AppNatively\App\Integrations\Forms\Formidable;
+use Crafium\AppNatively\WpMVC\RequestValidator\Request;
 
 class TestableFormidable extends Formidable {
     public function expose_get_validation_rules( array $form ) {
@@ -21,11 +21,11 @@ class TestableFormidable extends Formidable {
 
 class FormidableTest extends \WP_UnitTestCase {
     private function get_integration_instance(): TestableFormidable {
-        return new TestableFormidable( \AppNatively\WpMVC\App::instance() );
+        return new TestableFormidable( \Crafium\AppNatively\WpMVC\App::instance() );
     }
 
     public function test_get_key() {
-        $formidable = new Formidable( \AppNatively\WpMVC\App::instance() );
+        $formidable = new Formidable( \Crafium\AppNatively\WpMVC\App::instance() );
         $this->assertEquals( 'formidable', $formidable->get_key() );
     }
 

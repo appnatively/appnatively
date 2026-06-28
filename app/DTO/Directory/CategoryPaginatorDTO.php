@@ -1,10 +1,10 @@
 <?php
 
-namespace AppNatively\App\DTO\Directory;
+namespace Crafium\AppNatively\App\DTO\Directory;
 
 defined( "ABSPATH" ) || exit;
 
-use AppNatively\App\DTO\PaginatorDTO;
+use Crafium\AppNatively\App\DTO\PaginatorDTO;
 
 class CategoryPaginatorDTO extends PaginatorDTO {
     protected $items;

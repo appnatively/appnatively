@@ -1,9 +1,9 @@
 <?php
 
-namespace AppNatively\Tests\Integrations;
+namespace Crafium\AppNatively\Tests\Integrations;
 
-use AppNatively\App\Integrations\Forms\FluentForm;
-use AppNatively\WpMVC\RequestValidator\Request;
+use Crafium\AppNatively\App\Integrations\Forms\FluentForm;
+use Crafium\AppNatively\WpMVC\RequestValidator\Request;
 
 class TestableFluentForm extends FluentForm
 {
@@ -263,11 +263,11 @@ class FluentFormTest extends \WP_UnitTestCase
     }
 
     private function get_integration_instance(): TestableFluentForm {
-        return new TestableFluentForm( \AppNatively\WpMVC\App::instance() );
+        return new TestableFluentForm( \Crafium\AppNatively\WpMVC\App::instance() );
     }
 
     public function test_get_key() {
-        $fluent_form = new FluentForm( \AppNatively\WpMVC\App::instance() );
+        $fluent_form = new FluentForm( \Crafium\AppNatively\WpMVC\App::instance() );
         $this->assertEquals( 'fluentform', $fluent_form->get_key() );
     }
 

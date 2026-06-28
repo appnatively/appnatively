@@ -1,9 +1,9 @@
 <?php
 
-namespace AppNatively\Tests\Integrations;
+namespace Crafium\AppNatively\Tests\Integrations;
 
-use AppNatively\App\Integrations\Forms\GutenaForms;
-use AppNatively\WpMVC\RequestValidator\Request;
+use Crafium\AppNatively\App\Integrations\Forms\GutenaForms;
+use Crafium\AppNatively\WpMVC\RequestValidator\Request;
 
 class TestableGutenaForms extends GutenaForms {
     public function expose_get_validation_rules( array $form ) {
@@ -192,11 +192,11 @@ class GutenaFormTest extends \WP_UnitTestCase {
     }
 
     private function get_integration_instance(): TestableGutenaForms {
-        return new TestableGutenaForms( \AppNatively\WpMVC\App::instance() );
+        return new TestableGutenaForms( \Crafium\AppNatively\WpMVC\App::instance() );
     }
 
     public function test_get_key() {
-        $gutena = new GutenaForms( \AppNatively\WpMVC\App::instance() );
+        $gutena = new GutenaForms( \Crafium\AppNatively\WpMVC\App::instance() );
         $this->assertEquals( 'gutena-forms', $gutena->get_key() );
     }
 

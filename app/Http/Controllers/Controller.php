@@ -1,6 +1,6 @@
 <?php
 
-namespace AppNatively\App\Http\Controllers;
+namespace Crafium\AppNatively\App\Http\Controllers;
 
 defined( 'ABSPATH' ) || exit;
 

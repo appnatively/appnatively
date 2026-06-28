@@ -1,11 +1,11 @@
 <?php
 
-namespace AppNatively\App\Integrations\Forms;
+namespace Crafium\AppNatively\App\Integrations\Forms;
 
 defined( "ABSPATH" ) || exit;
 
-use AppNatively\WpMVC\Contracts\Provider;
-use AppNatively\WpMVC\RequestValidator\Request;
+use Crafium\AppNatively\WpMVC\Contracts\Provider;
+use Crafium\AppNatively\WpMVC\RequestValidator\Request;
 use Exception;
 
 abstract class Form extends Provider {
@@ -18,7 +18,7 @@ abstract class Form extends Provider {
     abstract protected function submit( Request $request, array $form );
 
     public function boot(): void {
-        add_filter( "appnatively_form_{$this->get_key()}_submit", [$this, "form_submit"], 10, 1 );
+        add_filter( "craf_appna_form_{$this->get_key()}_submit", [$this, "form_submit"], 10, 1 );
     }
 
     public function form_submit( Request $request ) {

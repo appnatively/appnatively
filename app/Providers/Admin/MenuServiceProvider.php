@@ -1,11 +1,11 @@
 <?php
 
-namespace AppNatively\App\Providers\Admin;
+namespace Crafium\AppNatively\App\Providers\Admin;
 
 defined( 'ABSPATH' ) || exit;
 
-use AppNatively\WpMVC\Contracts\Provider;
-use AppNatively\WpMVC\View\View;
+use Crafium\AppNatively\WpMVC\Contracts\Provider;
+use Crafium\AppNatively\WpMVC\View\View;
 
 class MenuServiceProvider extends Provider
 {

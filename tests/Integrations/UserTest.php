@@ -1,8 +1,8 @@
 <?php
 
-namespace AppNatively\Tests\Integrations;
+namespace Crafium\AppNatively\Tests\Integrations;
 
-use AppNatively\App\Models\User;
+use Crafium\AppNatively\App\Models\User;
 
 class UserTest extends \WP_UnitTestCase
 {

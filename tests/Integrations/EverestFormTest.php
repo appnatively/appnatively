@@ -1,9 +1,9 @@
 <?php
 
-namespace AppNatively\Tests\Integrations;
+namespace Crafium\AppNatively\Tests\Integrations;
 
-use AppNatively\App\Integrations\Forms\EverestForms;
-use AppNatively\WpMVC\RequestValidator\Request;
+use Crafium\AppNatively\App\Integrations\Forms\EverestForms;
+use Crafium\AppNatively\WpMVC\RequestValidator\Request;
 
 class TestableEverestForms extends EverestForms {
     public function expose_get_validation_rules( array $form ) {
@@ -228,11 +228,11 @@ class EverestFormTest extends \WP_UnitTestCase {
     }
 
     private function get_integration_instance(): TestableEverestForms {
-        return new TestableEverestForms( \AppNatively\WpMVC\App::instance() );
+        return new TestableEverestForms( \Crafium\AppNatively\WpMVC\App::instance() );
     }
 
     public function test_get_key() {
-        $everest_forms = new EverestForms( \AppNatively\WpMVC\App::instance() );
+        $everest_forms = new EverestForms( \Crafium\AppNatively\WpMVC\App::instance() );
         $this->assertEquals( 'everest-forms', $everest_forms->get_key() );
     }
 

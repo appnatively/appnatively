@@ -1,10 +1,10 @@
 <?php
 
-namespace AppNatively\Database\Seeders;
+namespace Crafium\AppNatively\Database\Seeders;
 
 defined( "ABSPATH" ) || exit;
 
-use AppNatively\WpMVC\Database\Seeder;
+use Crafium\AppNatively\WpMVC\Database\Seeder;
 
 class DatabaseSeeder extends Seeder {
     /**

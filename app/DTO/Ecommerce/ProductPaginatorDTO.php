@@ -1,10 +1,10 @@
 <?php
 
-namespace AppNatively\App\DTO\Ecommerce;
+namespace Crafium\AppNatively\App\DTO\Ecommerce;
 
 defined( "ABSPATH" ) || exit;
 
-use AppNatively\App\DTO\PaginatorDTO;
+use Crafium\AppNatively\App\DTO\PaginatorDTO;
 
 class ProductPaginatorDTO extends PaginatorDTO {
     /**

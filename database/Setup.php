@@ -1,10 +1,10 @@
 <?php
 
-namespace AppNatively\Database;
+namespace Crafium\AppNatively\Database;
 
 defined( 'ABSPATH' ) || exit;
 
-use AppNatively\WpMVC\Database\Schema\Schema;
+use Crafium\AppNatively\WpMVC\Database\Schema\Schema;
 
 class Setup {
     public function execute() {

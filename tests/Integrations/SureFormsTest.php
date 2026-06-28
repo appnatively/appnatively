@@ -1,9 +1,9 @@
 <?php
 
-namespace AppNatively\Tests\Integrations;
+namespace Crafium\AppNatively\Tests\Integrations;
 
-use AppNatively\App\Integrations\Forms\SureForms;
-use AppNatively\WpMVC\RequestValidator\Request;
+use Crafium\AppNatively\App\Integrations\Forms\SureForms;
+use Crafium\AppNatively\WpMVC\RequestValidator\Request;
 
 class TestableSureForms extends SureForms {
     public function expose_get_validation_rules( array $form ) {
@@ -134,7 +134,7 @@ class SureFormsTest extends \WP_UnitTestCase {
     }
 
     private function get_integration_instance(): TestableSureForms {
-        return new TestableSureForms( \AppNatively\WpMVC\App::instance() );
+        return new TestableSureForms( \Crafium\AppNatively\WpMVC\App::instance() );
     }
 
     private function build_expected_field_name( array $field, int &$dropdown_counter ): string {
@@ -151,7 +151,7 @@ class SureFormsTest extends \WP_UnitTestCase {
     }
 
     public function test_get_key() {
-        $sureforms = new SureForms( \AppNatively\WpMVC\App::instance() );
+        $sureforms = new SureForms( \Crafium\AppNatively\WpMVC\App::instance() );
         $this->assertEquals( 'sureforms', $sureforms->get_key() );
     }
 

@@ -1,10 +1,10 @@
 <?php
 
-namespace AppNatively\App\Integrations\Forms;
+namespace Crafium\AppNatively\App\Integrations\Forms;
 
 defined( 'ABSPATH' ) || exit;
 
-use AppNatively\WpMVC\RequestValidator\Request;
+use Crafium\AppNatively\WpMVC\RequestValidator\Request;
 
 class HappyForms extends Form {
     public function get_key(): string {

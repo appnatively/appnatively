@@ -1,11 +1,11 @@
 <?php
 
-namespace AppNatively\App\Integrations\Forms;
+namespace Crafium\AppNatively\App\Integrations\Forms;
 
 defined( "ABSPATH" ) || exit;
 
-use AppNatively\WpMVC\Helpers\Helpers;
-use AppNatively\WpMVC\RequestValidator\Request;
+use Crafium\AppNatively\WpMVC\Helpers\Helpers;
+use Crafium\AppNatively\WpMVC\RequestValidator\Request;
 
 class FluentForm extends Form {
     public function get_key(): string {

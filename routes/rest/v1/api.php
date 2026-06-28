@@ -2,9 +2,9 @@
 
 defined( 'ABSPATH' ) || exit;
 
-use AppNatively\App\Http\Controllers\PluginsController;
-use AppNatively\WpMVC\Routing\Route;
-use AppNatively\WpMVC\Routing\Response;
+use Crafium\AppNatively\App\Http\Controllers\PluginsController;
+use Crafium\AppNatively\WpMVC\Routing\Route;
+use Crafium\AppNatively\WpMVC\Routing\Response;
 
 Route::get(
     'me', function(){

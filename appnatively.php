@@ -2,8 +2,8 @@
 
 defined( 'ABSPATH' ) || exit;
 
-use AppNatively\WpMVC\App;
-use AppNatively\Database\Setup;
+use Crafium\AppNatively\WpMVC\App;
+use Crafium\AppNatively\Database\Setup;
 
 /**
  * Plugin Name:       App Natively
@@ -61,11 +61,11 @@ final class Appnatively
         add_action(
             'plugins_loaded', function () use ( $application ): void {
 
-                do_action( 'appnatively_before_load' );
+                do_action( 'craf_appna_before_load' );
 
                 $application->load();
 
-                do_action( 'appnatively_after_load' );
+                do_action( 'craf_appna_after_load' );
             }
         );
     }

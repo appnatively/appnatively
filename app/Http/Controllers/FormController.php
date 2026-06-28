@@ -1,12 +1,12 @@
 <?php
 
-namespace AppNatively\App\Http\Controllers;
+namespace Crafium\AppNatively\App\Http\Controllers;
 
 defined( "ABSPATH" ) || exit;
 
-use AppNatively\App\Http\Controllers\Controller;
-use AppNatively\WpMVC\Routing\Response;
-use AppNatively\WpMVC\RequestValidator\Request;
+use Crafium\AppNatively\App\Http\Controllers\Controller;
+use Crafium\AppNatively\WpMVC\Routing\Response;
+use Crafium\AppNatively\WpMVC\RequestValidator\Request;
 
 class FormController extends Controller {
     public function store( Request $request ): array {
@@ -19,7 +19,7 @@ class FormController extends Controller {
 
         $integration = sanitize_text_field( $request->get_param( "integration" ) );
 
-        do_action( "appnatively_form_{$integration}_submit", $request );
+        do_action( "craf_appna_form_{$integration}_submit", $request );
 
         $error_response = $this->get_processing_errors( $integration );
 

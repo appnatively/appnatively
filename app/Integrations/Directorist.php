@@ -1,16 +1,16 @@
 <?php
 
-namespace AppNatively\App\Integrations;
+namespace Crafium\AppNatively\App\Integrations;
 
 defined( "ABSPATH" ) || exit;
 
-use AppNatively\App\DTO\Directory\CategoryDTO;
-use AppNatively\App\DTO\Directory\CategoryPaginatorDTO;
-use AppNatively\App\DTO\Directory\ListingDTO;
-use AppNatively\App\DTO\Directory\ListingPaginatorDTO;
-use AppNatively\App\Models\Term;
-use AppNatively\WpMVC\Contracts\Provider;
-use AppNatively\WpMVC\RequestValidator\Request;
+use Crafium\AppNatively\App\DTO\Directory\CategoryDTO;
+use Crafium\AppNatively\App\DTO\Directory\CategoryPaginatorDTO;
+use Crafium\AppNatively\App\DTO\Directory\ListingDTO;
+use Crafium\AppNatively\App\DTO\Directory\ListingPaginatorDTO;
+use Crafium\AppNatively\App\Models\Term;
+use Crafium\AppNatively\WpMVC\Contracts\Provider;
+use Crafium\AppNatively\WpMVC\RequestValidator\Request;
 use Directorist\Helper;
 use WP_Post;
 use WP_Query;
@@ -29,8 +29,8 @@ class Directorist extends Provider {
      * @return void
      */
     public function boot(): void {
-        add_filter( "appnatively_directory_directorist_listings", [$this, "listings"], 10, 3 );
-        add_filter( "appnatively_directory_directorist_categories", [$this, "categories"], 10, 3 );
+        add_filter( "craf_appna_directory_directorist_listings", [$this, "listings"], 10, 3 );
+        add_filter( "craf_appna_directory_directorist_categories", [$this, "categories"], 10, 3 );
     }
 
     /**

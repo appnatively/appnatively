@@ -3,7 +3,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-use AppNatively\App\Http\Controllers\FormController;
-use AppNatively\WpMVC\Routing\Route;
+use Crafium\AppNatively\App\Http\Controllers\FormController;
+use Crafium\AppNatively\WpMVC\Routing\Route;
 
 Route::post( 'form', [FormController::class, 'store'] );

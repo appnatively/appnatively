@@ -1,9 +1,9 @@
 <?php
 
-namespace AppNatively\Tests\Integrations;
+namespace Crafium\AppNatively\Tests\Integrations;
 
-use AppNatively\App\Integrations\Forms\WeForms;
-use AppNatively\WpMVC\RequestValidator\Request;
+use Crafium\AppNatively\App\Integrations\Forms\WeForms;
+use Crafium\AppNatively\WpMVC\RequestValidator\Request;
 
 class TestableWeForms extends WeForms {
     public function expose_get_validation_rules( array $form ) {
@@ -182,11 +182,11 @@ class WeFormsTest extends \WP_UnitTestCase {
     }
 
     private function get_integration_instance(): TestableWeForms {
-        return new TestableWeForms( \AppNatively\WpMVC\App::instance() );
+        return new TestableWeForms( \Crafium\AppNatively\WpMVC\App::instance() );
     }
 
     public function test_get_key() {
-        $weforms = new WeForms( \AppNatively\WpMVC\App::instance() );
+        $weforms = new WeForms( \Crafium\AppNatively\WpMVC\App::instance() );
         $this->assertEquals( 'weforms', $weforms->get_key() );
     }
 

@@ -2,28 +2,28 @@
 
 defined( 'ABSPATH' ) || exit;
 
-use AppNatively\App\Http\Middleware\EnsureIsUserAdmin;
-use AppNatively\App\Integrations\FluentCart;
-use AppNatively\App\Integrations\Forms\FluentForm;
-use AppNatively\App\Integrations\Forms\FormGent;
-use AppNatively\App\Integrations\Forms\Forminator;
-use AppNatively\App\Integrations\Forms\ContactForm7;
-use AppNatively\App\Integrations\Forms\EverestForms;
-use AppNatively\App\Integrations\Forms\Formidable;
-use AppNatively\App\Integrations\Forms\GutenaForms;
-use AppNatively\App\Integrations\Forms\HappyForms;
-use AppNatively\App\Integrations\Forms\SureForms;
-use AppNatively\App\Integrations\Forms\WeForms;
-use AppNatively\App\Integrations\Forms\WPForms;
-use AppNatively\App\Providers\Admin\MenuServiceProvider;
-use AppNatively\App\Models\Comment;
-use AppNatively\App\Models\Post;
-use AppNatively\App\Models\Term;
-use AppNatively\App\Models\TermTaxonomy;
-use AppNatively\App\Models\User;
-use AppNatively\App\Integrations\Directorist;
-use AppNatively\App\Integrations\Woocommerce;
-use AppNatively\WpMVC\Helpers\Helpers;
+use Crafium\AppNatively\App\Http\Middleware\EnsureIsUserAdmin;
+use Crafium\AppNatively\App\Integrations\FluentCart;
+use Crafium\AppNatively\App\Integrations\Forms\FluentForm;
+use Crafium\AppNatively\App\Integrations\Forms\FormGent;
+use Crafium\AppNatively\App\Integrations\Forms\Forminator;
+use Crafium\AppNatively\App\Integrations\Forms\ContactForm7;
+use Crafium\AppNatively\App\Integrations\Forms\EverestForms;
+use Crafium\AppNatively\App\Integrations\Forms\Formidable;
+use Crafium\AppNatively\App\Integrations\Forms\GutenaForms;
+use Crafium\AppNatively\App\Integrations\Forms\HappyForms;
+use Crafium\AppNatively\App\Integrations\Forms\SureForms;
+use Crafium\AppNatively\App\Integrations\Forms\WeForms;
+use Crafium\AppNatively\App\Integrations\Forms\WPForms;
+use Crafium\AppNatively\App\Providers\Admin\MenuServiceProvider;
+use Crafium\AppNatively\App\Models\Comment;
+use Crafium\AppNatively\App\Models\Post;
+use Crafium\AppNatively\App\Models\Term;
+use Crafium\AppNatively\App\Models\TermTaxonomy;
+use Crafium\AppNatively\App\Models\User;
+use Crafium\AppNatively\App\Integrations\Directorist;
+use Crafium\AppNatively\App\Integrations\Woocommerce;
+use Crafium\AppNatively\WpMVC\Helpers\Helpers;
 
 return [
     /**

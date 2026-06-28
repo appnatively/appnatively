@@ -1,10 +1,10 @@
 <?php
 
-namespace AppNatively\App\Http\Middleware;
+namespace Crafium\AppNatively\App\Http\Middleware;
 
 defined( 'ABSPATH' ) || exit;
 
-use AppNatively\WpMVC\Routing\Contracts\Middleware;
+use Crafium\AppNatively\WpMVC\Routing\Contracts\Middleware;
 use WP_REST_Request;
 use WP_Error;
 

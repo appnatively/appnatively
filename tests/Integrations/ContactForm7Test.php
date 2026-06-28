@@ -1,9 +1,9 @@
 <?php
 
-namespace AppNatively\Tests\Integrations;
+namespace Crafium\AppNatively\Tests\Integrations;
 
-use AppNatively\App\Integrations\Forms\ContactForm7;
-use AppNatively\WpMVC\RequestValidator\Request;
+use Crafium\AppNatively\App\Integrations\Forms\ContactForm7;
+use Crafium\AppNatively\WpMVC\RequestValidator\Request;
 
 class TestableContactForm7 extends ContactForm7 {
     public function expose_get_validation_rules( array $form ) {
@@ -57,11 +57,11 @@ class ContactForm7Test extends \WP_UnitTestCase {
     }
 
     private function get_integration_instance(): TestableContactForm7 {
-        return new TestableContactForm7( \AppNatively\WpMVC\App::instance() );
+        return new TestableContactForm7( \Crafium\AppNatively\WpMVC\App::instance() );
     }
 
     public function test_get_key() {
-        $cf7 = new ContactForm7( \AppNatively\WpMVC\App::instance() );
+        $cf7 = new ContactForm7( \Crafium\AppNatively\WpMVC\App::instance() );
         $this->assertEquals( 'contact-form-7', $cf7->get_key() );
     }
 

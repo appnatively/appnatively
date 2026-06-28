@@ -1,25 +1,25 @@
 <?php
 
-namespace AppNatively\App\Integrations;
+namespace Crafium\AppNatively\App\Integrations;
 
 defined( "ABSPATH" ) || exit;
 
-use AppNatively\App\DTO\Ecommerce\CartDTO;
-use AppNatively\App\DTO\Ecommerce\CartItemDTO;
-use AppNatively\App\Models\Post;
-use AppNatively\App\DTO\Ecommerce\CategoryDTO;
-use AppNatively\App\DTO\Ecommerce\CategoryPaginatorDTO;
-use AppNatively\App\DTO\Ecommerce\ProductDTO;
-use AppNatively\App\DTO\Ecommerce\ProductDimensionDTO;
-use AppNatively\App\DTO\Ecommerce\ProductImageDTO;
-use AppNatively\App\DTO\Ecommerce\ProductPaginatorDTO;
-use AppNatively\App\DTO\Ecommerce\ProductVariantDTO;
-use AppNatively\App\DTO\Ecommerce\OrderDTO;
-use AppNatively\App\DTO\Ecommerce\OrderPaginatorDTO;
-use AppNatively\App\Models\Term;
-use AppNatively\WpMVC\Contracts\Provider;
-use AppNatively\WpMVC\RequestValidator\Request;
-use AppNatively\WpMVC\Exceptions\Exception;
+use Crafium\AppNatively\App\DTO\Ecommerce\CartDTO;
+use Crafium\AppNatively\App\DTO\Ecommerce\CartItemDTO;
+use Crafium\AppNatively\App\Models\Post;
+use Crafium\AppNatively\App\DTO\Ecommerce\CategoryDTO;
+use Crafium\AppNatively\App\DTO\Ecommerce\CategoryPaginatorDTO;
+use Crafium\AppNatively\App\DTO\Ecommerce\ProductDTO;
+use Crafium\AppNatively\App\DTO\Ecommerce\ProductDimensionDTO;
+use Crafium\AppNatively\App\DTO\Ecommerce\ProductImageDTO;
+use Crafium\AppNatively\App\DTO\Ecommerce\ProductPaginatorDTO;
+use Crafium\AppNatively\App\DTO\Ecommerce\ProductVariantDTO;
+use Crafium\AppNatively\App\DTO\Ecommerce\OrderDTO;
+use Crafium\AppNatively\App\DTO\Ecommerce\OrderPaginatorDTO;
+use Crafium\AppNatively\App\Models\Term;
+use Crafium\AppNatively\WpMVC\Contracts\Provider;
+use Crafium\AppNatively\WpMVC\RequestValidator\Request;
+use Crafium\AppNatively\WpMVC\Exceptions\Exception;
 
 class Woocommerce extends Provider {
     /**
@@ -35,19 +35,19 @@ class Woocommerce extends Provider {
      * @return void
      */
     public function boot() {
-        add_filter( "appnatively_ecommerce_woocommerce_products", [$this, "products"], 10, 3 );
-        add_filter( "appnatively_ecommerce_woocommerce_product", [$this, "product"], 10, 3 );
-        add_filter( "appnatively_ecommerce_woocommerce_categories", [$this, "categories"], 10, 3 );
-        add_filter( "appnatively_ecommerce_woocommerce_category", [$this, "category"], 10, 3 );
+        add_filter( "craf_appna_ecommerce_woocommerce_products", [$this, "products"], 10, 3 );
+        add_filter( "craf_appna_ecommerce_woocommerce_product", [$this, "product"], 10, 3 );
+        add_filter( "craf_appna_ecommerce_woocommerce_categories", [$this, "categories"], 10, 3 );
+        add_filter( "craf_appna_ecommerce_woocommerce_category", [$this, "category"], 10, 3 );
 
         // Cart filters
-        add_filter( "appnatively_ecommerce_woocommerce_cart_get", [$this, "cart_get"], 10, 2 );
-        add_filter( "appnatively_ecommerce_woocommerce_cart_add", [$this, "cart_add"], 10, 2 );
-        add_filter( "appnatively_ecommerce_woocommerce_cart_update", [$this, "cart_update"], 10, 2 );
-        add_filter( "appnatively_ecommerce_woocommerce_cart_remove", [$this, "cart_remove"], 10, 2 );
-        add_filter( "appnatively_ecommerce_woocommerce_cart_clear", [$this, "cart_clear"], 10, 2 );
-        add_filter( "appnatively_ecommerce_woocommerce_orders_get", [$this, "orders_get"], 10, 2 );
-        add_filter( "appnatively_ecommerce_woocommerce_order_get", [$this, "order_get"], 10, 3 );
+        add_filter( "craf_appna_ecommerce_woocommerce_cart_get", [$this, "cart_get"], 10, 2 );
+        add_filter( "craf_appna_ecommerce_woocommerce_cart_add", [$this, "cart_add"], 10, 2 );
+        add_filter( "craf_appna_ecommerce_woocommerce_cart_update", [$this, "cart_update"], 10, 2 );
+        add_filter( "craf_appna_ecommerce_woocommerce_cart_remove", [$this, "cart_remove"], 10, 2 );
+        add_filter( "craf_appna_ecommerce_woocommerce_cart_clear", [$this, "cart_clear"], 10, 2 );
+        add_filter( "craf_appna_ecommerce_woocommerce_orders_get", [$this, "orders_get"], 10, 2 );
+        add_filter( "craf_appna_ecommerce_woocommerce_order_get", [$this, "order_get"], 10, 3 );
 
 
         // Autologin handler for web checkout
@@ -297,7 +297,7 @@ class Woocommerce extends Provider {
                 $image_id  = $product ? $product->get_image_id() : null;
                 $image_url = $image_id ? wp_get_attachment_image_url( $image_id, 'woocommerce_thumbnail' ) : null;
 
-                $line_items[] = new \AppNatively\App\DTO\Ecommerce\OrderItemDTO(
+                $line_items[] = new \Crafium\AppNatively\App\DTO\Ecommerce\OrderItemDTO(
                     [
                         'title'        => $item->get_name(),
                         'quantity'     => $item->get_quantity(),
@@ -311,7 +311,7 @@ class Woocommerce extends Provider {
                 );
             }
 
-            $order_dtos[] = new \AppNatively\App\DTO\Ecommerce\OrderDTO(
+            $order_dtos[] = new \Crafium\AppNatively\App\DTO\Ecommerce\OrderDTO(
                 [
                     'id'                => (string) $wc_order->get_id(),
                     'name'              => '#' . $wc_order->get_order_number(),
@@ -390,7 +390,7 @@ class Woocommerce extends Provider {
                 }
             }
 
-            $line_items[] = new \AppNatively\App\DTO\Ecommerce\OrderItemDTO(
+            $line_items[] = new \Crafium\AppNatively\App\DTO\Ecommerce\OrderItemDTO(
                 [
                     'title'        => $title,
                     'quantity'     => $item->get_quantity(),
@@ -407,7 +407,7 @@ class Woocommerce extends Provider {
 
         $shipping = $wc_order->get_address( 'shipping' );
 
-        return new \AppNatively\App\DTO\Ecommerce\OrderDTO(
+        return new \Crafium\AppNatively\App\DTO\Ecommerce\OrderDTO(
             [
                 'id'                 => (string) $wc_order->get_id(),
                 'name'               => (string) '#' . $wc_order->get_order_number(),

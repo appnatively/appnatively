@@ -1,14 +1,14 @@
 <?php
 
-namespace AppNatively\App\Http\Controllers\Ecommerce;
+namespace Crafium\AppNatively\App\Http\Controllers\Ecommerce;
 
 defined( "ABSPATH" ) || exit;
 
-use AppNatively\App\DTO\Ecommerce\CartDTO;
-use AppNatively\App\Http\Controllers\Controller;
-use AppNatively\WpMVC\Exceptions\Exception;
-use AppNatively\WpMVC\Routing\Response;
-use AppNatively\WpMVC\RequestValidator\Request;
+use Crafium\AppNatively\App\DTO\Ecommerce\CartDTO;
+use Crafium\AppNatively\App\Http\Controllers\Controller;
+use Crafium\AppNatively\WpMVC\Exceptions\Exception;
+use Crafium\AppNatively\WpMVC\Routing\Response;
+use Crafium\AppNatively\WpMVC\RequestValidator\Request;
 
 class CartController extends Controller {
     /**
@@ -26,7 +26,7 @@ class CartController extends Controller {
         );
 
         $integration = sanitize_text_field( $request->get_param( "integration" ) );
-        $cart        = apply_filters( "appnatively_ecommerce_{$integration}_cart_get", null, $request );
+        $cart        = apply_filters( "craf_appna_ecommerce_{$integration}_cart_get", null, $request );
 
         if ( ! $cart instanceof CartDTO ) {
             throw new Exception( esc_html__( "Cart not found or integration missing", "appnatively" ) );
@@ -51,7 +51,7 @@ class CartController extends Controller {
         );
 
         $integration = sanitize_text_field( $request->get_param( "integration" ) );
-        $cart        = apply_filters( "appnatively_ecommerce_{$integration}_cart_add", null, $request );
+        $cart        = apply_filters( "craf_appna_ecommerce_{$integration}_cart_add", null, $request );
 
         if ( ! $cart instanceof CartDTO ) {
             throw new Exception( esc_html__( "Failed to add item to cart", "appnatively" ) );
@@ -76,7 +76,7 @@ class CartController extends Controller {
         );
 
         $integration = sanitize_text_field( $request->get_param( "integration" ) );
-        $cart        = apply_filters( "appnatively_ecommerce_{$integration}_cart_update", null, $request );
+        $cart        = apply_filters( "craf_appna_ecommerce_{$integration}_cart_update", null, $request );
 
         if ( ! $cart instanceof CartDTO ) {
             throw new Exception( esc_html__( "Failed to update cart item", "appnatively" ) );
@@ -101,7 +101,7 @@ class CartController extends Controller {
         );
 
         $integration = sanitize_text_field( $request->get_param( "integration" ) );
-        $cart        = apply_filters( "appnatively_ecommerce_{$integration}_cart_remove", null, $request );
+        $cart        = apply_filters( "craf_appna_ecommerce_{$integration}_cart_remove", null, $request );
 
         if ( ! $cart instanceof CartDTO ) {
             throw new Exception( esc_html__( "Failed to remove cart item", "appnatively" ) );
@@ -125,7 +125,7 @@ class CartController extends Controller {
         );
 
         $integration = sanitize_text_field( $request->get_param( "integration" ) );
-        $cart        = apply_filters( "appnatively_ecommerce_{$integration}_cart_clear", null, $request );
+        $cart        = apply_filters( "craf_appna_ecommerce_{$integration}_cart_clear", null, $request );
 
         if ( ! $cart instanceof CartDTO ) {
             throw new Exception( esc_html__( "Failed to clear cart", "appnatively" ) );

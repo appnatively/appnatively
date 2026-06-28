@@ -1,12 +1,12 @@
 <?php
 
-namespace AppNatively\App\Http\Controllers;
+namespace Crafium\AppNatively\App\Http\Controllers;
 
 defined( "ABSPATH" ) || exit;
 
-use AppNatively\App\Http\Controllers\Controller;
-use AppNatively\WpMVC\Routing\Response;
-use AppNatively\WpMVC\RequestValidator\Request;
+use Crafium\AppNatively\App\Http\Controllers\Controller;
+use Crafium\AppNatively\WpMVC\Routing\Response;
+use Crafium\AppNatively\WpMVC\RequestValidator\Request;
 
 class PluginsController extends Controller {
     /**
@@ -17,7 +17,7 @@ class PluginsController extends Controller {
      */
     public function index( Request $request ): array {
         $integrated_plugins_list = apply_filters(
-            'appnatively_integrated_plugins', [
+            "craf_appna_integrated_plugins", [
                 "woocommerce"    => [ "category" => "ecommerce", "label" => "WooCommerce" ],
                 "fluent-cart"    => [ "category" => "ecommerce", "label" => "Fluent Cart" ],
                 "formgent"       => [ "category" => "form",      "label" => "FormGent" ],

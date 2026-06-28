@@ -160,7 +160,7 @@ function _manually_load_plugin() {
     require dirname( __DIR__ ) . '/appnatively.php';
 
     // Reset and create database tables for tests
-    $setup = new \AppNatively\Database\Setup;
+    $setup = new \Crafium\AppNatively\Database\Setup;
     $setup->drop();
     $setup->execute();
 }
