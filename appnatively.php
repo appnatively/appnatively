@@ -20,8 +20,8 @@ use Crafium\AppNatively\Database\Setup;
  * Domain Path:       /languages
  */
 
-if ( ! defined( 'APPNATIVELY_VENDOR_LOADED' ) ) {
-    define( 'APPNATIVELY_VENDOR_LOADED', true );
+if ( ! defined( 'CRAF_APPNA_VENDOR_LOADED' ) ) {
+    define( 'CRAF_APPNA_VENDOR_LOADED', true );
     if ( file_exists( __DIR__ . '/vendor/vendor-src/autoload.php' ) ) {
         require_once __DIR__ . '/vendor/vendor-src/autoload.php';
     } elseif ( file_exists( __DIR__ . '/vendor-src/autoload.php' ) ) {
