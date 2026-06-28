@@ -24,7 +24,7 @@ class MenuServiceProvider extends Provider
      * @return void
      */
     public function action_admin_menu() {
-        add_menu_page( "App Natively", 'App Natively', 'manage_options', 'appnatively', [$this, 'dashboard'], 'dashicons-admin-generic', 30 );
+        add_menu_page( "App Natively", 'App Natively', 'manage_options', 'craf_appna', [$this, 'dashboard'], 'dashicons-admin-generic', 30 );
     }
 
     /**

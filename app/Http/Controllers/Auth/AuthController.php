@@ -135,7 +135,7 @@ class AuthController extends Controller {
         $hashed_token = hash( 'sha256', $token );
 
         // Store as a transient — auto-expires in 5 minutes, one-time use
-        set_transient( 'appnatively_autologin_' . $hashed_token, $user->ID, 5 * MINUTE_IN_SECONDS );
+        set_transient( 'craf_appna_autologin_' . $hashed_token, $user->ID, 5 * MINUTE_IN_SECONDS );
 
         return Response::send( [ 'autologin_token' => $token ] );
     }
@@ -151,7 +151,7 @@ class AuthController extends Controller {
 
         if ( $token ) {
             $hashed_token = hash( 'sha256', $token );
-            delete_metadata( 'user', 0, 'appnatively_auth_token', $hashed_token, true );
+            delete_metadata( 'user', 0, 'craf_appna_auth_token', $hashed_token, true );
         }
 
         return Response::send( [ 'success' => true ] );
@@ -260,7 +260,7 @@ class AuthController extends Controller {
         $token        = bin2hex( random_bytes( 32 ) );
         $hashed_token = hash( 'sha256', $token );
         
-        update_user_meta( $user_id, 'appnatively_auth_token', $hashed_token );
+        update_user_meta( $user_id, 'craf_appna_auth_token', $hashed_token );
         
         return $token;
     }
@@ -280,7 +280,7 @@ class AuthController extends Controller {
         $users = get_users(
             [
                 //phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
-                'meta_key'    => 'appnatively_auth_token',
+                'meta_key'    => 'craf_appna_auth_token',
                 //phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value
                 'meta_value'  => $hashed_token,
                 'number'      => 1,

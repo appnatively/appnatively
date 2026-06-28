@@ -61,11 +61,11 @@ class Woocommerce extends Provider {
      */
     public function handle_autologin(): void {
         // phpcs:ignore WordPress.Security.NonceVerification.Recommended
-        if ( ! empty( $_GET['appnatively_token'] ) && ! is_user_logged_in() ) {
+        if ( ! empty( $_GET['craf_appna_token'] ) && ! is_user_logged_in() ) {
             // phpcs:ignore WordPress.Security.NonceVerification.Recommended
-            $token         = sanitize_text_field( wp_unslash( $_GET['appnatively_token'] ) );
+            $token         = sanitize_text_field( wp_unslash( $_GET['craf_appna_token'] ) );
             $hashed_token  = hash( 'sha256', $token );
-            $transient_key = 'appnatively_autologin_' . $hashed_token;
+            $transient_key = 'craf_appna_autologin_' . $hashed_token;
 
             // One-time-use: read and immediately delete the transient
             $user_id = get_transient( $transient_key );
@@ -73,7 +73,7 @@ class Woocommerce extends Provider {
             if ( $user_id ) {
                 delete_transient( $transient_key ); // Invalidate immediately — cannot be replayed
                 wp_set_auth_cookie( (int) $user_id );
-                wp_safe_redirect( remove_query_arg( 'appnatively_token' ) );
+                wp_safe_redirect( remove_query_arg( 'craf_appna_token' ) );
                 exit;
             }
         }
@@ -95,7 +95,7 @@ class Woocommerce extends Provider {
                 $users        = get_users(
                     [
                         //phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
-                        'meta_key'    => 'appnatively_auth_token',
+                        'meta_key'    => 'craf_appna_auth_token',
                         //phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value
                         'meta_value'  => $hashed_token,
                         'number'      => 1,
@@ -133,7 +133,7 @@ class Woocommerce extends Provider {
         $checkout_url = wc_get_checkout_url();
         $auth_header  = $request->get_header( 'Authorization' );
         if ( $auth_header && preg_match( '/Bearer\s+(.*)$/i', $auth_header, $matches ) ) {
-            $checkout_url = add_query_arg( 'appnatively_token', $matches[1], $checkout_url );
+            $checkout_url = add_query_arg( 'craf_appna_token', $matches[1], $checkout_url );
         }
 
         $dto->set_subtotal( (string) WC()->cart->get_subtotal() )

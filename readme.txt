@@ -4,7 +4,7 @@ Tags: appnatively, website to mobile app, mobile app builder, woocommerce app, f
 Requires at least: 6.5
 Tested up to: 7.0
 Requires PHP: 7.4
-Stable tag: 0.0.2
+Stable tag: 0.0.3
 License: GPLv3
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 
@@ -33,5 +33,5 @@ The source code and public repository for this plugin is available on GitHub at 
 
 == Changelog ==
 
-= 0.0.2 - 25 June 2025 =
+= 0.0.3 - 26 June 2026 =
 * Initial release.

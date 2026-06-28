@@ -4,24 +4,11 @@ defined( 'ABSPATH' ) || exit;
 
 use Crafium\AppNatively\App\Http\Middleware\EnsureIsUserAdmin;
 use Crafium\AppNatively\App\Integrations\FluentCart;
-use Crafium\AppNatively\App\Integrations\Forms\FluentForm;
-use Crafium\AppNatively\App\Integrations\Forms\FormGent;
-use Crafium\AppNatively\App\Integrations\Forms\Forminator;
-use Crafium\AppNatively\App\Integrations\Forms\ContactForm7;
-use Crafium\AppNatively\App\Integrations\Forms\EverestForms;
-use Crafium\AppNatively\App\Integrations\Forms\Formidable;
-use Crafium\AppNatively\App\Integrations\Forms\GutenaForms;
-use Crafium\AppNatively\App\Integrations\Forms\HappyForms;
-use Crafium\AppNatively\App\Integrations\Forms\SureForms;
-use Crafium\AppNatively\App\Integrations\Forms\WeForms;
-use Crafium\AppNatively\App\Integrations\Forms\WPForms;
-use Crafium\AppNatively\App\Providers\Admin\MenuServiceProvider;
 use Crafium\AppNatively\App\Models\Comment;
 use Crafium\AppNatively\App\Models\Post;
 use Crafium\AppNatively\App\Models\Term;
 use Crafium\AppNatively\App\Models\TermTaxonomy;
 use Crafium\AppNatively\App\Models\User;
-use Crafium\AppNatively\App\Integrations\Directorist;
 use Crafium\AppNatively\App\Integrations\Woocommerce;
 use Crafium\AppNatively\WpMVC\Helpers\Helpers;
 
@@ -38,7 +25,7 @@ return [
         /**
          * The namespace for the REST API.
          */
-        'namespace' => 'appnatively',
+        'namespace' => 'craf_appna',
         
         /**
          * The versions of the REST API.
@@ -53,7 +40,7 @@ return [
         /**
          * The namespace for the AJAX API.
          */
-        'namespace' => 'appnatively',
+        'namespace' => 'craf_appna',
         
         /**
          * The versions of the AJAX API.
@@ -68,20 +55,6 @@ return [
         // Ecommerce Integrations
         Woocommerce::class,
         FluentCart::class,
-        Directorist::class,
-
-        // Form Integrations
-        FormGent::class,
-        Forminator::class,
-        ContactForm7::class,
-        Formidable::class,
-        FluentForm::class,
-        SureForms::class,
-        WeForms::class,
-        WPForms::class,
-        EverestForms::class,
-        HappyForms::class,
-        GutenaForms::class,
     ],
 
     /**
@@ -104,7 +77,7 @@ return [
     /**
      * The database option key for storing migration information.
      */
-    'migration_db_option_key'     => 'appnatively_migrations',
+    'migration_db_option_key'     => 'craf_appna_migrations',
 
     /**
      * List of migrations for the plugin.
@@ -116,7 +89,7 @@ return [
     /**
      * The WpMVC provided hooks prefix.
      */
-    'hook_prefix'                 => 'appnatively',
+    'hook_prefix'                 => 'craf_appna',
 
     /**
      * This configuration option defines a hook that will fire before executing the route callback,
@@ -125,7 +98,7 @@ return [
      * @param WP_REST_Request $wp_rest_request The current REST request object.
      * @param string $full_route The full route being accessed.
      */
-    'rest_response_action_hook'   => 'appnatively_rest_response_action',
+    'rest_response_action_hook'   => 'craf_appna_rest_response_action',
 
     /**
      * Configuration for the REST API response filter hook.
@@ -136,7 +109,7 @@ return [
      * @param WP_REST_Request  $wp_rest_request The request object.
      * @param string           $full_route The full route of the request.
      */
-    'rest_response_filter_hook'   => 'appnatively_rest_response_filter',
+    'rest_response_filter_hook'   => 'craf_appna_rest_response_filter',
 
     /**
      * This filter hook that can override all REST API permissions.
@@ -145,7 +118,7 @@ return [
      * @param mixed $middleware The middleware being applied.
      * @param string $full_route The full route of the API endpoint.
      */
-    'rest_permission_filter_hook' => 'appnatively_rest_permission_filter',
+    'rest_permission_filter_hook' => 'craf_appna_rest_permission_filter',
 
     /**
      * The registered morph map for polymorphic relationships.
