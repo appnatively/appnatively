@@ -4,6 +4,8 @@ namespace Crafium\AppNatively\App\Integrations\Forms;
 
 defined( 'ABSPATH' ) || exit;
 
+use Crafium\AppNatively\App\DTO\Forms\FormDTO;
+use Crafium\AppNatively\App\DTO\Forms\FormFieldDTO;
 use Crafium\AppNatively\WpMVC\RequestValidator\Request;
 
 class GutenaForms extends Form {
@@ -463,5 +465,152 @@ class GutenaForms extends Form {
         }
 
         wp_mail( $to, $subject, $body, $headers );
+    }
+
+    public function get_forms(): array {
+    global $wpdb;
+
+    if ( ! defined( 'GUTENA_FORMS_VERSION' ) ) {
+        return [];
+    }
+
+    $meta_key = 'gutena_forms_form_schema';
+    
+    $posts = $wpdb->get_results(
+        $wpdb->prepare(
+            "SELECT p.ID, p.post_title, p.post_date, p.post_modified
+            FROM {$wpdb->posts} p
+            INNER JOIN {$wpdb->postmeta} pm ON p.ID = pm.post_id AND pm.meta_key = %s
+            WHERE p.post_status = 'publish'
+            GROUP BY p.ID
+            ORDER BY p.ID ASC",
+            $meta_key
+        )
+    );
+
+    error_log( 'Gutena Forms posts count: ' . count( $posts ) ); // Debugging line
+
+    if ( empty( $posts ) ) {
+        return [];
+    }
+
+    $result = [];
+
+    foreach ( $posts as $post ) {
+        // Gutena Forms usually mirrors the post_id or uses a custom string inside the block meta.
+        // We use standard WordPress API safely here, but it's now optimized because of the narrow query.
+        $block_form_id = get_post_meta( $post->ID, 'gutena_form_id', true );
+
+        if ( ! $block_form_id ) {
+            continue;
+        }
+
+        // Fetch Gutena's global option dictionary schema mapping
+        $schema = function_exists('gutena_forms_get_form_schema_option') 
+            ? gutena_forms_get_form_schema_option( $block_form_id ) 
+            : [];
+
+        if ( empty( $schema ) || empty( $schema['form_attrs'] ) || empty( $schema['form_fields'] ) ) {
+            continue;
+        }
+
+        // CHANGED: Refactored output array to match your strict DTO architectural pattern
+        $form_title = $schema['form_attrs']['formName'] ?? $post->post_title;
+
+        $form_dto = (new FormDTO())
+            ->set_id( (int) $post->ID )
+            ->set_title( $form_title )
+            ->set_exclude_to_array( ['fields'] );
+
+        $result[] = $form_dto;
+    }
+
+    return $result;
+}
+
+
+    protected function get_standardized_type( string $native_type ): ?string {
+        $map = [
+            'text'     => 'text',
+            'email'    => 'email',
+            'number'   => 'number',
+            'checkbox' => 'checkbox',
+            'select'   => 'single_select',
+            'radio'    => 'radio',
+            'range'    => 'range',
+            'url'      => 'url',
+            'tel'      => 'text',
+            'textarea' => 'text',
+        ];
+
+        return $map[$native_type] ?? null;
+    }
+
+    protected function map_form_to_dto( array $raw_form, array $fields ): FormDTO {
+        $dto = new FormDTO();
+
+        if ( in_array( 'id', $fields, true ) ) {
+            $dto->set_id( (int) ( $raw_form['id'] ?? 0 ) );
+        }
+
+        if ( in_array( 'title', $fields, true ) ) {
+            $dto->set_title( $raw_form['form_name'] ?? '' );
+        }
+
+        if ( in_array( 'status', $fields, true ) ) {
+            $dto->set_status( $raw_form['status'] ?? 'publish' );
+        }
+
+        if ( in_array( 'date_created', $fields, true ) ) {
+            $dto->set_date_created( $raw_form['date_created'] ?? '' );
+        }
+
+        if ( in_array( 'date_updated', $fields, true ) ) {
+            $dto->set_date_updated( $raw_form['date_updated'] ?? '' );
+        }
+
+        if ( in_array( 'fields', $fields, true ) && ! empty( $raw_form['fields'] ) ) {
+            $field_dtos = [];
+
+            foreach ( $raw_form['fields'] as $field ) {
+                $std_type = $this->get_standardized_type( $field['type'] ?? '' );
+
+                if ( ! $std_type ) {
+                    continue;
+                }
+
+                $fdto = new FormFieldDTO();
+                $fdto->set_id( $field['name'] ?? '' )
+                    ->set_type( $std_type )
+                    ->set_required( ! empty( $field['required'] ) )
+                    ->set_label( $field['label'] ?? '' )
+                    ->set_fieldName( $field['name'] ?? '' );
+
+                if ( ! empty( $field['options'] ) ) {
+                    $items = [];
+
+                    foreach ( $field['options'] as $key => $value ) {
+                        $items[] = [
+                            'id'    => (string) $key,
+                            'label' => $value,
+                            'value' => $value,
+                        ];
+                    }
+
+                    $fdto->set_items( $items );
+                }
+
+                if ( $std_type === 'number' || $std_type === 'range' ) {
+                    $fdto->set_minValue( isset( $field['min'] ) && $field['min'] !== '' ? (float) $field['min'] : null )
+                        ->set_maxValue( isset( $field['max'] ) && $field['max'] !== '' ? (float) $field['max'] : null );
+                }
+
+                $field_dtos[] = $fdto;
+            }
+
+            $dto->set_fields( $field_dtos );
+        }
+
+        return $dto;
     }
 }

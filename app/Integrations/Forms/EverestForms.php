@@ -2,8 +2,12 @@
 
 namespace Crafium\AppNatively\App\Integrations\Forms;
 
+use Crafium\AppNatively\App\Models\Post;
+
 defined( 'ABSPATH' ) || exit;
 
+use Crafium\AppNatively\App\DTO\Forms\FormDTO;
+use Crafium\AppNatively\App\DTO\Forms\FormFieldDTO;
 use Crafium\AppNatively\WpMVC\RequestValidator\Request;
 
 class EverestForms extends Form {
@@ -355,5 +359,119 @@ class EverestForms extends Form {
         if ( $entry_id && ! is_wp_error( $entry_id ) ) {
             evf()->task->entry_email( $entry_fields, $entry, $form_data, $entry_id );
         }
+    }
+
+    public function get_forms(): array {
+        // Everest Forms uses 'everest_form' as its custom post type
+        $posts = Post::select("ID", "post_title")
+            ->where( 'post_type', 'everest_form' )
+            ->where( 'post_status', 'publish' )
+            ->get();
+
+        $result = [];
+
+        foreach ( $posts as $post ) {
+            $result[] = (new FormDTO())
+                ->set_id( (int) $post->ID )
+                ->set_title( $post->post_title )
+                ->set_exclude_to_array( ['fields'] );
+        }
+
+        return $result;
+    }
+
+    protected function get_standardized_type( string $native_type ): ?string {
+        $map = [
+            'text'     => 'text',
+            'email'    => 'email',
+            'url'      => 'url',
+            'number'   => 'number',
+            'radio'    => 'radio',
+            'checkbox' => 'checkbox',
+            'select'   => 'single_select',
+            'date'     => 'date_time_picker',
+            'rating'   => 'rating',
+            'textarea' => 'text',
+            'password' => 'password',
+        ];
+
+        return $map[$native_type] ?? null;
+    }
+
+    protected function map_form_to_dto( array $raw_form, array $fields ): FormDTO {
+        $dto = new FormDTO();
+
+        if ( in_array( 'id', $fields, true ) ) {
+            $dto->set_id( (int) ( $raw_form['id'] ?? 0 ) );
+        }
+
+        if ( in_array( 'title', $fields, true ) ) {
+            $dto->set_title( $raw_form['name'] ?? '' );
+        }
+
+        if ( in_array( 'status', $fields, true ) ) {
+            $dto->set_status( $raw_form['status'] ?? 'publish' );
+        }
+
+        if ( in_array( 'date_created', $fields, true ) ) {
+            $dto->set_date_created( $raw_form['date_created'] ?? '' );
+        }
+
+        if ( in_array( 'date_updated', $fields, true ) ) {
+            $dto->set_date_updated( $raw_form['date_updated'] ?? '' );
+        }
+
+        if ( in_array( 'fields', $fields, true ) && ! empty( $raw_form['fields'] ) ) {
+            $field_dtos = [];
+
+            foreach ( $raw_form['fields'] as $field ) {
+                $std_type = $this->get_standardized_type( $field['type'] ?? '' );
+
+                if ( ! $std_type ) {
+                    continue;
+                }
+
+                $fdto = new FormFieldDTO();
+                $fdto->set_id( (string) $field['id'] )
+                    ->set_type( $std_type )
+                    ->set_required( ! empty( $field['required'] ) )
+                    ->set_label( $field['name'] ?? '' )
+                    ->set_fieldName( (string) $field['id'] );
+
+                if ( ! empty( $field['options'] ) ) {
+                    $items = [];
+
+                    foreach ( $field['options'] as $key => $option ) {
+                        $items[] = [
+                            'id'    => (string) $key,
+                            'label' => is_string( $option ) ? $option : ( $option['label'] ?? '' ),
+                            'value' => is_string( $option ) ? $option : ( $option['value'] ?? '' ),
+                        ];
+                    }
+
+                    $fdto->set_items( $items );
+                }
+
+                if ( $std_type === 'number' ) {
+                    $fdto->set_minValue( isset( $field['min_value'] ) && $field['min_value'] !== '' ? (float) $field['min_value'] : null )
+                        ->set_maxValue( isset( $field['max_value'] ) && $field['max_value'] !== '' ? (float) $field['max_value'] : null );
+                }
+
+                if ( $std_type === 'rating' ) {
+                    $fdto->set_ratingMax( isset( $field['number_of_stars'] ) ? (int) $field['number_of_stars'] : 5 );
+                }
+
+                if ( $std_type === 'date_time_picker' ) {
+                    $fdto->set_pickerType( $field['datetime_format'] ?? 'date' )
+                        ->set_dateFormat( 'yyyy-MM-dd' );
+                }
+
+                $field_dtos[] = $fdto;
+            }
+
+            $dto->set_fields( $field_dtos );
+        }
+
+        return $dto;
     }
 }

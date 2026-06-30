@@ -2,188 +2,206 @@
 
 namespace Crafium\AppNatively\App\Integrations\Forms;
 
-defined( "ABSPATH" ) || exit;
+use Crafium\AppNatively\App\Models\Post;
 
+defined("ABSPATH") || exit;
+
+use Crafium\AppNatively\App\DTO\Forms\FormDTO;
+use Crafium\AppNatively\App\DTO\Forms\FormFieldDTO;
 use Crafium\AppNatively\WpMVC\RequestValidator\Request;
 
-class SureForms extends Form {
-    public function get_key(): string {
+class SureForms extends Form
+{
+    public function get_key(): string
+    {
         return 'sureforms';
     }
 
-    public function boot(): void {
-        if ( ! defined( 'SRFM_VER' ) ) {
+    public function boot(): void
+    {
+        if (!defined('SRFM_VER')) {
             return;
         }
         parent::boot();
     }
 
-    protected function get_form( int $id ) {
-        $post = get_post( $id );
+    protected function get_form(int $id)
+    {
+        $post = get_post($id);
 
-        if ( ! $post || $post->post_type !== 'sureforms_form' || $post->post_status !== 'publish' ) {
+        if (!$post || $post->post_type !== 'sureforms_form' || $post->post_status !== 'publish') {
             return [];
         }
 
-        $blocks = parse_blocks( $post->post_content );
+        $blocks = parse_blocks($post->post_content);
         $fields = [];
 
-        foreach ( $blocks as $block ) {
-            if ( empty( $block['blockName'] ) || strpos( $block['blockName'], 'srfm/' ) !== 0 ) {
+        foreach ($blocks as $block) {
+            if (empty($block['blockName']) || strpos($block['blockName'], 'srfm/') !== 0) {
                 continue;
             }
 
-            $block_type = str_replace( 'srfm/', '', $block['blockName'] );
-            $attrs      = $block['attrs'] ?? [];
+            $block_type = str_replace('srfm/', '', $block['blockName']);
+            $attrs = $block['attrs'] ?? [];
 
             $fields[] = [
-                'type'          => $block_type,
-                'label'         => $attrs['label'] ?? '',
-                'block_id'      => $attrs['block_id'] ?? '',
-                'slug'          => $attrs['slug'] ?? $block_type,
-                'required'      => ! empty( $attrs['required'] ),
-                'options'       => $attrs['options'] ?? [],
-                'min'           => $attrs['minValue'] ?? '',
-                'max'           => $attrs['maxValue'] ?? '',
-                'text_length'   => $attrs['textLength'] ?? '',
-                'placeholder'   => $attrs['placeholder'] ?? '',
+                'type' => $block_type,
+                'label' => $attrs['label'] ?? '',
+                'block_id' => $attrs['block_id'] ?? '',
+                'slug' => $attrs['slug'] ?? $block_type,
+                'required' => !empty($attrs['required']),
+                'options' => $attrs['options'] ?? [],
+                'min' => $attrs['minValue'] ?? '',
+                'max' => $attrs['maxValue'] ?? '',
+                'text_length' => $attrs['textLength'] ?? '',
+                'placeholder' => $attrs['placeholder'] ?? '',
                 'default_value' => $attrs['defaultValue'] ?? '',
             ];
         }
 
-        if ( empty( $fields ) ) {
+        if (empty($fields)) {
             return [];
         }
 
         return [
-            'id'     => $post->ID,
+            'id' => $post->ID,
             'fields' => $fields,
         ];
     }
 
-    private function map_field_type( string $type ) {
+    private function map_field_type(string $type)
+    {
         $map = [
-            'text'     => 'input',
-            'email'    => 'email',
-            'number'   => 'number',
-            'url'      => 'url',
+            'text' => 'input',
+            'email' => 'email',
+            'number' => 'number',
+            'url' => 'url',
             'checkbox' => 'checkbox',
-            'gdpr'     => 'gdpr',
-            'select'   => 'dropdown',
+            'gdpr' => 'gdpr',
+            'select' => 'dropdown',
         ];
 
-        $mapped = array_search( $type, $map, true );
+        $mapped = array_search($type, $map, true);
         return false !== $mapped ? $mapped : null;
     }
 
-    private function get_text_rules( array $field ): array {
-        $rules = [ 'string' ];
-        if ( ! empty( $field['text_length'] ) ) {
-            $rules[] = 'max:' . absint( $field['text_length'] );
+    private function get_text_rules(array $field): array
+    {
+        $rules = ['string'];
+        if (!empty($field['text_length'])) {
+            $rules[] = 'max:' . absint($field['text_length']);
         }
         return $rules;
     }
 
-    private function get_email_rules( array $field ): array {
-        return [ 'string', 'email' ];
+    private function get_email_rules(array $field): array
+    {
+        return ['string', 'email'];
     }
 
-    private function get_number_rules( array $field ): array {
-        $rules = [ 'numeric' ];
-        if ( isset( $field['min'] ) && $field['min'] !== '' ) {
-            $rules[] = 'min:' . floatval( $field['min'] );
+    private function get_number_rules(array $field): array
+    {
+        $rules = ['numeric'];
+        if (isset($field['min']) && $field['min'] !== '') {
+            $rules[] = 'min:' . floatval($field['min']);
         }
-        if ( isset( $field['max'] ) && $field['max'] !== '' ) {
-            $rules[] = 'max:' . floatval( $field['max'] );
+        if (isset($field['max']) && $field['max'] !== '') {
+            $rules[] = 'max:' . floatval($field['max']);
         }
         return $rules;
     }
 
-    private function get_url_rules( array $field ): array {
-        return [ 'string', 'url' ];
+    private function get_url_rules(array $field): array
+    {
+        return ['string', 'url'];
     }
 
-    private function get_checkbox_rules( array $field ): array {
-        return [ 'string' ];
+    private function get_checkbox_rules(array $field): array
+    {
+        return ['string'];
     }
 
-    private function get_gdpr_rules( array $field ): array {
-        return [ 'string' ];
+    private function get_gdpr_rules(array $field): array
+    {
+        return ['string'];
     }
 
-    private function get_select_rules( array $field ): array {
-        return [ 'string', 'max:255' ];
+    private function get_select_rules(array $field): array
+    {
+        return ['string', 'max:255'];
     }
 
-    private function build_sureforms_field_name( array $field, int &$dropdown_counter ): string {
+    private function build_sureforms_field_name(array $field, int &$dropdown_counter): string
+    {
         $type = $field['type'];
 
-        if ( $type === 'dropdown' ) {
+        if ($type === 'dropdown') {
             $dropdown_counter++;
             $type_part = "dropdown-{$dropdown_counter}";
         } else {
             $type_part = $type;
         }
 
-        $block_id     = $field['block_id'];
-        $label        = ! empty( $field['label'] ) ? $field['label'] : $type;
-        $base64_label = \SRFM\Inc\Helper::encrypt( $label );
-        $block_slug   = $field['slug'];
+        $block_id = $field['block_id'];
+        $label = !empty($field['label']) ? $field['label'] : $type;
+        $base64_label = \SRFM\Inc\Helper::encrypt($label);
+        $block_slug = $field['slug'];
 
         return "srfm-{$type_part}-{$block_id}-lbl-{$base64_label}-{$block_slug}";
     }
 
-    protected function get_validation_rules( array $form ): array {
-        if ( empty( $form['fields'] ) ) {
+    protected function get_validation_rules(array $form): array
+    {
+        if (empty($form['fields'])) {
             return [];
         }
 
         $rules = [];
 
-        foreach ( $form['fields'] as $field ) {
-            if ( empty( $field['type'] ) || empty( $field['slug'] ) ) {
+        foreach ($form['fields'] as $field) {
+            if (empty($field['type']) || empty($field['slug'])) {
                 continue;
             }
 
-            $mapped_type = $this->map_field_type( $field['type'] );
-            if ( ! $mapped_type ) {
+            $mapped_type = $this->map_field_type($field['type']);
+            if (!$mapped_type) {
                 continue;
             }
 
             $field_rules = [];
 
-            switch ( $mapped_type ) {
+            switch ($mapped_type) {
                 case 'text':
-                    $field_rules = $this->get_text_rules( $field );
+                    $field_rules = $this->get_text_rules($field);
                     break;
                 case 'email':
-                    $field_rules = $this->get_email_rules( $field );
+                    $field_rules = $this->get_email_rules($field);
                     break;
                 case 'number':
-                    $field_rules = $this->get_number_rules( $field );
+                    $field_rules = $this->get_number_rules($field);
                     break;
                 case 'url':
-                    $field_rules = $this->get_url_rules( $field );
+                    $field_rules = $this->get_url_rules($field);
                     break;
                 case 'checkbox':
-                    $field_rules = $this->get_checkbox_rules( $field );
+                    $field_rules = $this->get_checkbox_rules($field);
                     break;
                 case 'gdpr':
-                    $field_rules = $this->get_gdpr_rules( $field );
+                    $field_rules = $this->get_gdpr_rules($field);
                     break;
                 case 'select':
-                    $field_rules = $this->get_select_rules( $field );
+                    $field_rules = $this->get_select_rules($field);
                     break;
                 default:
                     continue 2;
             }
 
-            if ( ! empty( $field['required'] ) ) {
+            if (!empty($field['required'])) {
                 $field_rules[] = 'required';
             }
 
-            if ( ! empty( $field_rules ) ) {
-                $rules[$field['slug']] = implode( '|', array_unique( $field_rules ) );
+            if (!empty($field_rules)) {
+                $rules[$field['slug']] = implode('|', array_unique($field_rules));
             }
         }
 
@@ -200,49 +218,50 @@ class SureForms extends Form {
      * @param array $form Form data.
      * @return array<string, string>
      */
-    protected function get_validation_messages( array $form ): array {
-        if ( empty( $form['fields'] ) ) {
+    protected function get_validation_messages(array $form): array
+    {
+        if (empty($form['fields'])) {
             return [];
         }
 
         $messages = [];
 
-        foreach ( $form['fields'] as $field ) {
-            if ( empty( $field['type'] ) || empty( $field['slug'] ) ) {
+        foreach ($form['fields'] as $field) {
+            if (empty($field['type']) || empty($field['slug'])) {
                 continue;
             }
 
-            $mapped_type = $this->map_field_type( $field['type'] );
-            if ( ! $mapped_type ) {
+            $mapped_type = $this->map_field_type($field['type']);
+            if (!$mapped_type) {
                 continue;
             }
 
             $slug = (string) $field['slug'];
 
-            if ( ! empty( $field['required'] ) ) {
-                $required_key = $this->get_required_message_key( $mapped_type );
-                if ( ! empty( $required_key ) ) {
-                    $messages["{$slug}.required"] = \SRFM\Inc\Helper::get_default_dynamic_block_option( $required_key );
+            if (!empty($field['required'])) {
+                $required_key = $this->get_required_message_key($mapped_type);
+                if (!empty($required_key)) {
+                    $messages["{$slug}.required"] = \SRFM\Inc\Helper::get_default_dynamic_block_option($required_key);
                 }
             }
 
-            if ( $mapped_type === 'email' ) {
-                $messages["{$slug}.email"] = \SRFM\Inc\Helper::get_default_dynamic_block_option( 'srfm_valid_email' );
+            if ($mapped_type === 'email') {
+                $messages["{$slug}.email"] = \SRFM\Inc\Helper::get_default_dynamic_block_option('srfm_valid_email');
             }
 
-            if ( $mapped_type === 'url' ) {
-                $messages["{$slug}.url"] = \SRFM\Inc\Helper::get_default_dynamic_block_option( 'srfm_valid_url' );
+            if ($mapped_type === 'url') {
+                $messages["{$slug}.url"] = \SRFM\Inc\Helper::get_default_dynamic_block_option('srfm_valid_url');
             }
 
-            if ( $mapped_type === 'number' ) {
-                if ( isset( $field['min'] ) && $field['min'] !== '' ) {
-                    $msg                     = \SRFM\Inc\Helper::get_default_dynamic_block_option( 'srfm_input_min_value' );
-                    $messages["{$slug}.min"] = str_replace( '%s', ':min', $msg );
+            if ($mapped_type === 'number') {
+                if (isset($field['min']) && $field['min'] !== '') {
+                    $msg = \SRFM\Inc\Helper::get_default_dynamic_block_option('srfm_input_min_value');
+                    $messages["{$slug}.min"] = str_replace('%s', ':min', $msg);
                 }
 
-                if ( isset( $field['max'] ) && $field['max'] !== '' ) {
-                    $msg                     = \SRFM\Inc\Helper::get_default_dynamic_block_option( 'srfm_input_max_value' );
-                    $messages["{$slug}.max"] = str_replace( '%s', ':max', $msg );
+                if (isset($field['max']) && $field['max'] !== '') {
+                    $msg = \SRFM\Inc\Helper::get_default_dynamic_block_option('srfm_input_max_value');
+                    $messages["{$slug}.max"] = str_replace('%s', ':max', $msg);
                 }
             }
         }
@@ -258,81 +277,204 @@ class SureForms extends Form {
      * @param string $mapped_type Mapped field type.
      * @return string|null Settings key, or null when none applies.
      */
-    private function get_required_message_key( string $mapped_type ): ?string {
+    private function get_required_message_key(string $mapped_type): ?string
+    {
         $map = [
-            'text'     => 'srfm_input_block_required_text',
-            'email'    => 'srfm_email_block_required_text',
-            'number'   => 'srfm_number_block_required_text',
-            'url'      => 'srfm_url_block_required_text',
+            'text' => 'srfm_input_block_required_text',
+            'email' => 'srfm_email_block_required_text',
+            'number' => 'srfm_number_block_required_text',
+            'url' => 'srfm_url_block_required_text',
             'checkbox' => 'srfm_checkbox_block_required_text',
-            'gdpr'     => 'srfm_gdpr_block_required_text',
-            'select'   => 'srfm_dropdown_block_required_text',
+            'gdpr' => 'srfm_gdpr_block_required_text',
+            'select' => 'srfm_dropdown_block_required_text',
         ];
 
         return $map[$mapped_type] ?? null;
     }
 
-    public function form_submit( Request $request ) {
-        $form = $this->get_form( $request->get_param( 'form_id' ) );
+    public function form_submit(Request $request)
+    {
+        $form = $this->get_form($request->get_param('form_id'));
 
-        if ( ! $form ) {
-            throw new \Exception( __( 'Form not found', 'appnatively' ) );
+        if (!$form) {
+            throw new \Exception(__('Form not found', 'appnatively'));
         }
 
-        foreach ( $form['fields'] as $field ) {
-            if ( empty( $field['type'] ) || empty( $field['slug'] ) ) {
+        foreach ($form['fields'] as $field) {
+            if (empty($field['type']) || empty($field['slug'])) {
                 continue;
             }
 
-            $mapped_type = $this->map_field_type( $field['type'] );
-            if ( ! $mapped_type ) {
+            $mapped_type = $this->map_field_type($field['type']);
+            if (!$mapped_type) {
                 continue;
             }
 
-            $value = $request->get_param( $field['slug'] );
+            $value = $request->get_param($field['slug']);
 
-            if ( $value === null ) {
+            if ($value === null) {
                 continue;
             }
 
-            if ( in_array( $mapped_type, [ 'checkbox', 'gdpr' ], true ) && is_array( $value ) ) {
-                $request->set_param( $field['slug'], ! empty( $value ) ? (string) reset( $value ) : '' );
+            if (in_array($mapped_type, ['checkbox', 'gdpr'], true) && is_array($value)) {
+                $request->set_param($field['slug'], !empty($value) ? (string) reset($value) : '');
             }
         }
 
         $validation = $request->make(
             $request,
-            $this->get_validation_rules( $form ),
-            $this->get_validation_messages( $form )
+            $this->get_validation_rules($form),
+            $this->get_validation_messages($form)
         );
         $validation->throw_if_fails();
         $request->errors = $validation->errors();
 
-        $this->submit( $request, $form );
+        $this->submit($request, $form);
     }
 
-    protected function submit( Request $request, array $form ) {
+    protected function submit(Request $request, array $form)
+    {
         $form_data = [
             'form-id' => $form['id'],
         ];
 
         $dropdown_counter = 0;
 
-        foreach ( $form['fields'] as $field ) {
-            if ( empty( $field['slug'] ) || empty( $field['type'] ) ) {
+        foreach ($form['fields'] as $field) {
+            if (empty($field['slug']) || empty($field['type'])) {
                 continue;
             }
 
-            $value = $request->get_param( $field['slug'] );
+            $value = $request->get_param($field['slug']);
 
-            if ( $value === null ) {
+            if ($value === null) {
                 continue;
             }
 
-            $field_name             = $this->build_sureforms_field_name( $field, $dropdown_counter );
+            $field_name = $this->build_sureforms_field_name($field, $dropdown_counter);
             $form_data[$field_name] = $value;
         }
 
-        \SRFM\Inc\Form_Submit::get_instance()->handle_form_entry( $form_data );
+        \SRFM\Inc\Form_Submit::get_instance()->handle_form_entry($form_data);
+    }
+
+    public function get_forms(): array
+    {
+        $posts = Post::select("ID", "post_title")
+            ->where('post_type', 'sureforms_form')
+            ->where('post_status', 'publish')
+            ->get();
+
+        $result = [];
+
+        foreach ($posts as $post) {
+            $result[] = (new FormDTO())
+                ->set_id((int) $post->ID)
+                ->set_title($post->post_title)
+                ->set_exclude_to_array(['fields']);
+        }
+
+        return $result;
+    }
+
+    protected function get_standardized_type(string $native_type): ?string
+    {
+        $map = [
+            'input' => 'text',
+            'email' => 'email',
+            'number' => 'number',
+            'url' => 'url',
+            'checkbox' => 'checkbox',
+            'gdpr' => 'gdpr',
+            'dropdown' => 'single_select',
+            'radio' => 'radio',
+            'textarea' => 'text',
+            'phone' => 'text',
+            'date' => 'date_time_picker',
+        ];
+
+        return $map[$native_type] ?? null;
+    }
+
+    protected function map_form_to_dto(array $raw_form, array $fields): FormDTO
+    {
+        $dto = new FormDTO();
+
+        if (in_array('id', $fields, true)) {
+            $dto->set_id((int) ($raw_form['id'] ?? 0));
+        }
+
+        if (in_array('title', $fields, true)) {
+            $dto->set_title($raw_form['title'] ?? '');
+        }
+
+        if (in_array('status', $fields, true)) {
+            $dto->set_status($raw_form['status'] ?? 'publish');
+        }
+
+        if (in_array('date_created', $fields, true)) {
+            $dto->set_date_created($raw_form['date_created'] ?? '');
+        }
+
+        if (in_array('date_updated', $fields, true)) {
+            $dto->set_date_updated($raw_form['date_updated'] ?? '');
+        }
+
+        if (in_array('fields', $fields, true) && !empty($raw_form['fields'])) {
+            $field_dtos = [];
+
+            foreach ($raw_form['fields'] as $field) {
+                $std_type = $this->get_standardized_type($field['type'] ?? '');
+
+                if (!$std_type) {
+                    continue;
+                }
+
+                $fdto = new FormFieldDTO();
+                $fdto->set_id($field['slug'] ?? '')
+                    ->set_type($std_type)
+                    ->set_required(!empty($field['required']))
+                    ->set_label($field['label'] ?? '')
+                    ->set_placeholder($field['placeholder'] ?? '')
+                    ->set_fieldName($field['slug'] ?? '');
+
+                if (!empty($field['options'])) {
+                    $items = [];
+
+                    foreach ($field['options'] as $key => $option) {
+                        if (is_string($option)) {
+                            $items[] = [
+                                'id' => (string) $key,
+                                'label' => $option,
+                                'value' => $option,
+                            ];
+                        } elseif (is_array($option)) {
+                            $items[] = [
+                                'id' => $option['value'] ?? (string) $key,
+                                'label' => $option['label'] ?? '',
+                                'value' => $option['value'] ?? '',
+                            ];
+                        }
+                    }
+
+                    $fdto->set_items($items);
+                }
+
+                if ($std_type === 'number') {
+                    $fdto->set_minValue(isset($field['min']) && $field['min'] !== '' ? (float) $field['min'] : null)
+                        ->set_maxValue(isset($field['max']) && $field['max'] !== '' ? (float) $field['max'] : null);
+                }
+
+                if ($std_type === 'text' && !empty($field['text_length'])) {
+                    $fdto->set_characterLimit((int) $field['text_length']);
+                }
+
+                $field_dtos[] = $fdto;
+            }
+
+            $dto->set_fields($field_dtos);
+        }
+
+        return $dto;
     }
 }

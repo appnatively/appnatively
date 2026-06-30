@@ -2,290 +2,315 @@
 
 namespace Crafium\AppNatively\App\Integrations\Forms;
 
-defined( "ABSPATH" ) || exit;
+use Crafium\AppNatively\App\DTO\Forms\FormDTO;
+use Crafium\AppNatively\App\DTO\Forms\FormFieldDTO;
+
+defined("ABSPATH") || exit;
 
 use Crafium\AppNatively\WpMVC\Helpers\Helpers;
 use Crafium\AppNatively\WpMVC\RequestValidator\Request;
 
-class FluentForm extends Form {
-    public function get_key(): string {
+class FluentForm extends Form
+{
+    public function get_key(): string
+    {
         return 'fluentform';
     }
-    
-    public function boot(): void {
-        if ( ! function_exists( 'fluentFormApi' ) && ! defined( 'FLUENTFORM' ) ) {
+
+    public function boot(): void
+    {
+        if (!function_exists('fluentFormApi') && !defined('FLUENTFORM')) {
             return;
         }
         parent::boot();
     }
 
-    protected function get_form( int $id ) {
-        $form = fluentFormApi( 'forms' )->find( $id );
-        if ( $form ) {
-            return is_array( $form ) ? $form : ( method_exists( $form, 'toArray' ) ? $form->toArray() : (array) $form );
+    protected function get_form(int $id)
+    {
+        $form = fluentFormApi('forms')->find($id);
+        if ($form) {
+            return is_array($form) ? $form : (method_exists($form, 'toArray') ? $form->toArray() : (array) $form);
         }
         return [];
     }
 
-    private function map_field_type( string $type ) {
+    private function map_field_type(string $type)
+    {
         $map = [
-            'text'             => 'input_text',
-            'number'           => 'input_number',
-            'email'            => 'input_email',
-            'url'              => 'input_url',
-            'radio'            => 'input_radio',
-            'checkbox'         => 'input_checkbox',
-            'single_select'    => 'select',
-            'rating'           => 'ratings',
+            'text' => 'input_text',
+            'number' => 'input_number',
+            'email' => 'input_email',
+            'url' => 'input_url',
+            'radio' => 'input_radio',
+            'checkbox' => 'input_checkbox',
+            'single_select' => 'select',
+            'rating' => 'ratings',
             'date_time_picker' => 'input_date',
-            'password'         => 'input_password',
-            'gdpr_agreement'   => 'gdpr',
+            'password' => 'input_password',
+            'gdpr_agreement' => 'gdpr',
         ];
 
-        $key = array_search( $type, $map, true );
+        $key = array_search($type, $map, true);
         return false !== $key ? $key : null;
     }
 
-    private function get_form_fields_array( array $form ): array {
+    private function get_form_fields_array(array $form): array
+    {
         $form_fields = $form['form_fields'] ?? '';
-        if ( is_array( $form_fields ) ) {
+        if (is_array($form_fields)) {
             return $form_fields;
         }
-        $decoded = json_decode( $form_fields, true );
-        return is_array( $decoded ) ? $decoded : [];
+        $decoded = json_decode($form_fields, true);
+        return is_array($decoded) ? $decoded : [];
     }
 
-    private function get_base_rules( array $field ): array {
-        $field_rules      = [];
-        $validation_rules = isset( $field['settings']['validation_rules'] ) ? $field['settings']['validation_rules'] : [];
+    private function get_base_rules(array $field): array
+    {
+        $field_rules = [];
+        $validation_rules = isset($field['settings']['validation_rules']) ? $field['settings']['validation_rules'] : [];
 
-        foreach ( $validation_rules as $rule_key => $rule_config ) {
-            if ( ! empty( $rule_config['value'] ) ) {
-                if ( 'required' === $rule_key ) {
+        foreach ($validation_rules as $rule_key => $rule_config) {
+            if (!empty($rule_config['value'])) {
+                if ('required' === $rule_key) {
                     $field_rules[] = 'required';
-                } elseif ( 'email' === $rule_key ) {
+                } elseif ('email' === $rule_key) {
                     $field_rules[] = 'email';
-                } elseif ( 'numeric' === $rule_key ) {
+                } elseif ('numeric' === $rule_key) {
                     $field_rules[] = 'numeric';
-                } elseif ( 'url' === $rule_key ) {
+                } elseif ('url' === $rule_key) {
                     $field_rules[] = 'url';
-                } elseif ( 'min' === $rule_key ) {
+                } elseif ('min' === $rule_key) {
                     $field_rules[] = 'min:' . $rule_config['value'];
-                } elseif ( 'max' === $rule_key ) {
+                } elseif ('max' === $rule_key) {
                     $field_rules[] = 'max:' . $rule_config['value'];
                 }
             }
         }
 
-        if ( ( isset( $field['required'] ) && $field['required'] ) || ( isset( $field['settings']['required'] ) && $field['settings']['required'] ) ) {
+        if ((isset($field['required']) && $field['required']) || (isset($field['settings']['required']) && $field['settings']['required'])) {
             $field_rules[] = 'required';
         }
 
         return $field_rules;
     }
 
-    private function get_text_rules( array $field ): array {
-        return $this->get_base_rules( $field );
+    private function get_text_rules(array $field): array
+    {
+        return $this->get_base_rules($field);
     }
 
-    private function get_number_rules( array $field ): array {
-        $rules   = $this->get_base_rules( $field );
+    private function get_number_rules(array $field): array
+    {
+        $rules = $this->get_base_rules($field);
         $rules[] = 'numeric';
         return $rules;
     }
 
-    private function get_email_rules( array $field ): array {
-        $rules   = $this->get_base_rules( $field );
+    private function get_email_rules(array $field): array
+    {
+        $rules = $this->get_base_rules($field);
         $rules[] = 'email';
         return $rules;
     }
 
-    private function get_url_rules( array $field ): array {
-        $rules   = $this->get_base_rules( $field );
+    private function get_url_rules(array $field): array
+    {
+        $rules = $this->get_base_rules($field);
         $rules[] = 'url';
         return $rules;
     }
 
-    private function get_radio_rules( array $field ): array {
-        return $this->get_base_rules( $field );
+    private function get_radio_rules(array $field): array
+    {
+        return $this->get_base_rules($field);
     }
 
-    private function get_checkbox_rules( array $field ): array {
-        return $this->get_base_rules( $field );
+    private function get_checkbox_rules(array $field): array
+    {
+        return $this->get_base_rules($field);
     }
 
-    private function get_single_select_rules( array $field ): array {
-        return $this->get_base_rules( $field );
+    private function get_single_select_rules(array $field): array
+    {
+        return $this->get_base_rules($field);
     }
 
-    private function get_range_rules( array $field ): array {
-        return $this->get_base_rules( $field );
+    private function get_range_rules(array $field): array
+    {
+        return $this->get_base_rules($field);
     }
 
-    private function get_rating_rules( array $field ): array {
-        return $this->get_base_rules( $field );
+    private function get_rating_rules(array $field): array
+    {
+        return $this->get_base_rules($field);
     }
 
-    private function get_switch_rules( array $field ): array {
-        return $this->get_base_rules( $field );
+    private function get_switch_rules(array $field): array
+    {
+        return $this->get_base_rules($field);
     }
 
-    private function get_password_rules( array $field ): array {
-        return $this->get_base_rules( $field );
+    private function get_password_rules(array $field): array
+    {
+        return $this->get_base_rules($field);
     }
 
-    private function get_date_time_picker_rules( array $field ): array {
-        return $this->get_base_rules( $field );
+    private function get_date_time_picker_rules(array $field): array
+    {
+        return $this->get_base_rules($field);
     }
 
-    private function get_gdpr_rules( array $field ): array {
-        $rules   = $this->get_base_rules( $field );
+    private function get_gdpr_rules(array $field): array
+    {
+        $rules = $this->get_base_rules($field);
         $rules[] = 'integer';
         $rules[] = 'in:0,1';
         return $rules;
     }
 
-    protected function get_validation_rules( array $form ) : array {
-        $form_fields = $this->get_form_fields_array( $form );
-        if ( empty( $form_fields['fields'] ) ) {
+    protected function get_validation_rules(array $form): array
+    {
+        $form_fields = $this->get_form_fields_array($form);
+        if (empty($form_fields['fields'])) {
             return [];
         }
 
-        $flattened_fields = $this->extract_fluentform_fields( $form_fields['fields'] );
-        $rules            = [];
+        $flattened_fields = $this->extract_fluentform_fields($form_fields['fields']);
+        $rules = [];
 
-        foreach ( $flattened_fields as $field ) {
+        foreach ($flattened_fields as $field) {
             $field_name = $field['attributes']['name'] ?? $field['name'] ?? '';
-            if ( ! $field_name ) {
+            if (!$field_name) {
                 continue;
             }
 
             $element_type = $field['element'] ?? '';
-            $mapped_type  = $this->map_field_type( $element_type );
-            if ( ! $mapped_type ) {
+            $mapped_type = $this->map_field_type($element_type);
+            if (!$mapped_type) {
                 continue;
             }
 
             $field_rules = [];
 
-            switch ( $mapped_type ) {
+            switch ($mapped_type) {
                 case 'text':
-                    $field_rules = $this->get_text_rules( $field );
+                    $field_rules = $this->get_text_rules($field);
                     break;
                 case 'number':
-                    $field_rules = $this->get_number_rules( $field );
+                    $field_rules = $this->get_number_rules($field);
                     break;
                 case 'email':
-                    $field_rules = $this->get_email_rules( $field );
+                    $field_rules = $this->get_email_rules($field);
                     break;
                 case 'url':
-                    $field_rules = $this->get_url_rules( $field );
+                    $field_rules = $this->get_url_rules($field);
                     break;
                 case 'radio':
-                    $field_rules = $this->get_radio_rules( $field );
+                    $field_rules = $this->get_radio_rules($field);
                     break;
                 case 'checkbox':
-                    $field_rules = $this->get_checkbox_rules( $field );
+                    $field_rules = $this->get_checkbox_rules($field);
                     break;
                 case 'single_select':
-                    $field_rules = $this->get_single_select_rules( $field );
+                    $field_rules = $this->get_single_select_rules($field);
                     break;
                 case 'range':
-                    $field_rules = $this->get_range_rules( $field );
+                    $field_rules = $this->get_range_rules($field);
                     break;
                 case 'rating':
-                    $field_rules = $this->get_rating_rules( $field );
+                    $field_rules = $this->get_rating_rules($field);
                     break;
                 case 'switch':
-                    $field_rules = $this->get_switch_rules( $field );
+                    $field_rules = $this->get_switch_rules($field);
                     break;
                 case 'password':
-                    $field_rules = $this->get_password_rules( $field );
+                    $field_rules = $this->get_password_rules($field);
                     break;
                 case 'date_time_picker':
-                    $field_rules = $this->get_date_time_picker_rules( $field );
+                    $field_rules = $this->get_date_time_picker_rules($field);
                     break;
                 case 'gdpr':
-                    $field_rules = $this->get_gdpr_rules( $field );
+                    $field_rules = $this->get_gdpr_rules($field);
                     break;
                 default:
                     continue 2;
             }
 
-            if ( ! empty( $field_rules ) ) {
-                $rules[$field_name] = implode( '|', array_unique( $field_rules ) );
+            if (!empty($field_rules)) {
+                $rules[$field_name] = implode('|', array_unique($field_rules));
             }
         }
 
         return $rules;
     }
 
-    protected function get_validation_messages( array $form ): array {
-        $form_fields = $this->get_form_fields_array( $form );
-        if ( empty( $form_fields['fields'] ) ) {
+    protected function get_validation_messages(array $form): array
+    {
+        $form_fields = $this->get_form_fields_array($form);
+        if (empty($form_fields['fields'])) {
             return [];
         }
 
-        $flattened_fields = $this->extract_fluentform_fields( $form_fields['fields'] );
+        $flattened_fields = $this->extract_fluentform_fields($form_fields['fields']);
         $default_messages = [];
-        if ( class_exists( '\FluentForm\App\Helpers\Helper' ) && method_exists( '\FluentForm\App\Helpers\Helper', 'getAllGlobalDefaultMessages' ) ) {
+        if (class_exists('\FluentForm\App\Helpers\Helper') && method_exists('\FluentForm\App\Helpers\Helper', 'getAllGlobalDefaultMessages')) {
             $default_messages = \FluentForm\App\Helpers\Helper::getAllGlobalDefaultMessages();
         }
         $messages = [];
 
-        $resolve_message = function ( array $rule, string $rule_key, string $fallback ) use ( $default_messages ): string {
-            if ( ! empty( $rule['global'] ) ) {
-                return $rule['global_message'] ?? ( $default_messages[ $rule_key ] ?? $fallback );
+        $resolve_message = function (array $rule, string $rule_key, string $fallback) use ($default_messages): string {
+            if (!empty($rule['global'])) {
+                return $rule['global_message'] ?? ($default_messages[$rule_key] ?? $fallback);
             }
-            return $rule['message'] ?? ( $default_messages[ $rule_key ] ?? $fallback );
+            return $rule['message'] ?? ($default_messages[$rule_key] ?? $fallback);
         };
 
-        foreach ( $flattened_fields as $field ) {
+        foreach ($flattened_fields as $field) {
             $field_name = $field['attributes']['name'] ?? $field['name'] ?? '';
-            if ( ! $field_name ) {
+            if (!$field_name) {
                 continue;
             }
 
             $element_type = $field['element'] ?? '';
-            $mapped_type  = $this->map_field_type( $element_type );
-            if ( ! $mapped_type ) {
+            $mapped_type = $this->map_field_type($element_type);
+            if (!$mapped_type) {
                 continue;
             }
 
             $validation_rules = $field['settings']['validation_rules'] ?? [];
 
-            $is_required = ! empty( $validation_rules['required']['value'] );
-            if ( $is_required ) {
-                $messages[ "{$field_name}.required" ] = $resolve_message( $validation_rules['required'], 'required', 'This field is required' );
+            $is_required = !empty($validation_rules['required']['value']);
+            if ($is_required) {
+                $messages["{$field_name}.required"] = $resolve_message($validation_rules['required'], 'required', 'This field is required');
             }
 
-            switch ( $mapped_type ) {
+            switch ($mapped_type) {
                 case 'email':
-                    if ( ! empty( $validation_rules['email']['value'] ) ) {
-                        $messages[ "{$field_name}.email" ] = $resolve_message( $validation_rules['email'], 'email', 'This field must contain a valid email' );
+                    if (!empty($validation_rules['email']['value'])) {
+                        $messages["{$field_name}.email"] = $resolve_message($validation_rules['email'], 'email', 'This field must contain a valid email');
                     }
                     break;
                 case 'url':
-                    $messages[ "{$field_name}.url" ] = $default_messages['url'] ?? 'This field must contain a valid url';
+                    $messages["{$field_name}.url"] = $default_messages['url'] ?? 'This field must contain a valid url';
                     break;
                 case 'number':
-                    $messages[ "{$field_name}.numeric" ] = $default_messages['numeric'] ?? 'This field must contain numeric value';
-                    if ( ! empty( $validation_rules['min']['value'] ) ) {
-                        $messages[ "{$field_name}.min" ] = $resolve_message( $validation_rules['min'], 'min', 'Validation fails for minimum value' );
+                    $messages["{$field_name}.numeric"] = $default_messages['numeric'] ?? 'This field must contain numeric value';
+                    if (!empty($validation_rules['min']['value'])) {
+                        $messages["{$field_name}.min"] = $resolve_message($validation_rules['min'], 'min', 'Validation fails for minimum value');
                     }
-                    if ( ! empty( $validation_rules['max']['value'] ) ) {
-                        $messages[ "{$field_name}.max" ] = $resolve_message( $validation_rules['max'], 'max', 'Validation fails for maximum value' );
+                    if (!empty($validation_rules['max']['value'])) {
+                        $messages["{$field_name}.max"] = $resolve_message($validation_rules['max'], 'max', 'Validation fails for maximum value');
                     }
                     break;
                 case 'gdpr':
-                    $gdpr_msg                            = $default_messages['required'] ?? 'This field is required';
-                    $messages[ "{$field_name}.integer" ] = $gdpr_msg;
-                    $messages[ "{$field_name}.in" ]      = $gdpr_msg;
+                    $gdpr_msg = $default_messages['required'] ?? 'This field is required';
+                    $messages["{$field_name}.integer"] = $gdpr_msg;
+                    $messages["{$field_name}.in"] = $gdpr_msg;
                     break;
                 case 'rating':
-                    $messages[ "{$field_name}.integer" ] = $default_messages['numeric'] ?? 'This field must contain numeric value';
-                    if ( ! empty( $validation_rules['max']['value'] ) ) {
-                        $messages[ "{$field_name}.max" ] = $resolve_message( $validation_rules['max'], 'max', 'Validation fails for maximum value' );
+                    $messages["{$field_name}.integer"] = $default_messages['numeric'] ?? 'This field must contain numeric value';
+                    if (!empty($validation_rules['max']['value'])) {
+                        $messages["{$field_name}.max"] = $resolve_message($validation_rules['max'], 'max', 'Validation fails for maximum value');
                     }
                     break;
             }
@@ -294,19 +319,20 @@ class FluentForm extends Form {
         return $messages;
     }
 
-    private function extract_fluentform_fields( array $elements ) : array {
+    private function extract_fluentform_fields(array $elements): array
+    {
         $fields = [];
-        foreach ( $elements as $element ) {
-            if ( ! empty( $element['columns'] ) ) {
-                foreach ( $element['columns'] as $column ) {
-                    if ( ! empty( $column['fields'] ) ) {
-                        $fields = array_merge( $fields, $this->extract_fluentform_fields( $column['fields'] ) );
+        foreach ($elements as $element) {
+            if (!empty($element['columns'])) {
+                foreach ($element['columns'] as $column) {
+                    if (!empty($column['fields'])) {
+                        $fields = array_merge($fields, $this->extract_fluentform_fields($column['fields']));
                     }
                 }
-            } elseif ( ! empty( $element['fields'] ) ) {
-                $fields = array_merge( $fields, $this->extract_fluentform_fields( $element['fields'] ) );
-            } elseif ( ! empty( $element['inputs'] ) ) {
-                foreach ( $element['inputs'] as $input ) {
+            } elseif (!empty($element['fields'])) {
+                $fields = array_merge($fields, $this->extract_fluentform_fields($element['fields']));
+            } elseif (!empty($element['inputs'])) {
+                foreach ($element['inputs'] as $input) {
                     $fields[] = $input;
                 }
             } else {
@@ -316,46 +342,48 @@ class FluentForm extends Form {
         return $fields;
     }
 
-    public function form_submit( Request $request ) {
-        $form = $this->get_form( $request->get_param( "form_id" ) );
+    public function form_submit(Request $request)
+    {
+        $form = $this->get_form($request->get_param("form_id"));
 
-        if ( ! $form ) {
-            throw new \Exception( __( 'Form not found', 'appnatively' ) );
+        if (!$form) {
+            throw new \Exception(__('Form not found', 'appnatively'));
         }
 
         $validation = $request->make(
             $request,
-            $this->get_validation_rules( $form ),
-            $this->get_validation_messages( $form )
+            $this->get_validation_rules($form),
+            $this->get_validation_messages($form)
         );
         $validation->throw_if_fails();
         $request->errors = $validation->errors();
 
-        $this->submit( $request, $form );
+        $this->submit($request, $form);
     }
 
-    protected function submit( Request $request, array $form ) {
-        $form_fields = $this->get_form_fields_array( $form );
-        if ( empty( $form_fields['fields'] ) ) {
+    protected function submit(Request $request, array $form)
+    {
+        $form_fields = $this->get_form_fields_array($form);
+        if (empty($form_fields['fields'])) {
             return;
         }
 
-        $flattened_fields = $this->extract_fluentform_fields( $form_fields['fields'] );
-        $form_data        = [];
+        $flattened_fields = $this->extract_fluentform_fields($form_fields['fields']);
+        $form_data = [];
 
-        foreach ( $flattened_fields as $field ) {
+        foreach ($flattened_fields as $field) {
             $element_type = $field['element'] ?? '';
-            if ( ! $this->map_field_type( $element_type ) ) {
+            if (!$this->map_field_type($element_type)) {
                 continue;
             }
 
             $field_name = $field['attributes']['name'] ?? $field['name'] ?? '';
-            if ( $field_name ) {
-                $value = $request->get_param( $field_name );
-                if ( $element_type === 'gdpr_agreement' && $value !== null ) {
+            if ($field_name) {
+                $value = $request->get_param($field_name);
+                if ($element_type === 'gdpr_agreement' && $value !== null) {
                     $value = (int) $value ? 'on' : 'off';
                 }
-                if ( $value !== null && $value !== '' && $value !== [] ) {
+                if ($value !== null && $value !== '' && $value !== []) {
                     $form_data[$field_name] = $value;
                 }
             }
@@ -366,36 +394,175 @@ class FluentForm extends Form {
 
         // Insert using Fluent Forms native models/methods
         $serial_number = 1;
-        $previous_item = \FluentForm\App\Models\Submission::select( 'serial_number' )
-            ->where( 'form_id', (int) $form['id'] )
-            ->orderBy( 'id', 'DESC' )
+        $previous_item = \FluentForm\App\Models\Submission::select('serial_number')
+            ->where('form_id', (int) $form['id'])
+            ->orderBy('id', 'DESC')
             ->first();
 
-        if ( $previous_item ) {
+        if ($previous_item) {
             $serial_number = (int) $previous_item->serial_number + 1;
         }
 
         $submission_id = \FluentForm\App\Models\Submission::insertGetId(
             [
-                'form_id'       => (int) $form['id'],
+                'form_id' => (int) $form['id'],
                 'serial_number' => $serial_number,
-                'response'      => wp_json_encode( $form_data ),
-                'status'        => 'unread',
-                'ip'            => $ip,
-                'user_id'       => is_user_logged_in() ? wp_get_current_user()->ID : null,
-                'created_at'    => current_time( 'mysql' ),
-                'updated_at'    => current_time( 'mysql' ),
-            ] 
+                'response' => wp_json_encode($form_data),
+                'status' => 'unread',
+                'ip' => $ip,
+                'user_id' => is_user_logged_in() ? wp_get_current_user()->ID : null,
+                'created_at' => current_time('mysql'),
+                'updated_at' => current_time('mysql'),
+            ]
         );
 
         // Insert into wp_fluentform_entry_details using Fluent Forms native service
-        ( new \FluentForm\App\Services\Submission\SubmissionService() )->recordEntryDetails( $submission_id, (int) $form['id'], $form_data );
+        (new \FluentForm\App\Services\Submission\SubmissionService())->recordEntryDetails($submission_id, (int) $form['id'], $form_data);
 
         // Resolve Form model
-        $form_model = \FluentForm\App\Models\Form::find( (int) $form['id'] );
+        $form_model = \FluentForm\App\Models\Form::find((int) $form['id']);
 
         // Trigger the submission inserted hook so notifications/feeds run
         // phpcs:ignore WordPress.NamingConventions.ValidHookName.UseUnderscores
-        do_action( 'fluentform/submission_inserted', $submission_id, $form_data, $form_model ?: (object) $form );
+        do_action('fluentform/submission_inserted', $submission_id, $form_data, $form_model ?: (object) $form);
+    }
+
+    public function get_forms(): array
+    {
+        // Query Fluent Forms' custom database table directly
+        $forms = wpFluent()->table('fluentform_forms')
+            ->select(['id', 'title', 'status'])
+            ->where('status', 'published') // Filters active forms
+            ->get();
+
+        $result = [];
+
+        foreach ($forms as $form) {
+            // Map the properties from the custom table object to your DTO
+            $result[] = (new FormDTO())->set_id((int) $form->id)
+                ->set_title($form->title)
+                ->set_exclude_to_array(['fields']);
+        }
+
+        return $result;
+    }
+
+    protected function get_standardized_type(string $native_type): ?string
+    {
+        $map = [
+            'input_text' => 'text',
+            'input_number' => 'number',
+            'input_email' => 'email',
+            'input_url' => 'url',
+            'input_radio' => 'radio',
+            'input_checkbox' => 'checkbox',
+            'select' => 'single_select',
+            'ratings' => 'rating',
+            'input_date' => 'date_time_picker',
+            'input_password' => 'password',
+            'gdpr' => 'gdpr',
+            'input_hidden' => 'text',
+            'textarea' => 'text',
+            'input_textarea' => 'text',
+        ];
+
+        return $map[$native_type] ?? null;
+    }
+
+    protected function map_form_to_dto(array $raw_form, array $fields): FormDTO
+    {
+        $dto = new FormDTO();
+
+        if (in_array('id', $fields, true)) {
+            $dto->set_id((int) ($raw_form['id'] ?? 0));
+        }
+
+        if (in_array('title', $fields, true)) {
+            $dto->set_title($raw_form['title'] ?? '');
+        }
+
+        if (in_array('status', $fields, true)) {
+            $dto->set_status($raw_form['status'] ?? 'publish');
+        }
+
+        if (in_array('date_created', $fields, true)) {
+            $dto->set_date_created($raw_form['created_at'] ?? '');
+        }
+
+        if (in_array('date_updated', $fields, true)) {
+            $dto->set_date_updated($raw_form['updated_at'] ?? '');
+        }
+
+        if (in_array('fields', $fields, true)) {
+            $form_fields = $this->get_form_fields_array($raw_form);
+
+            if (!empty($form_fields['fields'])) {
+                $flattened = $this->extract_fluentform_fields($form_fields['fields']);
+                $field_dtos = [];
+
+                foreach ($flattened as $field) {
+                    $element_type = $field['element'] ?? '';
+                    $std_type = $this->get_standardized_type($element_type);
+
+                    if (!$std_type) {
+                        continue;
+                    }
+
+                    $field_name = $field['attributes']['name'] ?? $field['name'] ?? '';
+
+                    if (!$field_name) {
+                        continue;
+                    }
+
+                    $fdto = new FormFieldDTO();
+                    $fdto->set_id($field_name)
+                        ->set_type($std_type)
+                        ->set_required(!empty($field['settings']['validation_rules']['required']['value']) || !empty($field['required']))
+                        ->set_label($field['settings']['label'] ?? $field['label'] ?? '')
+                        ->set_placeholder($field['attributes']['placeholder'] ?? '')
+                        ->set_fieldName($field_name);
+
+                    if (!empty($field['options'])) {
+                        $items = [];
+
+                        foreach ($field['options'] as $key => $option) {
+                            $label = is_string($option) ? $option : ($option['label'] ?? $option['value'] ?? '');
+                            $value = is_string($option) ? $option : ($option['value'] ?? $key);
+                            $items[] = [
+                                'id' => (string) $key,
+                                'label' => $label,
+                                'value' => $value,
+                            ];
+                        }
+
+                        $fdto->set_items($items);
+                    }
+
+                    if ($std_type === 'number') {
+                        $fdto->set_minValue(isset($field['settings']['validation_rules']['min']['value']) ? (float) $field['settings']['validation_rules']['min']['value'] : null)
+                            ->set_maxValue(isset($field['settings']['validation_rules']['max']['value']) ? (float) $field['settings']['validation_rules']['max']['value'] : null);
+                    }
+
+                    if ($std_type === 'rating') {
+                        $fdto->set_ratingMax(5);
+                    }
+
+                    if ($std_type === 'date_time_picker') {
+                        $fdto->set_pickerType('date')
+                            ->set_dateFormat('yyyy-MM-dd');
+                    }
+
+                    if ($std_type === 'text' && !empty($field['settings']['validation_rules']['max']['value'])) {
+                        $fdto->set_characterLimit((int) $field['settings']['validation_rules']['max']['value']);
+                    }
+
+                    $field_dtos[] = $fdto;
+                }
+
+                $dto->set_fields($field_dtos);
+            }
+        }
+
+        return $dto;
     }
 }
