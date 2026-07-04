@@ -616,10 +616,10 @@ class Woocommerce extends Provider {
             $dto->set_status( $product->get_status() );
         }
         if ( in_array( "description", $fields ) ) {
-            $dto->set_description( $product->get_description() );
+            $dto->set_description( $this->parse_content( (string) $product->get_description() ) );
         }
         if ( in_array( "short_description", $fields ) ) {
-            $dto->set_short_description( $product->get_short_description() );
+            $dto->set_short_description( $this->parse_content( (string) $product->get_short_description() ) );
         }
         if ( in_array( "permalink", $fields ) ) {
             $dto->set_permalink( get_permalink( $post->ID ) );
@@ -745,6 +745,36 @@ class Woocommerce extends Provider {
         }
 
         return $dto;
+    }
+
+    /**
+     * Parse content safely without triggering third-party plugins attached to 'the_content'.
+     *
+     * @param string $content The raw content.
+     * @return string The parsed content.
+     */
+    private function parse_content( string $content ): string {
+        if ( empty( $content ) ) {
+            return "";
+        }
+
+        // Render Gutenberg blocks
+        if ( function_exists( "do_blocks" ) ) {
+            $content = do_blocks( $content );
+        }
+
+        // Add paragraphs
+        $content = wpautop( $content );
+
+        // Standard texturizing
+        $content = wptexturize( $content );
+        $content = convert_chars( $content );
+
+        // Shortcodes cleanup and execution
+        $content = shortcode_unautop( $content );
+        $content = do_shortcode( $content );
+
+        return $content;
     }
 
     /**
