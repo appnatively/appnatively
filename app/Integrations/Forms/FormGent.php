@@ -485,8 +485,11 @@ class FormGent extends Form {
                     }
 
                     if ( $std_type === 'date_time_picker' ) {
-                        $fdto->set_pickerType( 'date' )
-                            ->set_dateFormat( 'yyyy-MM-dd' );
+                        $fdto->set_pickerType( $field['option'] ?? 'date' );
+                    }
+
+                    if ( $std_type === 'gdpr' ) {
+                        $fdto->set_label( $field['description'] ?? $field['label'] ?? $field['name'] ?? '' );
                     }
 
                     if ( $std_type === 'text' && ! empty( $field['character_limit'] ) && ! empty( $field['limit'] ) ) {
