@@ -522,20 +522,33 @@ class FluentForm extends Form
                         ->set_placeholder($field['attributes']['placeholder'] ?? '')
                         ->set_fieldName($field_name);
 
-                    if (!empty($field['options'])) {
+                    $options = !empty($field['settings']['advanced_options'])
+                        ? $field['settings']['advanced_options']
+                        : ($field['options'] ?? []);
+
+                    if (!empty($options)) {
                         $items = [];
 
-                        foreach ($field['options'] as $key => $option) {
-                            $label = is_string($option) ? $option : ($option['label'] ?? $option['value'] ?? '');
-                            $value = is_string($option) ? $option : ($option['value'] ?? $key);
-                            $items[] = [
-                                'id' => (string) $key,
-                                'label' => $label,
-                                'value' => $value,
-                            ];
+                        foreach ($options as $key => $option) {
+                            if (is_string($option)) {
+                                // Legacy {value => label} map
+                                $items[] = [
+                                    'id' => (string) $key,
+                                    'label' => $option,
+                                    'value' => $option,
+                                ];
+                            } elseif (is_array($option)) {
+                                $items[] = [
+                                    'id' => isset($option['id']) ? (string) $option['id'] : (string) $key,
+                                    'label' => $option['label'] ?? $option['value'] ?? (string) $key,
+                                    'value' => $option['value'] ?? $option['label'] ?? (string) $key,
+                                ];
+                            }
                         }
 
-                        $fdto->set_items($items);
+                        if ($items) {
+                            $fdto->set_items($items);
+                        }
                     }
 
                     if ($std_type === 'number') {
@@ -548,8 +561,9 @@ class FluentForm extends Form
                     }
 
                     if ($std_type === 'date_time_picker') {
-                        $fdto->set_pickerType('date')
-                            ->set_dateFormat('yyyy-MM-dd');
+                        $format = $field['settings']['date_format'] ?? 'd/m/Y';
+                        $fdto->set_pickerType($this->fluentform_date_picker_type($format))
+                            ->set_dateFormat($this->flatpickr_to_date_fns_format($format));
                     }
 
                     if ($std_type === 'text' && !empty($field['settings']['validation_rules']['max']['value'])) {
@@ -564,5 +578,53 @@ class FluentForm extends Form
         }
 
         return $dto;
+    }
+
+    private function fluentform_date_picker_type(string $format): string
+    {
+        $timeTokens = ['H', 'h', 'G', 'i', 'S', 's', 'K'];
+        $dateTokens = ['d', 'D', 'l', 'j', 'J', 'w', 'W', 'F', 'm', 'n', 'M', 'U', 'Y', 'y', 'Z'];
+
+        $hasTime = false;
+        foreach ($timeTokens as $t) {
+            if (strpos($format, $t) !== false) {
+                $hasTime = true;
+                break;
+            }
+        }
+
+        $hasDate = false;
+        foreach ($dateTokens as $t) {
+            if (strpos($format, $t) !== false) {
+                $hasDate = true;
+                break;
+            }
+        }
+
+        if ($hasTime && !$hasDate) {
+            return 'time';
+        }
+        if ($hasTime && $hasDate) {
+            return 'both';
+        }
+        return 'date';
+    }
+
+    private function flatpickr_to_date_fns_format(string $format): string
+    {
+        $map = [
+            'Y' => 'yyyy', 'y' => 'yy',
+            'm' => 'MM', 'n' => 'M', 'M' => 'MMM', 'F' => 'MMMM',
+            'd' => 'dd', 'j' => 'd', 'D' => 'EEE', 'l' => 'EEEE', 'J' => 'do',
+            'H' => 'HH', 'G' => 'H', 'h' => 'hh', 'g' => 'h',
+            'i' => 'mm', 'S' => 'ss', 's' => 'ss', 'K' => 'a',
+            'Z' => 'xxx',
+        ];
+
+        $out = '';
+        for ($k = 0, $len = strlen($format); $k < $len; $k++) {
+            $out .= $map[$format[$k]] ?? $format[$k];
+        }
+        return $out;
     }
 }

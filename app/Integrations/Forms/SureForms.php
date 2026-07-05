@@ -44,6 +44,15 @@ class SureForms extends Form
             $block_type = str_replace('srfm/', '', $block['blockName']);
             $attrs = $block['attrs'] ?? [];
 
+            $registered = \WP_Block_Type_Registry::get_instance()->get_registered($block['blockName']);
+            if ($registered && isset($registered->attributes)) {
+                foreach ($registered->attributes as $key => $definition) {
+                    if (!array_key_exists($key, $attrs) && array_key_exists('default', $definition)) {
+                        $attrs[$key] = $definition['default'];
+                    }
+                }
+            }
+
             $fields[] = [
                 'type' => $block_type,
                 'label' => $attrs['label'] ?? '',
@@ -69,20 +78,20 @@ class SureForms extends Form
         ];
     }
 
-    private function map_field_type(string $type)
+    private function map_field_type(string $type): ?string
     {
         $map = [
-            'text' => 'input',
+            'input' => 'text',
             'email' => 'email',
             'number' => 'number',
             'url' => 'url',
             'checkbox' => 'checkbox',
+            'multi-choice' => 'checkbox',
             'gdpr' => 'gdpr',
-            'select' => 'dropdown',
+            'dropdown' => 'select',
         ];
 
-        $mapped = array_search($type, $map, true);
-        return false !== $mapped ? $mapped : null;
+        return $map[$type] ?? null;
     }
 
     private function get_text_rules(array $field): array
@@ -138,6 +147,8 @@ class SureForms extends Form
         if ($type === 'dropdown') {
             $dropdown_counter++;
             $type_part = "dropdown-{$dropdown_counter}";
+        } elseif ($type === 'multi-choice') {
+            $type_part = 'input-multi-choice';
         } else {
             $type_part = $type;
         }
@@ -239,7 +250,7 @@ class SureForms extends Form
             $slug = (string) $field['slug'];
 
             if (!empty($field['required'])) {
-                $required_key = $this->get_required_message_key($mapped_type);
+                $required_key = $this->get_required_message_key($mapped_type, $field['type'] ?? '');
                 if (!empty($required_key)) {
                     $messages["{$slug}.required"] = \SRFM\Inc\Helper::get_default_dynamic_block_option($required_key);
                 }
@@ -275,10 +286,15 @@ class SureForms extends Form
      * unlike WPForms' single validation-required key.
      *
      * @param string $mapped_type Mapped field type.
+     * @param string $native_type Native SureForms block type (for multi-choice override).
      * @return string|null Settings key, or null when none applies.
      */
-    private function get_required_message_key(string $mapped_type): ?string
+    private function get_required_message_key(string $mapped_type, string $native_type = ''): ?string
     {
+        if ($native_type === 'multi-choice') {
+            return 'srfm_multi_choice_block_required_text';
+        }
+
         $map = [
             'text' => 'srfm_input_block_required_text',
             'email' => 'srfm_email_block_required_text',
@@ -318,6 +334,10 @@ class SureForms extends Form
 
             if (in_array($mapped_type, ['checkbox', 'gdpr'], true) && is_array($value)) {
                 $request->set_param($field['slug'], !empty($value) ? (string) reset($value) : '');
+            }
+
+            if ($mapped_type === 'checkbox' && $value === '0') {
+                $request->set_param($field['slug'], '');
             }
         }
 
@@ -384,7 +404,8 @@ class SureForms extends Form
             'email' => 'email',
             'number' => 'number',
             'url' => 'url',
-            'checkbox' => 'checkbox',
+            'checkbox' => 'gdpr',
+            'multi-choice' => 'checkbox',
             'gdpr' => 'gdpr',
             'dropdown' => 'single_select',
             'radio' => 'radio',
@@ -424,6 +445,7 @@ class SureForms extends Form
             $field_dtos = [];
 
             foreach ($raw_form['fields'] as $field) {
+                //error_log(print_r($field, true));
                 $std_type = $this->get_standardized_type($field['type'] ?? '');
 
                 if (!$std_type) {
@@ -449,10 +471,11 @@ class SureForms extends Form
                                 'value' => $option,
                             ];
                         } elseif (is_array($option)) {
+                            $option_label = $option['label'] ?? $option['optionTitle'] ?? '';
                             $items[] = [
                                 'id' => $option['value'] ?? (string) $key,
-                                'label' => $option['label'] ?? '',
-                                'value' => $option['value'] ?? '',
+                                'label' => $option_label,
+                                'value' => $option['value'] ?? $option_label,
                             ];
                         }
                     }

@@ -27,6 +27,7 @@ class ContactForm7 extends Form {
 
     protected function get_form( int $id ) {
         $form = wpcf7_contact_form( $id );
+        error_log(print_r( $form, true ) );
         if ( $form ) {
             $this->cf7_form = $form;
             return [
@@ -431,6 +432,66 @@ class ContactForm7 extends Form {
         return $map[$native_type] ?? null;
     }
 
+    private function extract_cf7_labels( string $template ): array {
+        $labels = [];
+
+        if ( empty( $template ) ) {
+            return $labels;
+        }
+
+        // Match all <label ...>...</label> blocks (case-insensitive, dotall).
+        if ( ! preg_match_all( '/<label\b([^>]*)>(.*?)<\/label>/is', $template, $label_matches, PREG_SET_ORDER ) ) {
+            return $labels;
+        }
+
+        $tag_name_regex = '/\[([a-zA-Z]+)(?:\*)?\s+([A-Za-z0-9_\-\.]+)/';
+
+        // Resolve tag name for each id:option across the whole template (for the for/id pattern).
+        $id_to_name = [];
+        if ( preg_match_all( '/\[([a-zA-Z]+)(?:\*)?\s+([A-Za-z0-9_\-\.]+)([^\]]*)\]/', $template, $all_tags, PREG_SET_ORDER ) ) {
+            foreach ( $all_tags as $t ) {
+                $name = strtr( $t[2], '.', '_' );
+                $rest = $t[3] ?? '';
+                if ( preg_match( '/\bid:([A-Za-z0-9_\-]+)/', $rest, $idm ) ) {
+                    $id_to_name[ $idm[1] ] = $name;
+                }
+            }
+        }
+
+        foreach ( $label_matches as $lm ) {
+            $attrs = $lm[1];
+            $inner = $lm[2];
+
+            // Clean the label text: strip form-tag tokens and HTML tags, collapse whitespace.
+            $text = preg_replace( '/\[[^\]]*\]/', '', $inner );
+            $text = trim( strip_tags( $text ) );
+            $text = preg_replace( '/\s+/', ' ', $text );
+
+            if ( $text === '' ) {
+                continue;
+            }
+
+            // Pattern 1: a form-tag name appears inside the <label>.
+            if ( preg_match_all( $tag_name_regex, $inner, $tags_inside, PREG_SET_ORDER ) ) {
+                foreach ( $tags_inside as $t ) {
+                    $name             = strtr( $t[2], '.', '_' );
+                    $labels[ $name ] = $text;
+                }
+                continue;
+            }
+
+            // Pattern 2: <label for="x">...</label> paired with [... id:x].
+            if ( preg_match( '/\bfor\s*=\s*["\']?([A-Za-z0-9_\-]+)/i', $attrs, $fm ) ) {
+                $for_id = $fm[1];
+                if ( isset( $id_to_name[ $for_id ] ) ) {
+                    $labels[ $id_to_name[ $for_id ] ] = $text;
+                }
+            }
+        }
+
+        return $labels;
+    }
+
     protected function map_form_to_dto( array $raw_form, array $fields ): FormDTO {
         $dto = new FormDTO();
 
@@ -459,7 +520,8 @@ class ContactForm7 extends Form {
             $field_dtos = [];
 
             if ( $cf7_form ) {
-                $tags = $cf7_form->scan_form_tags();
+                $tags      = $cf7_form->scan_form_tags();
+                $label_map = $this->extract_cf7_labels( (string) $cf7_form->prop( 'form' ) );
 
                 foreach ( $tags as $tag ) {
                     if ( empty( $tag->name ) || empty( $tag->basetype ) ) {
@@ -476,7 +538,7 @@ class ContactForm7 extends Form {
                     $fdto->set_id( $tag->name )
                         ->set_type( $std_type )
                         ->set_required( $tag->is_required() )
-                        ->set_label( $tag->name )
+                        ->set_label( $label_map[ $tag->name ] ?? '' )
                         ->set_placeholder( $tag->get_option( 'placeholder', '', true ) ?: '' )
                         ->set_fieldName( $tag->name );
 

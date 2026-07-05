@@ -30,6 +30,8 @@ class Forminator extends Form {
 
         $form = \Forminator_API::get_form( $id );
 
+        error_log( 'Forminator form: ' . print_r( $form, true ), 0 );
+
         if ( ! $form || is_wp_error( $form ) ) {
             return [];
         }
@@ -477,7 +479,7 @@ class Forminator extends Form {
                 $fdto->set_id( $field['element_id'] ?? '' )
                     ->set_type( $std_type )
                     ->set_required( ! empty( $field['required'] ) && filter_var( $field['required'], FILTER_VALIDATE_BOOLEAN ) )
-                    ->set_label( $field['field_label'] ?? $field['label'] ?? '' )
+                    ->set_label( ( $std_type === 'gdpr' && ! empty( $field['consent_description'] ) ) ? $field['consent_description'] : ( $field['field_label'] ?? $field['label'] ?? '' ) )
                     ->set_placeholder( $field['placeholder'] ?? '' )
                     ->set_fieldName( $field['element_id'] ?? '' );
 
@@ -518,7 +520,11 @@ class Forminator extends Form {
                 }
 
                 if ( $std_type === 'date_time_picker' ) {
-                    $fdto->set_pickerType( 'date' )->set_dateFormat( 'yyyy-MM-dd' );
+                    if ( ( $field['type'] ?? '' ) === 'time' ) {
+                        $fdto->set_pickerType( 'time' )->set_dateFormat( 'hh:mm a' );
+                    } else {
+                        $fdto->set_pickerType( 'date' )->set_dateFormat( 'yyyy-MM-dd' );
+                    }
                 }
 
                 if ( $std_type === 'text' && ! empty( $field['text_limit'] ) && ! empty( $field['limit'] ) ) {

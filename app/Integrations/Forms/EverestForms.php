@@ -42,8 +42,13 @@ class EverestForms extends Form {
                 'max_value'                      => $field['max_value'] ?? '',
                 'number_of_stars'                => $field['number_of_stars'] ?? 5,
                 'datetime_format'                => $field['datetime_format'] ?? 'date',
+                'date_format'                    => $field['date_format'] ?? 'Y-m-d',
+                'time_format'                    => $field['time_format'] ?? 'g:i A',
                 'required_field_message_setting' => $field['required_field_message_setting'] ?? 'global',
                 'required_field_message'         => $field['required-field-message'] ?? '',
+                'options'                        => isset( $field['choices'] ) && is_array( $field['choices'] )
+                    ? $this->normalize_choices( $field['choices'], ! empty( $field['show_values'] ) )
+                    : [],
             ];
         }
 
@@ -52,6 +57,43 @@ class EverestForms extends Form {
             'name'   => $form_data['settings']['form_title'] ?? '',
             'fields' => $fields,
         ];
+    }
+
+    private function normalize_choices( array $choices, bool $show_values ): array {
+        $options = [];
+
+        foreach ( $choices as $key => $choice ) {
+            if ( ! is_array( $choice ) ) {
+                continue;
+            }
+
+            $label = $choice['label'] ?? '';
+            $value = $show_values ? ( $choice['value'] ?? '' ) : $label;
+
+            $options[ $key ] = [
+                'label' => $label,
+                'value' => $value !== '' ? $value : $label,
+            ];
+        }
+
+        return $options;
+    }
+
+    private function php_to_date_fns_format( string $format ): string {
+        $map = [
+            'Y' => 'yyyy', 'y' => 'yy',
+            'm' => 'MM', 'n' => 'M', 'M' => 'MMM', 'F' => 'MMMM',
+            'd' => 'dd', 'j' => 'd', 'D' => 'EEE', 'l' => 'EEEE',
+            'H' => 'HH', 'G' => 'H', 'h' => 'hh', 'g' => 'h',
+            'i' => 'mm', 's' => 'ss', 'A' => 'a', 'a' => 'aaa',
+        ];
+
+        $out = '';
+        for ( $k = 0, $len = strlen( $format ); $k < $len; $k++ ) {
+            $out .= $map[ $format[ $k ] ] ?? $format[ $k ];
+        }
+
+        return $out;
     }
 
     private function map_field_type( string $type ) {
@@ -388,9 +430,9 @@ class EverestForms extends Form {
             'number'   => 'number',
             'radio'    => 'radio',
             'checkbox' => 'checkbox',
-            'select'   => 'single_select',
-            'date'     => 'date_time_picker',
-            'rating'   => 'rating',
+            'select'    => 'single_select',
+            'date-time' => 'date_time_picker',
+            'rating'    => 'rating',
             'textarea' => 'text',
             'password' => 'password',
         ];
@@ -462,8 +504,22 @@ class EverestForms extends Form {
                 }
 
                 if ( $std_type === 'date_time_picker' ) {
-                    $fdto->set_pickerType( $field['datetime_format'] ?? 'date' )
-                        ->set_dateFormat( 'yyyy-MM-dd' );
+                    $datetime_format = $field['datetime_format'] ?? 'date';
+                    $date_fns        = $this->php_to_date_fns_format( $field['date_format'] ?? 'Y-m-d' );
+                    $time_fns        = $this->php_to_date_fns_format( $field['time_format'] ?? 'g:i A' );
+
+                    if ( 'time' === $datetime_format ) {
+                        $picker_type  = 'time';
+                        $final_format = $time_fns ?: 'HH:mm';
+                    } elseif ( 'date-time' === $datetime_format ) {
+                        $picker_type  = 'both';
+                        $final_format = trim( $date_fns . ' ' . $time_fns );
+                    } else {
+                        $picker_type  = 'date';
+                        $final_format = $date_fns ?: 'yyyy-MM-dd';
+                    }
+
+                    $fdto->set_pickerType( $picker_type )->set_dateFormat( $final_format );
                 }
 
                 $field_dtos[] = $fdto;

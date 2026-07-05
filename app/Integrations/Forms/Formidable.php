@@ -32,6 +32,7 @@ class Formidable extends Form {
         $fields_array = [];
 
         foreach ( $fields as $field ) {
+            error_log( 'field: ' . print_r( $field, true ), 0 );
             $fields_array[] = [
                 'id'            => (int) $field->id,
                 'type'          => $field->type,

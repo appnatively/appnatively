@@ -51,8 +51,6 @@ abstract class Form extends Provider {
         $id       = (int) $request->get_param( "id" );
         $raw_form = $this->get_form( $id );
 
-        // error_log( print_r( $raw_form, true ) );
-
         if ( empty( $raw_form ) ) {
             return null;
         }

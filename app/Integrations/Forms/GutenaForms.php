@@ -37,8 +37,22 @@ class GutenaForms extends Form {
         $fields = [];
 
         foreach ( $schema['form_fields'] as $name_attr => $field ) {
+            error_log( 'field: ' . print_r( $field, true ), 0 );
             if ( empty( $field['nameAttr'] ) ) {
                 continue;
+            }
+
+            // Gutena persists its schema via parse_blocks(), which does NOT merge
+            // registered block-attribute defaults. Re-apply them from the live
+            // gutena/form-field block type so choice fields expose their option list
+            // (and range fields their min/max) even when left at defaults.
+            $field_block = \WP_Block_Type_Registry::get_instance()->get_registered( 'gutena/form-field' );
+            if ( $field_block && ! empty( $field_block->attributes ) ) {
+                foreach ( $field_block->attributes as $attr_name => $attr_def ) {
+                    if ( ! isset( $field[ $attr_name ] ) && is_array( $attr_def ) && array_key_exists( 'default', $attr_def ) ) {
+                        $field[ $attr_name ] = $attr_def['default'];
+                    }
+                }
             }
 
             $field_type = $field['fieldType'] ?? 'text';
@@ -468,65 +482,49 @@ class GutenaForms extends Form {
     }
 
     public function get_forms(): array {
-    global $wpdb;
-
-    if ( ! defined( 'GUTENA_FORMS_VERSION' ) ) {
-        return [];
-    }
-
-    $meta_key = 'gutena_forms_form_schema';
-    
-    $posts = $wpdb->get_results(
-        $wpdb->prepare(
-            "SELECT p.ID, p.post_title, p.post_date, p.post_modified
-            FROM {$wpdb->posts} p
-            INNER JOIN {$wpdb->postmeta} pm ON p.ID = pm.post_id AND pm.meta_key = %s
-            WHERE p.post_status = 'publish'
-            GROUP BY p.ID
-            ORDER BY p.ID ASC",
-            $meta_key
-        )
-    );
-
-    error_log( 'Gutena Forms posts count: ' . count( $posts ) ); // Debugging line
-
-    if ( empty( $posts ) ) {
-        return [];
-    }
-
-    $result = [];
-
-    foreach ( $posts as $post ) {
-        // Gutena Forms usually mirrors the post_id or uses a custom string inside the block meta.
-        // We use standard WordPress API safely here, but it's now optimized because of the narrow query.
-        $block_form_id = get_post_meta( $post->ID, 'gutena_form_id', true );
-
-        if ( ! $block_form_id ) {
-            continue;
+        if ( ! defined( 'GUTENA_FORMS_VERSION' ) ) {
+            return [];
         }
 
-        // Fetch Gutena's global option dictionary schema mapping
-        $schema = function_exists('gutena_forms_get_form_schema_option') 
-            ? gutena_forms_get_form_schema_option( $block_form_id ) 
-            : [];
+        $posts = get_posts( [
+            'post_type'      => 'gutena_forms',
+            'post_status'    => 'publish',
+            'posts_per_page' => -1,
+            'orderby'        => 'ID',
+            'order'          => 'ASC',
+        ] );
 
-        if ( empty( $schema ) || empty( $schema['form_attrs'] ) || empty( $schema['form_fields'] ) ) {
-            continue;
+        if ( empty( $posts ) ) {
+            return [];
         }
 
-        // CHANGED: Refactored output array to match your strict DTO architectural pattern
-        $form_title = $schema['form_attrs']['formName'] ?? $post->post_title;
+        $result = [];
 
-        $form_dto = (new FormDTO())
-            ->set_id( (int) $post->ID )
-            ->set_title( $form_title )
-            ->set_exclude_to_array( ['fields'] );
+        foreach ( $posts as $post ) {
+            $block_form_id = get_post_meta( $post->ID, 'gutena_form_id', true );
 
-        $result[] = $form_dto;
+            if ( ! $block_form_id ) {
+                continue;
+            }
+
+            $schema = function_exists( 'gutena_forms_get_form_schema_option' )
+                ? gutena_forms_get_form_schema_option( $block_form_id )
+                : [];
+
+            if ( empty( $schema ) || empty( $schema['form_attrs'] ) || empty( $schema['form_fields'] ) ) {
+                continue;
+            }
+
+            $form_title = $schema['form_attrs']['formName'] ?? $post->post_title;
+
+            $result[] = (new FormDTO())
+                ->set_id( (int) $post->ID )
+                ->set_title( $form_title )
+                ->set_exclude_to_array( ['fields'] );
+        }
+
+        return $result;
     }
-
-    return $result;
-}
 
 
     protected function get_standardized_type( string $native_type ): ?string {
