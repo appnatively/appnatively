@@ -131,7 +131,7 @@ class FormGent extends Form {
     }
 
     private function get_gdpr_rules( array $field ): array {
-        return [ 'integer', 'in:0,1' ];
+        return [ 'integer', 'in:1' ];
     }
 
     protected function get_validation_rules( array $form ) : array {
@@ -190,6 +190,7 @@ class FormGent extends Form {
                     break;
                 case 'gdpr':
                     $field_rules = $this->get_gdpr_rules( $field );
+                    $field_rules[] = 'required';
                     break;
                 default:
                     continue 2;
@@ -253,6 +254,7 @@ class FormGent extends Form {
                     break;
                 case 'gdpr':
                     $gdpr_msg                            = $validation_messages['gdpr'] ?? 'You must agree to proceed';
+                    $messages[ "{$field_name}.required" ] = $gdpr_msg;
                     $messages[ "{$field_name}.integer" ] = $gdpr_msg;
                     $messages[ "{$field_name}.in" ]      = $gdpr_msg;
                     break;
@@ -455,7 +457,7 @@ class FormGent extends Form {
                     $fdto = new FormFieldDTO();
                     $fdto->set_id( $field['name'] ?? '' )
                         ->set_type( $std_type )
-                        ->set_required( ! empty( $field['required'] ) )
+                        ->set_required( $std_type === 'gdpr' ? true : ! empty( $field['required'] ) )
                         ->set_label( $field['label'] ?? $field['name'] ?? '' )
                         ->set_placeholder( $field['placeholder'] ?? '' )
                         ->set_fieldName( $field['name'] ?? '' );
