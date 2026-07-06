@@ -12,6 +12,7 @@ class FormsDTO extends DTO {
     public function get_items(): array {
         return $this->items;
     }
+
     /**
      * Summary of set_items
      * @param FormDTO[] $items

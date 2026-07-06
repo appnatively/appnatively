@@ -2,6 +2,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
+use Crafium\AppNatively\App\Http\Controllers\ShopController;
 use Crafium\AppNatively\App\Http\Controllers\PluginsController;
 use Crafium\AppNatively\WpMVC\Routing\Route;
 use Crafium\AppNatively\WpMVC\Routing\Response;
@@ -13,6 +14,7 @@ Route::get(
 );
 
 Route::get( 'plugins', [PluginsController::class, 'index'] );
+Route::get( 'shop', [ShopController::class, 'index'] );
 Route::group(
     'ecommerce', function() {
         require __DIR__ . '/ecommerce.php';

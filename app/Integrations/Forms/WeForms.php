@@ -302,7 +302,7 @@ class WeForms extends Form {
                 continue;
             }
 
-            $result[] = (new FormDTO())
+            $result[] = ( new FormDTO() )
                 ->set_id( (int) $form_obj->id )
                 ->set_title( $form_obj->name );
         }
@@ -312,17 +312,17 @@ class WeForms extends Form {
 
     protected function get_standardized_type( string $native_type ): ?string {
         $map = [
-            'text_field'      => 'text',
-            'email_address'   => 'email',
-            'dropdown_field'  => 'single_select',
-            'radio_field'     => 'radio',
-            'checkbox_field'  => 'checkbox',
-            'website_url'     => 'url',
-            'date_field'      => 'date_time_picker',
-            'textarea_field'  => 'text',
-            'number_field'    => 'number',
-            'section_break'   => null,
-            'custom_html'     => null,
+            'text_field'     => 'text',
+            'email_address'  => 'email',
+            'dropdown_field' => 'single_select',
+            'radio_field'    => 'radio',
+            'checkbox_field' => 'checkbox',
+            'website_url'    => 'url',
+            'date_field'     => 'date_time_picker',
+            'textarea_field' => 'text',
+            'number_field'   => 'number',
+            'section_break'  => null,
+            'custom_html'    => null,
         ];
 
         return $map[$native_type] ?? null;

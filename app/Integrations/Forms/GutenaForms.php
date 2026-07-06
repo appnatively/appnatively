@@ -486,13 +486,15 @@ class GutenaForms extends Form {
             return [];
         }
 
-        $posts = get_posts( [
-            'post_type'      => 'gutena_forms',
-            'post_status'    => 'publish',
-            'posts_per_page' => -1,
-            'orderby'        => 'ID',
-            'order'          => 'ASC',
-        ] );
+        $posts = get_posts(
+            [
+                'post_type'      => 'gutena_forms',
+                'post_status'    => 'publish',
+                'posts_per_page' => -1,
+                'orderby'        => 'ID',
+                'order'          => 'ASC',
+            ] 
+        );
 
         if ( empty( $posts ) ) {
             return [];
@@ -517,7 +519,7 @@ class GutenaForms extends Form {
 
             $form_title = $schema['form_attrs']['formName'] ?? $post->post_title;
 
-            $result[] = (new FormDTO())
+            $result[] = ( new FormDTO() )
                 ->set_id( (int) $post->ID )
                 ->set_title( $form_title )
                 ->set_exclude_to_array( ['fields'] );
@@ -525,7 +527,6 @@ class GutenaForms extends Form {
 
         return $result;
     }
-
 
     protected function get_standardized_type( string $native_type ): ?string {
         $map = [

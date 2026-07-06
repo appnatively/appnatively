@@ -403,7 +403,7 @@ class Forminator extends Form {
 
     public function get_forms(): array {
         // Forminator registers its custom post type as 'forminator_forms'
-        $posts = Post::select("ID", "post_title")
+        $posts = Post::select( "ID", "post_title" )
             ->where( 'post_type', 'forminator_forms' )
             ->where( 'post_status', 'publish' )
             ->get();
@@ -411,7 +411,7 @@ class Forminator extends Form {
         $result = [];
 
         foreach ( $posts as $post ) {
-            $result[] = (new FormDTO())
+            $result[] = ( new FormDTO() )
                 ->set_id( (int) $post->ID )
                 ->set_title( $post->post_title )
                 ->set_exclude_to_array( ['fields'] );

@@ -362,11 +362,13 @@ class WPForms extends Form {
 
     public function get_forms(): array {
 
-        $forms = wpforms()->obj( 'form' )->get( '', [ 
-            'post_type'   => 'wpforms',
-            'post_status' => 'publish', // Fetches active forms
-            'nopaging'    => true       // Ensures you fetch all forms, not just the first 10
-        ] );
+        $forms = wpforms()->obj( 'form' )->get(
+            '', [ 
+                'post_type'   => 'wpforms',
+                'post_status' => 'publish', // Fetches active forms
+                'nopaging'    => true       // Ensures you fetch all forms, not just the first 10
+            ] 
+        );
 
         if ( ! $forms ) {
             return [];
@@ -376,7 +378,7 @@ class WPForms extends Form {
 
         foreach ( $forms as $form_post ) {
 
-            $result[] = (new FormDTO())
+            $result[] = ( new FormDTO() )
                 ->set_id( (int) $form_post->ID )
                 ->set_title( $form_post->post_title );
         }
@@ -384,23 +386,22 @@ class WPForms extends Form {
         return $result;
     }
 
-
     protected function get_standardized_type( string $native_type ): ?string {
         $map = [
-            'text'            => 'text',
-            'number'          => 'number',
-            'email'           => 'email',
-            'checkbox'        => 'checkbox',
-            'select'          => 'single_select',
-            'radio'           => 'radio',
-            'number-slider'   => 'range',
-            'gdpr-checkbox'   => 'gdpr',
-            'url'             => 'url',
-            'password'        => 'password',
-            'date-time'       => 'date_time_picker',
-            'rating'          => 'rating',
-            'file-upload'     => 'text',
-            'hidden'          => 'text',
+            'text'          => 'text',
+            'number'        => 'number',
+            'email'         => 'email',
+            'checkbox'      => 'checkbox',
+            'select'        => 'single_select',
+            'radio'         => 'radio',
+            'number-slider' => 'range',
+            'gdpr-checkbox' => 'gdpr',
+            'url'           => 'url',
+            'password'      => 'password',
+            'date-time'     => 'date_time_picker',
+            'rating'        => 'rating',
+            'file-upload'   => 'text',
+            'hidden'        => 'text',
         ];
 
         return $map[$native_type] ?? null;

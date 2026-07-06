@@ -189,7 +189,7 @@ class FormGent extends Form {
                     $field_rules = $this->get_date_time_picker_rules( $field );
                     break;
                 case 'gdpr':
-                    $field_rules = $this->get_gdpr_rules( $field );
+                    $field_rules   = $this->get_gdpr_rules( $field );
                     $field_rules[] = 'required';
                     break;
                 default:
@@ -253,10 +253,10 @@ class FormGent extends Form {
                     }
                     break;
                 case 'gdpr':
-                    $gdpr_msg                            = $validation_messages['gdpr'] ?? 'You must agree to proceed';
+                    $gdpr_msg                             = $validation_messages['gdpr'] ?? 'You must agree to proceed';
                     $messages[ "{$field_name}.required" ] = $gdpr_msg;
-                    $messages[ "{$field_name}.integer" ] = $gdpr_msg;
-                    $messages[ "{$field_name}.in" ]      = $gdpr_msg;
+                    $messages[ "{$field_name}.integer" ]  = $gdpr_msg;
+                    $messages[ "{$field_name}.in" ]       = $gdpr_msg;
                     break;
                 case 'rating':
                     $messages[ "{$field_name}.integer" ] = $validation_messages['number'] ?? 'This field must contain numeric value';
@@ -396,14 +396,14 @@ class FormGent extends Form {
 
     public function get_forms(): array {
 
-        $posts = Post::select("ID", "post_title")->where( 'post_type', 'formgent_form' )
+        $posts = Post::select( "ID", "post_title" )->where( 'post_type', 'formgent_form' )
             ->where( 'post_status', 'publish' )
             ->get();
 
         $result = [];
 
         foreach ( $posts as $post ) {
-            $result[] = (new FormDTO())->set_id( (int) $post->ID )
+            $result[] = ( new FormDTO() )->set_id( (int) $post->ID )
                 ->set_title( $post->post_title )
                 ->set_exclude_to_array( ['fields'] );
         }
