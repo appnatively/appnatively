@@ -5,6 +5,7 @@ defined( 'ABSPATH' ) || exit;
 
 use Crafium\AppNatively\App\Http\Middleware\EnsureIsUserAdmin;
 use Crafium\AppNatively\App\Integrations\FluentCart;
+use Crafium\AppNatively\App\Integrations\Directorist;
 use Crafium\AppNatively\App\Integrations\Forms\FormGent;
 use Crafium\AppNatively\App\Integrations\Forms\FluentForm;
 use Crafium\AppNatively\App\Integrations\Forms\EverestForms;
@@ -66,6 +67,8 @@ return [
         // Ecommerce Integrations
         Woocommerce::class,
         FluentCart::class,
+        // Directory Integrations
+        Directorist::class,
         // Forms Integrations
         FormGent::class,
         FluentForm::class,
