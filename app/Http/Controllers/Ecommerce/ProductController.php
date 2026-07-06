@@ -35,6 +35,18 @@ class ProductController extends Controller {
     ];
 
     /**
+     * Additional fields only fetched for a single product's detail view
+     * (variation data — too heavy to include on every list item).
+     *
+     * @var array
+     */
+    protected array $detail_only_fields = [
+        "type",
+        "variants",
+        "options"
+    ];
+
+    /**
      * Display a listing of the resource.
      *
      * @param Request $request The REST request instance.
@@ -78,7 +90,8 @@ class ProductController extends Controller {
         );
 
         $integration = sanitize_text_field( $request->get_param( "integration" ) );
-        $product     = apply_filters( "craf_appna_ecommerce_{$integration}_product", null, $request, $this->allowed_fields );
+        $fields      = array_merge( $this->allowed_fields, $this->detail_only_fields );
+        $product     = apply_filters( "craf_appna_ecommerce_{$integration}_product", null, $request, $fields );
 
         if ( ! $product instanceof ProductDTO ) {
             throw new Exception( esc_html__( "Product not found", 'appnatively' ) );

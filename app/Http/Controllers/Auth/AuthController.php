@@ -137,7 +137,7 @@ class AuthController extends Controller {
         // Store as a transient — auto-expires in 5 minutes, one-time use
         set_transient( 'craf_appna_autologin_' . $hashed_token, $user->ID, 5 * MINUTE_IN_SECONDS );
 
-        return Response::send( [ 'autologin_token' => $token ] );
+        return Response::send( [ 'craf_appna_token' => $token ] );
     }
 
     /**
