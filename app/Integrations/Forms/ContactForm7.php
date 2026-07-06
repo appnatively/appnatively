@@ -27,7 +27,7 @@ class ContactForm7 extends Form {
 
     protected function get_form( int $id ) {
         $form = wpcf7_contact_form( $id );
-        error_log(print_r( $form, true ) );
+        error_log( print_r( $form, true ) );
         if ( $form ) {
             $this->cf7_form = $form;
             return [
@@ -394,7 +394,7 @@ class ContactForm7 extends Form {
 
     public function get_forms(): array {
         // Contact form 7 uses 'wpcf7_contact_form' as its custom post type
-        $posts = Post::select("ID", "post_title")
+        $posts = Post::select( "ID", "post_title" )
             ->where( 'post_type', 'wpcf7_contact_form' )
             ->where( 'post_status', 'publish' )
             ->get();
@@ -402,7 +402,7 @@ class ContactForm7 extends Form {
         $result = [];
 
         foreach ( $posts as $post ) {
-            $result[] = (new FormDTO())
+            $result[] = ( new FormDTO() )
                 ->set_id( (int) $post->ID )
                 ->set_title( $post->post_title )
                 ->set_exclude_to_array( ['fields'] );
@@ -474,7 +474,7 @@ class ContactForm7 extends Form {
             // Pattern 1: a form-tag name appears inside the <label>.
             if ( preg_match_all( $tag_name_regex, $inner, $tags_inside, PREG_SET_ORDER ) ) {
                 foreach ( $tags_inside as $t ) {
-                    $name             = strtr( $t[2], '.', '_' );
+                    $name            = strtr( $t[2], '.', '_' );
                     $labels[ $name ] = $text;
                 }
                 continue;
@@ -516,7 +516,7 @@ class ContactForm7 extends Form {
         }
 
         if ( in_array( 'fields', $fields, true ) && ! empty( $raw_form['id'] ) ) {
-            $cf7_form  = wpcf7_contact_form( (int) $raw_form['id'] );
+            $cf7_form   = wpcf7_contact_form( (int) $raw_form['id'] );
             $field_dtos = [];
 
             if ( $cf7_form ) {

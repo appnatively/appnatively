@@ -354,7 +354,7 @@ class Formidable extends Form {
         $result = [];
 
         foreach ( $forms as $form ) {
-            $result[] = (new FormDTO())
+            $result[] = ( new FormDTO() )
                 ->set_id( (int) $form->id )       // Formidable uses lowercase 'id' properties
                 ->set_title( $form->name )        // Formidable uses 'name' instead of 'post_title'
                 ->set_exclude_to_array( ['fields'] );

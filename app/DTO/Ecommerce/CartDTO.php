@@ -7,6 +7,8 @@ defined( "ABSPATH" ) || exit;
 use Crafium\AppNatively\App\DTO\DTO;
 
 class CartDTO extends DTO {
+    private ?string $id = null;
+
     /**
      * @var CartItemDTO[]
      */
@@ -113,6 +115,21 @@ class CartDTO extends DTO {
      */
     public function set_checkout_url( string $checkout_url ): self {
         $this->checkout_url = $checkout_url;
+        return $this;
+    }
+
+    /**
+     * Get the value of id.
+     */
+    public function get_id(): ?string {
+        return $this->id;
+    }
+
+    /**
+     * Set the value of id.
+     */
+    public function set_id( ?string $id ): self {
+        $this->id = $id;
         return $this;
     }
 }

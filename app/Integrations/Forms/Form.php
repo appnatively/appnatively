@@ -28,7 +28,7 @@ abstract class Form extends Provider {
 
     public function boot(): void {
         add_filter( "craf_appna_form_{$this->get_key()}_submit", [$this, "form_submit"], 10, 1 );
-        add_filter( "craf_appna_form_{$this->get_key()}_forms", [$this, "forms"]);
+        add_filter( "craf_appna_form_{$this->get_key()}_forms", [$this, "forms"] );
         add_filter( "craf_appna_form_{$this->get_key()}_form", [$this, "form"], 10, 2 );
     }
 
@@ -44,7 +44,7 @@ abstract class Form extends Provider {
     }
 
     public function forms() {
-        return (new FormsDTO())->set_items( $this->get_forms() );
+        return ( new FormsDTO() )->set_items( $this->get_forms() );
     }
 
     public function form( $value, Request $request ): ?FormDTO {

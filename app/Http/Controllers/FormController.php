@@ -14,7 +14,6 @@ use Crafium\AppNatively\WpMVC\Routing\Response;
 use Crafium\AppNatively\WpMVC\RequestValidator\Request;
 
 class FormController extends Controller {
-
     public function index( Request $request ): array {
         $request->validate(
             [
@@ -22,8 +21,8 @@ class FormController extends Controller {
             ]
         );
 
-        $integration    = sanitize_text_field( $request->get_param( "integration" ) );
-        $forms = apply_filters( "craf_appna_form_{$integration}_forms", null, $request );
+        $integration = sanitize_text_field( $request->get_param( "integration" ) );
+        $forms       = apply_filters( "craf_appna_form_{$integration}_forms", null, $request );
 
         if ( ! $forms instanceof FormsDTO ) {
             throw new Exception( esc_html__( "Forms integration not found", 'appnatively' ) );

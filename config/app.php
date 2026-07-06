@@ -1,8 +1,9 @@
 <?php
 
-use Crafium\AppNatively\App\Integrations\Forms\GutenaForms;
 defined( 'ABSPATH' ) || exit;
 
+use Crafium\AppNatively\App\Integrations\Forms\GutenaForms;
+use Crafium\AppNatively\App\Providers\AuthServiceProvider;
 use Crafium\AppNatively\App\Http\Middleware\EnsureIsUserAdmin;
 use Crafium\AppNatively\App\Integrations\FluentCart;
 use Crafium\AppNatively\App\Integrations\Directorist;
@@ -81,6 +82,7 @@ return [
         SureForms::class,
         WeForms::class,
         WPForms::class, 
+        AuthServiceProvider::class
     ],
 
     /**

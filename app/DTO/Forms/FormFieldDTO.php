@@ -142,12 +142,14 @@ class FormFieldDTO extends DTO {
     }
 
     public function set_items( array $items ): self {
-        $this->items = array_map( function ( $item ) {
-            if ( empty( $item['value'] ) && ! empty( $item['label'] ) ) {
-                $item['value'] = $item['label'];
-            }
-            return $item;
-        }, $items );
+        $this->items = array_map(
+            function ( $item ) {
+                if ( empty( $item['value'] ) && ! empty( $item['label'] ) ) {
+                      $item['value'] = $item['label'];
+                }
+                return $item;
+            }, $items 
+        );
         return $this;
     }
 
@@ -286,9 +288,9 @@ class FormFieldDTO extends DTO {
             $allowed = array_merge( $allowed, self::$typePropertyMap[$type] );
         }
 
-		return array_filter(
-			array_intersect_key( $data, array_flip( $allowed ) ),
-			fn( $value ) => $value !== null
-		);
+        return array_filter(
+            array_intersect_key( $data, array_flip( $allowed ) ),
+            fn( $value ) => $value !== null
+        );
     }
 }
