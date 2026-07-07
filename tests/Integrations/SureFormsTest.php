@@ -281,7 +281,7 @@ class SureFormsTest extends \WP_UnitTestCase {
         $entry_id = \SRFM\Inc\Database\Tables\Entries::add( $data );
         $this->assertGreaterThan( 0, $entry_id, 'Entries::add() should return a positive ID' );
 
-        $row = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$table} WHERE ID = %d", $entry_id ), ARRAY_A );
+        $row = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM %i WHERE ID = %d", $table, $entry_id ), ARRAY_A );
         $this->assertNotEmpty( $row, "Row not found in {$table} after Entries::add()" );
     }
 
