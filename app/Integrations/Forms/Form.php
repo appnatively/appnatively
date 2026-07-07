@@ -2,10 +2,9 @@
 
 namespace Crafium\AppNatively\App\Integrations\Forms;
 
-use Crafium\AppNatively\App\DTO\Forms\FormsDTO;
-
 defined( "ABSPATH" ) || exit;
 
+use Crafium\AppNatively\App\DTO\Forms\FormsDTO;
 use Crafium\AppNatively\App\DTO\Forms\FormDTO;
 use Crafium\AppNatively\WpMVC\Contracts\Provider;
 use Crafium\AppNatively\WpMVC\RequestValidator\Request;
