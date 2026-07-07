@@ -479,7 +479,7 @@ class Forminator extends Form {
                     ->set_required( ! empty( $field['required'] ) && filter_var( $field['required'], FILTER_VALIDATE_BOOLEAN ) )
                     ->set_label( ( $std_type === 'gdpr' && ! empty( $field['consent_description'] ) ) ? $field['consent_description'] : ( $field['field_label'] ?? $field['label'] ?? '' ) )
                     ->set_placeholder( $field['placeholder'] ?? '' )
-                    ->set_fieldName( $field['element_id'] ?? '' );
+                    ->set_field_name( $field['element_id'] ?? '' );
 
                 if ( ! empty( $field['options'] ) ) {
                     $items = [];
@@ -504,29 +504,29 @@ class Forminator extends Form {
                 }
 
                 if ( $std_type === 'number' ) {
-                    $fdto->set_minValue( isset( $field['min'] ) && $field['min'] !== '' ? (float) $field['min'] : null )
-                        ->set_maxValue( isset( $field['max'] ) && $field['max'] !== '' ? (float) $field['max'] : null );
+                    $fdto->set_min_value( isset( $field['min'] ) && $field['min'] !== '' ? (float) $field['min'] : null )
+                        ->set_max_value( isset( $field['max'] ) && $field['max'] !== '' ? (float) $field['max'] : null );
                 }
 
                 if ( $std_type === 'range' ) {
-                    $fdto->set_minValue( isset( $field['min'] ) && $field['min'] !== '' ? (float) $field['min'] : null )
-                        ->set_maxValue( isset( $field['max'] ) && $field['max'] !== '' ? (float) $field['max'] : null );
+                    $fdto->set_min_value( isset( $field['min'] ) && $field['min'] !== '' ? (float) $field['min'] : null )
+                        ->set_max_value( isset( $field['max'] ) && $field['max'] !== '' ? (float) $field['max'] : null );
                 }
 
                 if ( $std_type === 'rating' ) {
-                    $fdto->set_ratingMax( isset( $field['max_rating'] ) ? (int) $field['max_rating'] : 5 );
+                    $fdto->set_rating_max( isset( $field['max_rating'] ) ? (int) $field['max_rating'] : 5 );
                 }
 
                 if ( $std_type === 'date_time_picker' ) {
                     if ( ( $field['type'] ?? '' ) === 'time' ) {
-                        $fdto->set_pickerType( 'time' )->set_dateFormat( 'hh:mm a' );
+                        $fdto->set_picker_type( 'time' )->set_date_format( 'hh:mm a' );
                     } else {
-                        $fdto->set_pickerType( 'date' )->set_dateFormat( 'yyyy-MM-dd' );
+                        $fdto->set_picker_type( 'date' )->set_date_format( 'yyyy-MM-dd' );
                     }
                 }
 
                 if ( $std_type === 'text' && ! empty( $field['text_limit'] ) && ! empty( $field['limit'] ) ) {
-                    $fdto->set_characterLimit( (int) $field['limit'] );
+                    $fdto->set_character_limit( (int) $field['limit'] );
                 }
 
                 $field_dtos[] = $fdto;

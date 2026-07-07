@@ -437,7 +437,7 @@ class SureForms extends Form
                     ->set_required( ! empty( $field['required'] ) )
                     ->set_label( $field['label'] ?? '' )
                     ->set_placeholder( $field['placeholder'] ?? '' )
-                    ->set_fieldName( $field['slug'] ?? '' );
+                    ->set_field_name( $field['slug'] ?? '' );
 
                 if ( ! empty( $field['options'] ) ) {
                     $items = [];
@@ -463,12 +463,12 @@ class SureForms extends Form
                 }
 
                 if ( $std_type === 'number' ) {
-                    $fdto->set_minValue( isset( $field['min'] ) && $field['min'] !== '' ? (float) $field['min'] : null )
-                        ->set_maxValue( isset( $field['max'] ) && $field['max'] !== '' ? (float) $field['max'] : null );
+                    $fdto->set_min_value( isset( $field['min'] ) && $field['min'] !== '' ? (float) $field['min'] : null )
+                        ->set_max_value( isset( $field['max'] ) && $field['max'] !== '' ? (float) $field['max'] : null );
                 }
 
                 if ( $std_type === 'text' && ! empty( $field['text_length'] ) ) {
-                    $fdto->set_characterLimit( (int) $field['text_length'] );
+                    $fdto->set_character_limit( (int) $field['text_length'] );
                 }
 
                 $field_dtos[] = $fdto;

@@ -80,11 +80,24 @@ class EverestForms extends Form {
 
     private function php_to_date_fns_format( string $format ): string {
         $map = [
-            'Y' => 'yyyy', 'y' => 'yy',
-            'm' => 'MM', 'n' => 'M', 'M' => 'MMM', 'F' => 'MMMM',
-            'd' => 'dd', 'j' => 'd', 'D' => 'EEE', 'l' => 'EEEE',
-            'H' => 'HH', 'G' => 'H', 'h' => 'hh', 'g' => 'h',
-            'i' => 'mm', 's' => 'ss', 'A' => 'a', 'a' => 'aaa',
+            'Y' => 'yyyy',
+            'y' => 'yy',
+            'm' => 'MM',
+            'n' => 'M',
+            'M' => 'MMM',
+            'F' => 'MMMM',
+            'd' => 'dd',
+            'j' => 'd',
+            'D' => 'EEE',
+            'l' => 'EEEE',
+            'H' => 'HH',
+            'G' => 'H',
+            'h' => 'hh',
+            'g' => 'h',
+            'i' => 'mm',
+            's' => 'ss',
+            'A' => 'a',
+            'a' => 'aaa',
         ];
 
         $out = '';
@@ -404,7 +417,7 @@ class EverestForms extends Form {
 
     public function get_forms(): array {
         // Everest Forms uses 'everest_form' as its custom post type
-        $posts = Post::select("ID", "post_title")
+        $posts = Post::select( "ID", "post_title" )
             ->where( 'post_type', 'everest_form' )
             ->where( 'post_status', 'publish' )
             ->get();
@@ -412,7 +425,7 @@ class EverestForms extends Form {
         $result = [];
 
         foreach ( $posts as $post ) {
-            $result[] = (new FormDTO())
+            $result[] = ( new FormDTO() )
                 ->set_id( (int) $post->ID )
                 ->set_title( $post->post_title )
                 ->set_exclude_to_array( ['fields'] );
@@ -423,17 +436,17 @@ class EverestForms extends Form {
 
     protected function get_standardized_type( string $native_type ): ?string {
         $map = [
-            'text'     => 'text',
-            'email'    => 'email',
-            'url'      => 'url',
-            'number'   => 'number',
-            'radio'    => 'radio',
-            'checkbox' => 'checkbox',
+            'text'      => 'text',
+            'email'     => 'email',
+            'url'       => 'url',
+            'number'    => 'number',
+            'radio'     => 'radio',
+            'checkbox'  => 'checkbox',
             'select'    => 'single_select',
             'date-time' => 'date_time_picker',
             'rating'    => 'rating',
-            'textarea' => 'text',
-            'password' => 'password',
+            'textarea'  => 'text',
+            'password'  => 'password',
         ];
 
         return $map[$native_type] ?? null;
@@ -477,7 +490,7 @@ class EverestForms extends Form {
                     ->set_type( $std_type )
                     ->set_required( ! empty( $field['required'] ) )
                     ->set_label( $field['name'] ?? '' )
-                    ->set_fieldName( (string) $field['id'] );
+                    ->set_field_name( (string) $field['id'] );
 
                 if ( ! empty( $field['options'] ) ) {
                     $items = [];
@@ -494,12 +507,12 @@ class EverestForms extends Form {
                 }
 
                 if ( $std_type === 'number' ) {
-                    $fdto->set_minValue( isset( $field['min_value'] ) && $field['min_value'] !== '' ? (float) $field['min_value'] : null )
-                        ->set_maxValue( isset( $field['max_value'] ) && $field['max_value'] !== '' ? (float) $field['max_value'] : null );
+                    $fdto->set_min_value( isset( $field['min_value'] ) && $field['min_value'] !== '' ? (float) $field['min_value'] : null )
+                        ->set_max_value( isset( $field['max_value'] ) && $field['max_value'] !== '' ? (float) $field['max_value'] : null );
                 }
 
                 if ( $std_type === 'rating' ) {
-                    $fdto->set_ratingMax( isset( $field['number_of_stars'] ) ? (int) $field['number_of_stars'] : 5 );
+                    $fdto->set_rating_max( isset( $field['number_of_stars'] ) ? (int) $field['number_of_stars'] : 5 );
                 }
 
                 if ( $std_type === 'date_time_picker' ) {
@@ -518,7 +531,7 @@ class EverestForms extends Form {
                         $final_format = $date_fns ?: 'yyyy-MM-dd';
                     }
 
-                    $fdto->set_pickerType( $picker_type )->set_dateFormat( $final_format );
+                    $fdto->set_picker_type( $picker_type )->set_date_format( $final_format );
                 }
 
                 $field_dtos[] = $fdto;

@@ -583,7 +583,7 @@ class GutenaForms extends Form {
                     ->set_type( $std_type )
                     ->set_required( ! empty( $field['required'] ) )
                     ->set_label( $field['label'] ?? '' )
-                    ->set_fieldName( $field['name'] ?? '' );
+                    ->set_field_name( $field['name'] ?? '' );
 
                 if ( ! empty( $field['options'] ) ) {
                     $items = [];
@@ -600,8 +600,8 @@ class GutenaForms extends Form {
                 }
 
                 if ( $std_type === 'number' || $std_type === 'range' ) {
-                    $fdto->set_minValue( isset( $field['min'] ) && $field['min'] !== '' ? (float) $field['min'] : null )
-                        ->set_maxValue( isset( $field['max'] ) && $field['max'] !== '' ? (float) $field['max'] : null );
+                    $fdto->set_min_value( isset( $field['min'] ) && $field['min'] !== '' ? (float) $field['min'] : null )
+                        ->set_max_value( isset( $field['max'] ) && $field['max'] !== '' ? (float) $field['max'] : null );
                 }
 
                 $field_dtos[] = $fdto;

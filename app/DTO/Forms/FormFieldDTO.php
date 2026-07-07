@@ -17,61 +17,61 @@ class FormFieldDTO extends DTO {
 
     private ?string $placeholder = null;
 
-    private string $fieldName;
+    private string $field_name;
 
-    private ?string $iconName = null;
+    private ?string $icon_name = null;
 
     private array $items = [];
 
-    private ?string $rangeMode = null;
+    private ?string $range_mode = null;
 
-    private ?float $minValue = null;
+    private ?float $min_value = null;
 
-    private ?float $maxValue = null;
+    private ?float $max_value = null;
 
-    private ?float $rangeStep = null;
+    private ?float $range_step = null;
 
-    private ?int $ratingMax = null;
+    private ?int $rating_max = null;
 
-    private ?string $ratingIconName = null;
+    private ?string $rating_icon_name = null;
 
-    private ?string $pickerType = null;
+    private ?string $picker_type = null;
 
-    private ?string $dateFormat = null;
+    private ?string $date_format = null;
 
-    private ?int $characterLimit = null;
+    private ?int $character_limit = null;
 
-    private ?int $minLength = null;
+    private ?int $min_length = null;
 
-    private ?int $maxLength = null;
+    private ?int $max_length = null;
 
-    private ?bool $showConfirmation = null;
+    private ?bool $show_confirmation = null;
 
-    private ?string $confirmLabel = null;
+    private ?string $confirm_label = null;
 
-    private ?string $confirmPlaceholder = null;
+    private ?string $confirm_placeholder = null;
 
-    private static array $universalProperties = [
-        'id', 'type', 'required', 'label', 'fieldName', 'placeholder',
+    private static array $universal_properties = [
+        'id', 'type', 'required', 'label', 'field_name', 'placeholder',
     ];
 
-    private static array $typePropertyMap = [
-        'text'             => ['characterLimit'],
+    private static array $type_property_map = [
+        'text'             => ['character_limit'],
         'email'            => [],
         'url'              => [],
-        'number'           => ['minLength', 'maxLength'],
+        'number'           => ['min_length', 'max_length'],
         'checkbox'         => ['items'],
         'radio'            => ['items'],
         'single_select'    => ['items'],
-        'date_time_picker' => ['pickerType', 'dateFormat'],
-        'password'         => ['minLength', 'showConfirmation', 'confirmLabel', 'confirmPlaceholder'],
-        'range'            => ['rangeMode', 'minValue', 'maxValue', 'rangeStep'],
-        'rating'           => ['ratingMax', 'ratingIconName'],
+        'date_time_picker' => ['picker_type', 'date_format'],
+        'password'         => ['min_length', 'show_confirmation', 'confirm_label', 'confirm_placeholder'],
+        'range'            => ['range_mode', 'min_value', 'max_value', 'range_step'],
+        'rating'           => ['rating_max', 'rating_icon_name'],
         'gdpr'             => [],
     ];
 
     public function __construct() {
-        $this->exclude_to_array = ['universalProperties', 'typePropertyMap'];
+        $this->exclude_to_array = ['universal_properties', 'type_property_map'];
     }
 
     public function get_id(): string {
@@ -119,21 +119,21 @@ class FormFieldDTO extends DTO {
         return $this;
     }
 
-    public function get_fieldName(): string {
-        return $this->fieldName;
+    public function get_field_name(): string {
+        return $this->field_name;
     }
 
-    public function set_fieldName( string $fieldName ): self {
-        $this->fieldName = $fieldName;
+    public function set_field_name( string $field_name ): self {
+        $this->field_name = $field_name;
         return $this;
     }
 
-    public function get_iconName(): ?string {
-        return $this->iconName;
+    public function get_icon_name(): ?string {
+        return $this->icon_name;
     }
 
-    public function set_iconName( ?string $iconName ): self {
-        $this->iconName = $iconName;
+    public function set_icon_name( ?string $icon_name ): self {
+        $this->icon_name = $icon_name;
         return $this;
     }
 
@@ -153,129 +153,129 @@ class FormFieldDTO extends DTO {
         return $this;
     }
 
-    public function get_rangeMode(): ?string {
-        return $this->rangeMode;
+    public function get_range_mode(): ?string {
+        return $this->range_mode;
     }
 
-    public function set_rangeMode( ?string $rangeMode ): self {
-        $this->rangeMode = $rangeMode;
+    public function set_range_mode( ?string $range_mode ): self {
+        $this->range_mode = $range_mode;
         return $this;
     }
 
-    public function get_minValue(): ?float {
-        return $this->minValue;
+    public function get_min_value(): ?float {
+        return $this->min_value;
     }
 
-    public function set_minValue( ?float $minValue ): self {
-        $this->minValue = $minValue;
+    public function set_min_value( ?float $min_value ): self {
+        $this->min_value = $min_value;
         return $this;
     }
 
-    public function get_maxValue(): ?float {
-        return $this->maxValue;
+    public function get_max_value(): ?float {
+        return $this->max_value;
     }
 
-    public function set_maxValue( ?float $maxValue ): self {
-        $this->maxValue = $maxValue;
+    public function set_max_value( ?float $max_value ): self {
+        $this->max_value = $max_value;
         return $this;
     }
 
-    public function get_rangeStep(): ?float {
-        return $this->rangeStep;
+    public function get_range_step(): ?float {
+        return $this->range_step;
     }
 
-    public function set_rangeStep( ?float $rangeStep ): self {
-        $this->rangeStep = $rangeStep;
+    public function set_range_step( ?float $range_step ): self {
+        $this->range_step = $range_step;
         return $this;
     }
 
-    public function get_ratingMax(): ?int {
-        return $this->ratingMax;
+    public function get_rating_max(): ?int {
+        return $this->rating_max;
     }
 
-    public function set_ratingMax( ?int $ratingMax ): self {
-        $this->ratingMax = $ratingMax;
+    public function set_rating_max( ?int $rating_max ): self {
+        $this->rating_max = $rating_max;
         return $this;
     }
 
-    public function get_ratingIconName(): ?string {
-        return $this->ratingIconName;
+    public function get_rating_icon_name(): ?string {
+        return $this->rating_icon_name;
     }
 
-    public function set_ratingIconName( ?string $ratingIconName ): self {
-        $this->ratingIconName = $ratingIconName;
+    public function set_rating_icon_name( ?string $rating_icon_name ): self {
+        $this->rating_icon_name = $rating_icon_name;
         return $this;
     }
 
-    public function get_pickerType(): ?string {
-        return $this->pickerType;
+    public function get_picker_type(): ?string {
+        return $this->picker_type;
     }
 
-    public function set_pickerType( ?string $pickerType ): self {
-        $this->pickerType = $pickerType;
+    public function set_picker_type( ?string $picker_type ): self {
+        $this->picker_type = $picker_type;
         return $this;
     }
 
-    public function get_dateFormat(): ?string {
-        return $this->dateFormat;
+    public function get_date_format(): ?string {
+        return $this->date_format;
     }
 
-    public function set_dateFormat( ?string $dateFormat ): self {
-        $this->dateFormat = $dateFormat;
+    public function set_date_format( ?string $date_format ): self {
+        $this->date_format = $date_format;
         return $this;
     }
 
-    public function get_characterLimit(): ?int {
-        return $this->characterLimit;
+    public function get_character_limit(): ?int {
+        return $this->character_limit;
     }
 
-    public function set_characterLimit( ?int $characterLimit ): self {
-        $this->characterLimit = $characterLimit;
+    public function set_character_limit( ?int $character_limit ): self {
+        $this->character_limit = $character_limit;
         return $this;
     }
 
-    public function get_minLength(): ?int {
-        return $this->minLength;
+    public function get_min_length(): ?int {
+        return $this->min_length;
     }
 
-    public function set_minLength( ?int $minLength ): self {
-        $this->minLength = $minLength;
+    public function set_min_length( ?int $min_length ): self {
+        $this->min_length = $min_length;
         return $this;
     }
 
-    public function get_maxLength(): ?int {
-        return $this->maxLength;
+    public function get_max_length(): ?int {
+        return $this->max_length;
     }
 
-    public function set_maxLength( ?int $maxLength ): self {
-        $this->maxLength = $maxLength;
+    public function set_max_length( ?int $max_length ): self {
+        $this->max_length = $max_length;
         return $this;
     }
 
-    public function is_showConfirmation(): ?bool {
-        return $this->showConfirmation;
+    public function is_show_confirmation(): ?bool {
+        return $this->show_confirmation;
     }
 
-    public function set_showConfirmation( ?bool $showConfirmation ): self {
-        $this->showConfirmation = $showConfirmation;
+    public function set_show_confirmation( ?bool $show_confirmation ): self {
+        $this->show_confirmation = $show_confirmation;
         return $this;
     }
 
-    public function get_confirmLabel(): ?string {
-        return $this->confirmLabel;
+    public function get_confirm_label(): ?string {
+        return $this->confirm_label;
     }
 
-    public function set_confirmLabel( ?string $confirmLabel ): self {
-        $this->confirmLabel = $confirmLabel;
+    public function set_confirm_label( ?string $confirm_label ): self {
+        $this->confirm_label = $confirm_label;
         return $this;
     }
 
-    public function get_confirmPlaceholder(): ?string {
-        return $this->confirmPlaceholder;
+    public function get_confirm_placeholder(): ?string {
+        return $this->confirm_placeholder;
     }
 
-    public function set_confirmPlaceholder( ?string $confirmPlaceholder ): self {
-        $this->confirmPlaceholder = $confirmPlaceholder;
+    public function set_confirm_placeholder( ?string $confirm_placeholder ): self {
+        $this->confirm_placeholder = $confirm_placeholder;
         return $this;
     }
 
@@ -283,9 +283,9 @@ class FormFieldDTO extends DTO {
         $data = parent::to_array();
         $type = $data['type'] ?? '';
 
-        $allowed = self::$universalProperties;
-        if ( isset( self::$typePropertyMap[$type] ) ) {
-            $allowed = array_merge( $allowed, self::$typePropertyMap[$type] );
+        $allowed = self::$universal_properties;
+        if ( isset( self::$type_property_map[$type] ) ) {
+            $allowed = array_merge( $allowed, self::$type_property_map[$type] );
         }
 
         return array_filter(

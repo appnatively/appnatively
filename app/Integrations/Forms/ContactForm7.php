@@ -337,12 +337,13 @@ class ContactForm7 extends Form {
             $posted_data['_wpnonce'] = wpcf7_create_nonce();
         }
 
-        $original_post = $_POST;
+        $original_post = $_POST; // phpcs:ignore WordPress.Security.NonceVerification.Missing
         $_POST         = $posted_data;
 
         $original_server = $_SERVER;
 
-        if ( empty( $_SERVER['HTTP_USER_AGENT'] ) || strlen( $_SERVER['HTTP_USER_AGENT'] ) < 2 ) {
+        $http_user_agent = isset( $_SERVER['HTTP_USER_AGENT'] ) ? sanitize_text_field( wp_unslash( $_SERVER['HTTP_USER_AGENT'] ) ) : '';
+        if ( empty( $http_user_agent ) || strlen( $http_user_agent ) < 2 ) {
             $_SERVER['HTTP_USER_AGENT'] = 'AppNatively/1.0';
         }
 
@@ -351,7 +352,8 @@ class ContactForm7 extends Form {
             $_SERVER['REMOTE_ADDR'] = $ip;
         }
 
-        if ( ! \WP_Http::is_ip_address( $_SERVER['REMOTE_ADDR'] ?? '' ) ) {
+        $remote_addr = isset( $_SERVER['REMOTE_ADDR'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) ) : '';
+        if ( ! \WP_Http::is_ip_address( $remote_addr ) ) {
             $_SERVER['REMOTE_ADDR'] = '127.0.0.1';
         }
 
@@ -539,16 +541,16 @@ class ContactForm7 extends Form {
                         ->set_required( $tag->is_required() )
                         ->set_label( $label_map[ $tag->name ] ?? '' )
                         ->set_placeholder( $tag->get_option( 'placeholder', '', true ) ?: '' )
-                        ->set_fieldName( $tag->name );
+                        ->set_field_name( $tag->name );
 
                     $maxlength = $tag->get_maxlength_option();
                     if ( $maxlength ) {
-                        $fdto->set_maxLength( (int) $maxlength );
+                        $fdto->set_max_length( (int) $maxlength );
                     }
 
                     $minlength = $tag->get_minlength_option();
                     if ( $minlength ) {
-                        $fdto->set_minLength( (int) $minlength );
+                        $fdto->set_min_length( (int) $minlength );
                     }
 
                     if ( $std_type === 'number' ) {
@@ -556,10 +558,10 @@ class ContactForm7 extends Form {
                         $max = $tag->get_option( 'max', 'signed_num', true );
 
                         if ( false !== $min ) {
-                            $fdto->set_minValue( (float) $min );
+                            $fdto->set_min_value( (float) $min );
                         }
                         if ( false !== $max ) {
-                            $fdto->set_maxValue( (float) $max );
+                            $fdto->set_max_value( (float) $max );
                         }
                     }
 

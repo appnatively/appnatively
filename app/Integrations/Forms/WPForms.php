@@ -353,7 +353,7 @@ class WPForms extends Form {
         wpforms()->obj( 'process' )->process( $entry );
 
         // Restore the original action to avoid side effects.
-        unset( $_POST['action'] );
+        unset( $_POST['action'] ); // phpcs:ignore WordPress.Security.NonceVerification.Missing
 
         remove_filter( 'wpforms_process_anti_spam_direct_post_bypass', '__return_true' );
         remove_filter( 'wpforms_field_choices_allow_unknown_value', '__return_true' );
@@ -445,7 +445,7 @@ class WPForms extends Form {
                     ->set_required( ! empty( $field['required'] ) && $field['required'] === '1' )
                     ->set_label( $field['label'] ?? '' )
                     ->set_placeholder( $field['placeholder'] ?? '' )
-                    ->set_fieldName( (string) $field['id'] );
+                    ->set_field_name( (string) $field['id'] );
 
                 if ( ! empty( $field['choices'] ) ) {
                     $items = [];
@@ -462,17 +462,17 @@ class WPForms extends Form {
                 }
 
                 if ( $std_type === 'range' ) {
-                    $fdto->set_minValue( isset( $field['min'] ) ? (float) $field['min'] : null )
-                        ->set_maxValue( isset( $field['max'] ) ? (float) $field['max'] : null );
+                    $fdto->set_min_value( isset( $field['min'] ) ? (float) $field['min'] : null )
+                        ->set_max_value( isset( $field['max'] ) ? (float) $field['max'] : null );
                 }
 
                 if ( $std_type === 'rating' ) {
-                    $fdto->set_ratingMax( isset( $field['rating_max'] ) ? (int) $field['rating_max'] : 5 );
+                    $fdto->set_rating_max( isset( $field['rating_max'] ) ? (int) $field['rating_max'] : 5 );
                 }
 
                 if ( $std_type === 'date_time_picker' ) {
-                    $fdto->set_pickerType( 'date' )
-                        ->set_dateFormat( 'yyyy-MM-dd' );
+                    $fdto->set_picker_type( 'date' )
+                        ->set_date_format( 'yyyy-MM-dd' );
                 }
 
                 $field_dtos[] = $fdto;

@@ -367,7 +367,7 @@ class WeForms extends Form {
                     ->set_required( isset( $field['required'] ) && $field['required'] === 'yes' )
                     ->set_label( $field['label'] ?? '' )
                     ->set_placeholder( $field['placeholder'] ?? '' )
-                    ->set_fieldName( $field['name'] ?? '' );
+                    ->set_field_name( $field['name'] ?? '' );
 
                 if ( ! empty( $field['options'] ) ) {
                     $items = [];
@@ -384,11 +384,11 @@ class WeForms extends Form {
                 }
 
                 if ( $std_type === 'text' && ! empty( $field['word_restriction'] ) ) {
-                    $fdto->set_characterLimit( (int) $field['word_restriction'] );
+                    $fdto->set_character_limit( (int) $field['word_restriction'] );
                 }
 
                 if ( $std_type === 'date_time_picker' ) {
-                    $fdto->set_pickerType( 'date' )->set_dateFormat( 'yyyy-MM-dd' );
+                    $fdto->set_picker_type( 'date' )->set_date_format( 'yyyy-MM-dd' );
                 }
 
                 $field_dtos[] = $fdto;

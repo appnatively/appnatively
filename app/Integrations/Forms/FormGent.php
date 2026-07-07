@@ -460,7 +460,7 @@ class FormGent extends Form {
                         ->set_required( $std_type === 'gdpr' ? true : ! empty( $field['required'] ) )
                         ->set_label( $field['label'] ?? $field['name'] ?? '' )
                         ->set_placeholder( $field['placeholder'] ?? '' )
-                        ->set_fieldName( $field['name'] ?? '' );
+                        ->set_field_name( $field['name'] ?? '' );
 
                     if ( ! empty( $field['options'] ) ) {
                         $items = [];
@@ -477,17 +477,17 @@ class FormGent extends Form {
                     }
 
                     if ( $std_type === 'range' ) {
-                        $fdto->set_minValue( isset( $field['min_value'] ) ? (float) $field['min_value'] : null )
-                            ->set_maxValue( isset( $field['max_value'] ) ? (float) $field['max_value'] : null )
-                            ->set_rangeStep( isset( $field['step'] ) ? (float) $field['step'] : null );
+                        $fdto->set_min_value( isset( $field['min_value'] ) ? (float) $field['min_value'] : null )
+                            ->set_max_value( isset( $field['max_value'] ) ? (float) $field['max_value'] : null )
+                            ->set_range_step( isset( $field['step'] ) ? (float) $field['step'] : null );
                     }
 
                     if ( $std_type === 'rating' ) {
-                        $fdto->set_ratingMax( isset( $field['rating_limit'] ) ? (int) $field['rating_limit'] : 5 );
+                        $fdto->set_rating_max( isset( $field['rating_limit'] ) ? (int) $field['rating_limit'] : 5 );
                     }
 
                     if ( $std_type === 'date_time_picker' ) {
-                        $fdto->set_pickerType( $field['option'] ?? 'date' );
+                        $fdto->set_picker_type( $field['option'] ?? 'date' );
                     }
 
                     if ( $std_type === 'gdpr' ) {
@@ -495,7 +495,7 @@ class FormGent extends Form {
                     }
 
                     if ( $std_type === 'text' && ! empty( $field['character_limit'] ) && ! empty( $field['limit'] ) ) {
-                        $fdto->set_characterLimit( (int) $field['limit'] );
+                        $fdto->set_character_limit( (int) $field['limit'] );
                     }
 
                     $field_dtos[] = $fdto;

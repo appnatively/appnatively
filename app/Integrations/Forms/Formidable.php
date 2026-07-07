@@ -421,7 +421,7 @@ class Formidable extends Form {
                     ->set_type( $std_type )
                     ->set_required( ! empty( $field['required'] ) )
                     ->set_label( $field['name'] ?? '' )
-                    ->set_fieldName( $field['field_key'] ?? '' );
+                    ->set_field_name( $field['field_key'] ?? '' );
 
                 if ( ! empty( $field['options'] ) ) {
                     $items = [];
@@ -447,16 +447,16 @@ class Formidable extends Form {
 
                 if ( $std_type === 'number' ) {
                     $field_options = $field['field_options'] ?? [];
-                    $fdto->set_minValue( isset( $field_options['minnum'] ) ? (float) $field_options['minnum'] : null )
-                        ->set_maxValue( isset( $field_options['maxnum'] ) ? (float) $field_options['maxnum'] : null );
+                    $fdto->set_min_value( isset( $field_options['minnum'] ) ? (float) $field_options['minnum'] : null )
+                        ->set_max_value( isset( $field_options['maxnum'] ) ? (float) $field_options['maxnum'] : null );
                 }
 
                 if ( $std_type === 'date_time_picker' ) {
-                    $fdto->set_pickerType( 'date' )->set_dateFormat( 'yyyy-MM-dd' );
+                    $fdto->set_picker_type( 'date' )->set_date_format( 'yyyy-MM-dd' );
                 }
 
                 if ( $std_type === 'rating' ) {
-                    $fdto->set_ratingMax( 5 );
+                    $fdto->set_rating_max( 5 );
                 }
 
                 $field_dtos[] = $fdto;

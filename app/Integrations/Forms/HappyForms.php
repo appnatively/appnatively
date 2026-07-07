@@ -343,7 +343,7 @@ class HappyForms extends Form
                     ->set_required( ! empty( $part['required'] ) )
                     ->set_label( $part['label'] ?? '' )
                     ->set_placeholder( $part['placeholder'] ?? '' )
-                    ->set_fieldName( (string) $part['id'] );
+                    ->set_field_name( (string) $part['id'] );
 
                 if ( ! empty( $part['options'] ) ) {
                     $items = [];
@@ -368,12 +368,12 @@ class HappyForms extends Form
                 }
 
                 if ( $std_type === 'number' ) {
-                    $fdto->set_minValue( isset( $part['min_value'] ) && $part['min_value'] !== '' ? (float) $part['min_value'] : null )
-                        ->set_maxValue( isset( $part['max_value'] ) && $part['max_value'] !== '' ? (float) $part['max_value'] : null );
+                    $fdto->set_min_value( isset( $part['min_value'] ) && $part['min_value'] !== '' ? (float) $part['min_value'] : null )
+                        ->set_max_value( isset( $part['max_value'] ) && $part['max_value'] !== '' ? (float) $part['max_value'] : null );
                 }
 
                 if ( $std_type === 'date_time_picker' ) {
-                    $fdto->set_pickerType( 'date' )->set_dateFormat( 'yyyy-MM-dd' );
+                    $fdto->set_picker_type( 'date' )->set_date_format( 'yyyy-MM-dd' );
                 }
 
                 $field_dtos[] = $fdto;
