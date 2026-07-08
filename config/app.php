@@ -5,6 +5,7 @@ defined( 'ABSPATH' ) || exit;
 use Crafium\AppNatively\App\Providers\AuthServiceProvider;
 use Crafium\AppNatively\App\Http\Middleware\EnsureIsUserAdmin;
 use Crafium\AppNatively\App\Integrations\FluentCart;
+use Crafium\AppNatively\App\Integrations\Directorist;
 use Crafium\AppNatively\App\Models\Comment;
 use Crafium\AppNatively\App\Models\Post;
 use Crafium\AppNatively\App\Models\Term;
@@ -56,7 +57,9 @@ return [
         // Ecommerce Integrations
         Woocommerce::class,
         FluentCart::class,
-        AuthServiceProvider::class
+        AuthServiceProvider::class,
+        // Directory Integrations
+        Directorist::class
     ],
 
     /**

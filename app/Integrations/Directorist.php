@@ -8,6 +8,8 @@ use Crafium\AppNatively\App\DTO\Directory\CategoryDTO;
 use Crafium\AppNatively\App\DTO\Directory\CategoryPaginatorDTO;
 use Crafium\AppNatively\App\DTO\Directory\ListingDTO;
 use Crafium\AppNatively\App\DTO\Directory\ListingPaginatorDTO;
+use Crafium\AppNatively\App\DTO\Directory\TermDTO;
+use Crafium\AppNatively\App\DTO\Directory\TermPaginatorDTO;
 use Crafium\AppNatively\App\Models\Term;
 use Crafium\AppNatively\WpMVC\Contracts\Provider;
 use Crafium\AppNatively\WpMVC\RequestValidator\Request;
@@ -31,6 +33,8 @@ class Directorist extends Provider {
     public function boot(): void {
         add_filter( "craf_appna_directory_directorist_listings", [$this, "listings"], 10, 3 );
         add_filter( "craf_appna_directory_directorist_categories", [$this, "categories"], 10, 3 );
+        add_filter( "craf_appna_directory_directorist_tags", [$this, "tags"], 10, 3 );
+        add_filter( "craf_appna_directory_directorist_locations", [$this, "locations"], 10, 3 );
     }
 
     /**
@@ -47,6 +51,11 @@ class Directorist extends Provider {
         $search    = sanitize_text_field( (string) $request->get_param( "search" ) );
         $sort      = sanitize_text_field( (string) $request->get_param( "sort" ) );
         $post_type = defined( "ATBDP_POST_TYPE" ) ? ATBDP_POST_TYPE : "at_biz_dir";
+
+        $categories = $request->get_param( "categories" );
+        $tags       = $request->get_param( "tags" );
+        $locations  = $request->get_param( "locations" );
+        $isFeatured = $request->get_param( "isFeatured" );
 
         $order_by = "date";
         $order    = "DESC";
@@ -68,17 +77,56 @@ class Directorist extends Provider {
             "id"    => "ID",
         ];
 
-        $query = new WP_Query(
-            [
-                "post_type"      => $post_type,
-                "post_status"    => "publish",
-                "paged"          => $page,
-                "posts_per_page" => $per_page,
-                "s"              => $search,
-                "orderby"        => $sort_map[$order_by] ?? "date",
-                "order"          => $order,
-            ]
-        );
+        $wp_query_args = [
+            "post_type"      => $post_type,
+            "post_status"    => "publish",
+            "paged"          => $page,
+            "posts_per_page" => $per_page,
+            "s"              => $search,
+            "orderby"        => $sort_map[$order_by] ?? "date",
+            "order"          => $order,
+        ];
+
+        $tax_query = [];
+
+        if ( ! empty( $categories ) && is_array( $categories ) ) {
+            $tax_query[] = [
+                "taxonomy" => defined( "ATBDP_CATEGORY" ) ? ATBDP_CATEGORY : "at_biz_dir-category",
+                "field"    => "term_id",
+                "terms"    => array_map( "intval", $categories ),
+            ];
+        }
+
+        if ( ! empty( $tags ) && is_array( $tags ) ) {
+            $tax_query[] = [
+                "taxonomy" => defined( "ATBDP_TAGS" ) ? ATBDP_TAGS : "at_biz_dir-tags",
+                "field"    => "term_id",
+                "terms"    => array_map( "intval", $tags ),
+            ];
+        }
+
+        if ( ! empty( $locations ) && is_array( $locations ) ) {
+            $tax_query[] = [
+                "taxonomy" => defined( "ATBDP_LOCATION" ) ? ATBDP_LOCATION : "at_biz_dir-location",
+                "field"    => "term_id",
+                "terms"    => array_map( "intval", $locations ),
+            ];
+        }
+
+        if ( ! empty( $tax_query ) ) {
+            $wp_query_args["tax_query"] = $tax_query;
+        }
+
+        if ( ! empty( $isFeatured ) && filter_var( $isFeatured, FILTER_VALIDATE_BOOLEAN ) ) {
+            $wp_query_args["meta_query"] = [
+                [
+                    "key"   => "_featured",
+                    "value" => "1",
+                ],
+            ];
+        }
+
+        $query = new WP_Query( $wp_query_args );
 
         $items = [];
         foreach ( $query->posts as $listing ) {
@@ -158,6 +206,151 @@ class Directorist extends Provider {
             $paginator->last_page(),
             $items
         );
+    }
+
+    /**
+     * Get tags paginator.
+     *
+     * @param TermPaginatorDTO|null $tag_paginator The tag paginator.
+     * @param Request               $request The REST request instance.
+     * @param array                 $fields The requested fields.
+     * @return TermPaginatorDTO
+     */
+    public function tags( ?TermPaginatorDTO $tag_paginator, Request $request, array $fields = [] ): TermPaginatorDTO {
+        $page     = (int) $request->get_param( "page" ) ?: 1;
+        $per_page = (int) $request->get_param( "per_page" ) ?: 10;
+        $search   = sanitize_text_field( (string) $request->get_param( "search" ) );
+        $taxonomy = defined( "ATBDP_TAGS" ) ? ATBDP_TAGS : "at_biz_dir-tags";
+
+        $query = Term::join( "term_taxonomy", "terms.term_id", "=", "term_taxonomy.term_id" )
+            ->where( "term_taxonomy.taxonomy", $taxonomy )
+            ->select( ["terms.term_id", "terms.name", "terms.slug"] );
+
+        if ( ! empty( $search ) ) {
+            global $wpdb;
+            $search = $wpdb->esc_like( $search );
+            $query->where( "terms.name", "like", "%$search%" );
+        }
+
+        $sort     = sanitize_text_field( (string) $request->get_param( "sort" ) );
+        $order_by = "name";
+        $order    = "ASC";
+
+        if ( ! empty( $sort ) ) {
+            if ( 0 === strpos( $sort, "-" ) ) {
+                $order_by = ltrim( $sort, "-" );
+                $order    = "DESC";
+            } else {
+                $order_by = $sort;
+                $order    = "ASC";
+            }
+        }
+
+        $sort_map = [
+            "name" => "terms.name",
+            "id"   => "terms.term_id",
+            "slug" => "terms.slug",
+        ];
+
+        $query->order_by( $sort_map[$order_by] ?? "terms.name", $order );
+        $paginator = $query->paginate( $page, $per_page );
+
+        $items = [];
+        foreach ( $paginator->items() as $term ) {
+            $items[] = $this->map_term_to_dto( $term, $fields );
+        }
+
+        return new TermPaginatorDTO(
+            $page,
+            $per_page,
+            $paginator->total(),
+            $paginator->last_page(),
+            $items
+        );
+    }
+
+    /**
+     * Get locations paginator.
+     *
+     * @param TermPaginatorDTO|null $location_paginator The location paginator.
+     * @param Request               $request The REST request instance.
+     * @param array                 $fields The requested fields.
+     * @return TermPaginatorDTO
+     */
+    public function locations( ?TermPaginatorDTO $location_paginator, Request $request, array $fields = [] ): TermPaginatorDTO {
+        $page     = (int) $request->get_param( "page" ) ?: 1;
+        $per_page = (int) $request->get_param( "per_page" ) ?: 10;
+        $search   = sanitize_text_field( (string) $request->get_param( "search" ) );
+        $taxonomy = defined( "ATBDP_LOCATION" ) ? ATBDP_LOCATION : "at_biz_dir-location";
+
+        $query = Term::join( "term_taxonomy", "terms.term_id", "=", "term_taxonomy.term_id" )
+            ->where( "term_taxonomy.taxonomy", $taxonomy )
+            ->select( ["terms.term_id", "terms.name", "terms.slug"] );
+
+        if ( ! empty( $search ) ) {
+            global $wpdb;
+            $search = $wpdb->esc_like( $search );
+            $query->where( "terms.name", "like", "%$search%" );
+        }
+
+        $sort     = sanitize_text_field( (string) $request->get_param( "sort" ) );
+        $order_by = "name";
+        $order    = "ASC";
+
+        if ( ! empty( $sort ) ) {
+            if ( 0 === strpos( $sort, "-" ) ) {
+                $order_by = ltrim( $sort, "-" );
+                $order    = "DESC";
+            } else {
+                $order_by = $sort;
+                $order    = "ASC";
+            }
+        }
+
+        $sort_map = [
+            "name" => "terms.name",
+            "id"   => "terms.term_id",
+            "slug" => "terms.slug",
+        ];
+
+        $query->order_by( $sort_map[$order_by] ?? "terms.name", $order );
+        $paginator = $query->paginate( $page, $per_page );
+
+        $items = [];
+        foreach ( $paginator->items() as $term ) {
+            $items[] = $this->map_term_to_dto( $term, $fields );
+        }
+
+        return new TermPaginatorDTO(
+            $page,
+            $per_page,
+            $paginator->total(),
+            $paginator->last_page(),
+            $items
+        );
+    }
+
+    /**
+     * Map term result to TermDTO.
+     *
+     * @param mixed $term The term result.
+     * @param array $fields The requested fields.
+     * @return TermDTO
+     */
+    private function map_term_to_dto( $term, array $fields ): TermDTO {
+        $dto = new TermDTO();
+
+        if ( in_array( "id", $fields, true ) ) {
+            $dto->set_id( (int) $term->term_id );
+        }
+        if ( in_array( "name", $fields, true ) ) {
+            $dto->set_name( $term->name );
+        }
+        if ( in_array( "slug", $fields, true ) ) {
+            $dto->set_slug( $term->slug );
+        }
+
+        return $dto;
     }
 
     /**

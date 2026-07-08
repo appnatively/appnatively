@@ -55,6 +55,10 @@ class ListingController extends Controller {
                 "sort"        => "nullable|string",
                 "fields"      => "nullable|string",
                 "integration" => "required|string",
+                "categories"  => "nullable|array",
+                "tags"        => "nullable|array",
+                "locations"   => "nullable|array",
+                "isFeatured"  => "nullable|boolean",
             ]
         );
 
