@@ -32,6 +32,7 @@ class Directorist extends Provider {
      */
     public function boot(): void {
         add_filter( "craf_appna_directory_directorist_listings", [$this, "listings"], 10, 3 );
+        add_filter( "craf_appna_directory_directorist_listing", [$this, "listing"], 10, 3 );
         add_filter( "craf_appna_directory_directorist_categories", [$this, "categories"], 10, 3 );
         add_filter( "craf_appna_directory_directorist_tags", [$this, "tags"], 10, 3 );
         add_filter( "craf_appna_directory_directorist_locations", [$this, "locations"], 10, 3 );
@@ -142,6 +143,26 @@ class Directorist extends Provider {
             (int) $query->max_num_pages,
             $items
         );
+    }
+
+    /**
+     * Get single listing.
+     *
+     * @param ListingDTO|null $listing The listing DTO.
+     * @param Request         $request The REST request instance.
+     * @param array           $fields The requested fields.
+     * @return ListingDTO|null
+     */
+    public function listing( ?ListingDTO $listing, Request $request, array $fields = [] ): ?ListingDTO {
+        $listing_id = (int) $request->get_param( "id" );
+        $post_type  = defined( "ATBDP_POST_TYPE" ) ? ATBDP_POST_TYPE : "at_biz_dir";
+        $post       = get_post( $listing_id );
+
+        if ( ! $post instanceof WP_Post || $post->post_type !== $post_type || $post->post_status !== "publish" ) {
+            return null;
+        }
+
+        return $this->map_listing_to_dto( $post, $fields );
     }
 
     /**

@@ -10,5 +10,6 @@ use Crafium\AppNatively\WpMVC\Routing\Route;
 
 Route::get( 'categories', [CategoryController::class, 'index'] );
 Route::get( 'listings', [ListingController::class, 'index'] );
+Route::get( 'listings/{id}', [ListingController::class, 'show'] );
 Route::get( 'tags', [TagController::class, 'index'] );
 Route::get( 'locations', [LocationController::class, 'index'] );

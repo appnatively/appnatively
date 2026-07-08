@@ -5,6 +5,7 @@ namespace Crafium\AppNatively\App\Http\Controllers\Directory;
 defined( "ABSPATH" ) || exit;
 
 use Crafium\AppNatively\App\Http\Controllers\Controller;
+use Crafium\AppNatively\App\DTO\Directory\ListingDTO;
 use Crafium\AppNatively\App\DTO\Directory\ListingPaginatorDTO;
 use Crafium\AppNatively\WpMVC\Exceptions\Exception;
 use Crafium\AppNatively\WpMVC\Routing\Response;
@@ -71,5 +72,40 @@ class ListingController extends Controller {
         }
 
         return Response::send( ["data" => $listing_paginator] );
+    }
+
+    /**
+     * Display the specified resource.
+     *
+     * @param Request $request The REST request instance.
+     * @return array
+     * @throws Exception
+     */
+    public function show( Request $request ): array {
+        $request->validate(
+            [
+                "id"          => "required|numeric",
+                "integration" => "required|string",
+            ]
+        );
+
+        $integration = sanitize_text_field( $request->get_param( "integration" ) );
+        $fields      = craf_appna_get_verified_fields( $request->get_param( "fields" ), $this->allowed_fields );
+
+        if ( empty( $fields ) ) {
+            $fields = $this->allowed_fields;
+        }
+
+        $listing = apply_filters( "craf_appna_directory_{$integration}_listing", null, $request, $fields );
+
+        if ( ! $listing instanceof ListingDTO ) {
+            throw new Exception( esc_html__( "Listing not found", "appnatively" ) );
+        }
+
+        return Response::send(
+            [
+                "data" => $listing
+            ]
+        );
     }
 }
