@@ -25,6 +25,10 @@ class ListingDTO extends DTO {
 
     private string $address;
 
+    private ?float $latitude = null;
+
+    private ?float $longitude = null;
+
     private string $phone;
 
     private string $email;
@@ -127,6 +131,24 @@ class ListingDTO extends DTO {
 
     public function set_address( string $address ): self {
         $this->address = $address;
+        return $this;
+    }
+
+    public function get_latitude(): ?float {
+        return $this->latitude;
+    }
+
+    public function set_latitude( ?float $latitude ): self {
+        $this->latitude = $latitude;
+        return $this;
+    }
+
+    public function get_longitude(): ?float {
+        return $this->longitude;
+    }
+
+    public function set_longitude( ?float $longitude ): self {
+        $this->longitude = $longitude;
         return $this;
     }
 

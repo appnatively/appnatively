@@ -483,6 +483,12 @@ class Directorist extends Provider {
         if ( in_array( "address", $fields, true ) ) {
             $dto->set_address( $this->get_meta_value( $listing->ID, ["_address", "address"] ) );
         }
+        if ( in_array( "latitude", $fields, true ) ) {
+            $dto->set_latitude( $this->normalize_coordinate( $this->get_meta_value( $listing->ID, ["_manual_lat", "manual_lat"] ), -90, 90 ) );
+        }
+        if ( in_array( "longitude", $fields, true ) ) {
+            $dto->set_longitude( $this->normalize_coordinate( $this->get_meta_value( $listing->ID, ["_manual_lng", "manual_lng"] ), -180, 180 ) );
+        }
         if ( in_array( "phone", $fields, true ) ) {
             $dto->set_phone( $this->get_meta_value( $listing->ID, ["_phone", "phone"] ) );
         }
@@ -521,6 +527,28 @@ class Directorist extends Provider {
         }
 
         return $dto;
+    }
+
+    /**
+     * Normalize a latitude/longitude meta value.
+     *
+     * @param mixed $value Raw coordinate value.
+     * @param float $min Minimum valid coordinate.
+     * @param float $max Maximum valid coordinate.
+     * @return float|null
+     */
+    private function normalize_coordinate( $value, float $min, float $max ): ?float {
+        if ( $value === null || $value === "" || ! is_numeric( $value ) ) {
+            return null;
+        }
+
+        $coordinate = (float) $value;
+
+        if ( $coordinate < $min || $coordinate > $max ) {
+            return null;
+        }
+
+        return $coordinate;
     }
 
     /**
