@@ -112,6 +112,35 @@ class ListingController extends Controller {
     }
 
     /**
+     * Display related listings for the specified resource.
+     *
+     * @param Request $request The REST request instance.
+     * @return array
+     * @throws Exception
+     */
+    public function related( Request $request ): array {
+        $request->validate(
+            [
+                "id"          => "required|numeric",
+                "page"        => "nullable|integer|min:1",
+                "per_page"    => "nullable|integer|min:1|max:100",
+                "fields"      => "nullable|string",
+                "integration" => "required|string",
+            ]
+        );
+
+        $integration       = sanitize_text_field( $request->get_param( "integration" ) );
+        $fields            = craf_appna_get_verified_fields( $request->get_param( "fields" ), $this->allowed_fields );
+        $listing_paginator = apply_filters( "craf_appna_directory_{$integration}_related_listings", null, $request, $fields );
+
+        if ( ! $listing_paginator instanceof ListingPaginatorDTO ) {
+            throw new Exception( esc_html__( "Related listings integration not found", "appnatively" ) );
+        }
+
+        return Response::send( ["data" => $listing_paginator] );
+    }
+
+    /**
      * Display approved reviews for the specified listing.
      *
      * @param Request $request The REST request instance.

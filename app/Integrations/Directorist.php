@@ -33,6 +33,7 @@ class Directorist extends Provider {
     public function boot(): void {
         add_filter( "craf_appna_directory_directorist_listings", [$this, "listings"], 10, 3 );
         add_filter( "craf_appna_directory_directorist_listing", [$this, "listing"], 10, 3 );
+        add_filter( "craf_appna_directory_directorist_related_listings", [$this, "related_listings"], 10, 3 );
         add_filter( "craf_appna_directory_directorist_categories", [$this, "categories"], 10, 3 );
         add_filter( "craf_appna_directory_directorist_category", [$this, "category"], 10, 3 );
         add_filter( "craf_appna_directory_directorist_tags", [$this, "tags"], 10, 3 );
@@ -164,6 +165,91 @@ class Directorist extends Provider {
         }
 
         return $this->map_listing_to_dto( $post, $fields );
+    }
+
+    /**
+     * Get related listings paginator.
+     *
+     * @param ListingPaginatorDTO|null $listing_paginator The listing paginator.
+     * @param Request                  $request The REST request instance.
+     * @param array                    $fields The requested fields.
+     * @return ListingPaginatorDTO
+     */
+    public function related_listings( ?ListingPaginatorDTO $listing_paginator, Request $request, array $fields = [] ): ListingPaginatorDTO {
+        $listing_id = (int) $request->get_param( "id" );
+        $page       = (int) $request->get_param( "page" ) ?: 1;
+        $per_page   = (int) $request->get_param( "per_page" ) ?: 10;
+        $post_type  = defined( "ATBDP_POST_TYPE" ) ? ATBDP_POST_TYPE : "at_biz_dir";
+        $post       = get_post( $listing_id );
+
+        if ( ! $post instanceof WP_Post || $post->post_type !== $post_type || $post->post_status !== "publish" ) {
+            return new ListingPaginatorDTO( $page, $per_page, 0, 1, [] );
+        }
+
+        $category_taxonomy = defined( "ATBDP_CATEGORY" ) ? ATBDP_CATEGORY : "at_biz_dir-category";
+        $tag_taxonomy      = defined( "ATBDP_TAGS" ) ? ATBDP_TAGS : "at_biz_dir-tags";
+        $category_ids      = wp_get_post_terms( $listing_id, $category_taxonomy, ["fields" => "ids"] );
+        $tag_ids           = wp_get_post_terms( $listing_id, $tag_taxonomy, ["fields" => "ids"] );
+
+        if ( is_wp_error( $category_ids ) ) {
+            $category_ids = [];
+        }
+
+        if ( is_wp_error( $tag_ids ) ) {
+            $tag_ids = [];
+        }
+
+        $tax_query = [
+            "relation" => "OR",
+        ];
+
+        if ( ! empty( $category_ids ) ) {
+            $tax_query[] = [
+                "taxonomy" => $category_taxonomy,
+                "field"    => "term_id",
+                "terms"    => array_map( "intval", $category_ids ),
+            ];
+        }
+
+        if ( ! empty( $tag_ids ) ) {
+            $tax_query[] = [
+                "taxonomy" => $tag_taxonomy,
+                "field"    => "term_id",
+                "terms"    => array_map( "intval", $tag_ids ),
+            ];
+        }
+
+        if ( count( $tax_query ) === 1 ) {
+            return new ListingPaginatorDTO( $page, $per_page, 0, 1, [] );
+        }
+
+        $query = new WP_Query(
+            [
+                "post_type"      => $post_type,
+                "post_status"    => "publish",
+                "paged"          => $page,
+                "posts_per_page" => $per_page,
+                "post__not_in"   => [ $listing_id ],
+                "tax_query"      => $tax_query,
+                "orderby"        => "date",
+                "order"          => "DESC",
+            ]
+        );
+
+        $items = [];
+        foreach ( $query->posts as $related_listing ) {
+            if ( $related_listing instanceof WP_Post ) {
+                $items[] = $this->map_listing_to_dto( $related_listing, $fields );
+            }
+        }
+
+        return new ListingPaginatorDTO(
+            $page,
+            $per_page,
+            (int) $query->found_posts,
+            max( 1, (int) $query->max_num_pages ),
+            $items
+        );
     }
 
     /**
