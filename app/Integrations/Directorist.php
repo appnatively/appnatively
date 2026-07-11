@@ -34,6 +34,7 @@ class Directorist extends Provider {
         add_filter( "craf_appna_directory_directorist_listings", [$this, "listings"], 10, 3 );
         add_filter( "craf_appna_directory_directorist_listing", [$this, "listing"], 10, 3 );
         add_filter( "craf_appna_directory_directorist_categories", [$this, "categories"], 10, 3 );
+        add_filter( "craf_appna_directory_directorist_category", [$this, "category"], 10, 3 );
         add_filter( "craf_appna_directory_directorist_tags", [$this, "tags"], 10, 3 );
         add_filter( "craf_appna_directory_directorist_locations", [$this, "locations"], 10, 3 );
     }
@@ -227,6 +228,26 @@ class Directorist extends Provider {
             $paginator->last_page(),
             $items
         );
+    }
+
+    /**
+     * Get single category.
+     *
+     * @param CategoryDTO|null $category The category DTO.
+     * @param Request          $request The REST request instance.
+     * @param array            $fields The requested fields.
+     * @return CategoryDTO|null
+     */
+    public function category( ?CategoryDTO $category, Request $request, array $fields = [] ): ?CategoryDTO {
+        $category_id = (int) $request->get_param( "id" );
+        $taxonomy    = defined( "ATBDP_CATEGORY" ) ? ATBDP_CATEGORY : "at_biz_dir-category";
+        $term        = get_term( $category_id, $taxonomy );
+
+        if ( ! $term || is_wp_error( $term ) ) {
+            return null;
+        }
+
+        return $this->map_term_to_category_dto( $term, $fields );
     }
 
     /**
