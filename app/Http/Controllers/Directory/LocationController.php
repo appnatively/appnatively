@@ -5,6 +5,7 @@ namespace Crafium\AppNatively\App\Http\Controllers\Directory;
 defined( "ABSPATH" ) || exit;
 
 use Crafium\AppNatively\App\DTO\Directory\TermPaginatorDTO;
+use Crafium\AppNatively\App\DTO\Directory\TermDTO;
 use Crafium\AppNatively\App\Http\Controllers\Controller;
 use Crafium\AppNatively\WpMVC\Exceptions\Exception;
 use Crafium\AppNatively\WpMVC\Routing\Response;
@@ -40,5 +41,30 @@ class LocationController extends Controller {
         }
 
         return Response::send( ["data" => $location_paginator] );
+    }
+
+    public function show( Request $request ): array {
+        $request->validate(
+            [
+                "id"          => "required|numeric",
+                "integration" => "required|string",
+                "fields"      => "nullable|string",
+            ]
+        );
+
+        $integration = sanitize_text_field( $request->get_param( "integration" ) );
+        $fields      = craf_appna_get_verified_fields( $request->get_param( "fields" ), $this->allowed_fields );
+
+        if ( empty( $fields ) ) {
+            $fields = $this->allowed_fields;
+        }
+
+        $location = apply_filters( "craf_appna_directory_{$integration}_location", null, $request, $fields );
+
+        if ( ! $location instanceof TermDTO ) {
+            throw new Exception( esc_html__( "Location not found", "appnatively" ) );
+        }
+
+        return Response::send( ["data" => $location] );
     }
 }

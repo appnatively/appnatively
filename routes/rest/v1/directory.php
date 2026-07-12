@@ -16,3 +16,4 @@ Route::get( 'listings/{id}/reviews', [ListingController::class, 'reviews'] );
 Route::get( 'listings/{id}', [ListingController::class, 'show'] );
 Route::get( 'tags', [TagController::class, 'index'] );
 Route::get( 'locations', [LocationController::class, 'index'] );
+Route::get( 'locations/{id}', [LocationController::class, 'show'] );

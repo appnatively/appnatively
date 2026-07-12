@@ -38,6 +38,7 @@ class Directorist extends Provider {
         add_filter( "craf_appna_directory_directorist_category", [$this, "category"], 10, 3 );
         add_filter( "craf_appna_directory_directorist_tags", [$this, "tags"], 10, 3 );
         add_filter( "craf_appna_directory_directorist_locations", [$this, "locations"], 10, 3 );
+        add_filter( "craf_appna_directory_directorist_location", [$this, "location"], 10, 3 );
     }
 
     /**
@@ -458,6 +459,18 @@ class Directorist extends Provider {
         );
     }
 
+    public function location( ?TermDTO $location, Request $request, array $fields = [] ): ?TermDTO {
+        $location_id = (int) $request->get_param( "id" );
+        $taxonomy    = defined( "ATBDP_LOCATION" ) ? ATBDP_LOCATION : "at_biz_dir-location";
+        $term        = get_term( $location_id, $taxonomy );
+
+        if ( ! $term || is_wp_error( $term ) ) {
+            return null;
+        }
+
+        return $this->map_term_to_dto( $term, $fields );
+    }
+
     /**
      * Map term result to TermDTO.
      *
@@ -492,18 +505,55 @@ class Directorist extends Provider {
 
     private function get_term_image( int $term_id, array $meta_keys ): array {
         foreach ( $meta_keys as $meta_key ) {
-            $image_id = (int) get_term_meta( $term_id, $meta_key, true );
-            if ( ! $image_id ) {
+            $image = $this->normalize_term_image_meta( get_term_meta( $term_id, $meta_key, true ) );
+            if ( empty( $image ) ) {
                 continue;
             }
 
-            $src = wp_get_attachment_url( $image_id );
+            return $image;
+        }
+
+        return [];
+    }
+
+    private function normalize_term_image_meta( $image_meta ): array {
+        if ( empty( $image_meta ) ) {
+            return [];
+        }
+
+        if ( is_array( $image_meta ) ) {
+            $image_id = (int) ( $image_meta["id"] ?? $image_meta["attachment_id"] ?? $image_meta["attachmentId"] ?? 0 );
+            $src      = (string) ( $image_meta["src"] ?? $image_meta["url"] ?? "" );
+
+            if ( ! $src && $image_id ) {
+                $src = (string) wp_get_attachment_url( $image_id );
+            }
+
             if ( $src ) {
                 return [
                     "id"  => $image_id,
-                    "src" => (string) $src,
+                    "src" => esc_url_raw( $src ),
                 ];
             }
+
+            return [];
+        }
+
+        if ( is_numeric( $image_meta ) ) {
+            $image_id = (int) $image_meta;
+            $src      = (string) wp_get_attachment_url( $image_id );
+
+            return $src ? [
+                "id"  => $image_id,
+                "src" => esc_url_raw( $src ),
+            ] : [];
+        }
+
+        if ( is_string( $image_meta ) && filter_var( $image_meta, FILTER_VALIDATE_URL ) ) {
+            return [
+                "id"  => 0,
+                "src" => esc_url_raw( $image_meta ),
+            ];
         }
 
         return [];
