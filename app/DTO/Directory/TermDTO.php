@@ -13,6 +13,10 @@ class TermDTO extends DTO {
 
     private string $slug;
 
+    private int $count = 0;
+
+    private array $image = [];
+
     public function get_id(): int {
         return $this->id;
     }
@@ -37,6 +41,24 @@ class TermDTO extends DTO {
 
     public function set_slug( string $slug ): self {
         $this->slug = $slug;
+        return $this;
+    }
+
+    public function get_count(): int {
+        return $this->count;
+    }
+
+    public function set_count( int $count ): self {
+        $this->count = $count;
+        return $this;
+    }
+
+    public function get_image(): array {
+        return $this->image;
+    }
+
+    public function set_image( array $image ): self {
+        $this->image = $image;
         return $this;
     }
 }

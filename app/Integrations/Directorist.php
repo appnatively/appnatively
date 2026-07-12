@@ -352,7 +352,7 @@ class Directorist extends Provider {
 
         $query = Term::join( "term_taxonomy", "terms.term_id", "=", "term_taxonomy.term_id" )
             ->where( "term_taxonomy.taxonomy", $taxonomy )
-            ->select( ["terms.term_id", "terms.name", "terms.slug"] );
+            ->select( ["terms.term_id", "terms.name", "terms.slug", "term_taxonomy.count"] );
 
         if ( ! empty( $search ) ) {
             global $wpdb;
@@ -413,7 +413,7 @@ class Directorist extends Provider {
 
         $query = Term::join( "term_taxonomy", "terms.term_id", "=", "term_taxonomy.term_id" )
             ->where( "term_taxonomy.taxonomy", $taxonomy )
-            ->select( ["terms.term_id", "terms.name", "terms.slug"] );
+            ->select( ["terms.term_id", "terms.name", "terms.slug", "term_taxonomy.count"] );
 
         if ( ! empty( $search ) ) {
             global $wpdb;
@@ -477,8 +477,36 @@ class Directorist extends Provider {
         if ( in_array( "slug", $fields, true ) ) {
             $dto->set_slug( $term->slug );
         }
+        if ( in_array( "count", $fields, true ) ) {
+            $dto->set_count( (int) $term->count );
+        }
+        if ( in_array( "image", $fields, true ) ) {
+            $image = $this->get_term_image( (int) $term->term_id, ["location_img", "category_img", "thumbnail_id", "image"] );
+            if ( ! empty( $image ) ) {
+                $dto->set_image( $image );
+            }
+        }
 
         return $dto;
+    }
+
+    private function get_term_image( int $term_id, array $meta_keys ): array {
+        foreach ( $meta_keys as $meta_key ) {
+            $image_id = (int) get_term_meta( $term_id, $meta_key, true );
+            if ( ! $image_id ) {
+                continue;
+            }
+
+            $src = wp_get_attachment_url( $image_id );
+            if ( $src ) {
+                return [
+                    "id"  => $image_id,
+                    "src" => (string) $src,
+                ];
+            }
+        }
+
+        return [];
     }
 
     /**
@@ -536,17 +564,9 @@ class Directorist extends Provider {
             $dto->set_count( (int) $term->count );
         }
         if ( in_array( "image", $fields, true ) ) {
-            $image_id = (int) get_term_meta( (int) $term->term_id, "category_img", true );
-            if ( $image_id ) {
-                $src = wp_get_attachment_url( $image_id );
-                if ( $src ) {
-                    $dto->set_image(
-                        [
-                            "id"  => $image_id,
-                            "src" => (string) $src,
-                        ]
-                    );
-                }
+            $image = $this->get_term_image( (int) $term->term_id, ["category_img"] );
+            if ( ! empty( $image ) ) {
+                $dto->set_image( $image );
             }
         }
 

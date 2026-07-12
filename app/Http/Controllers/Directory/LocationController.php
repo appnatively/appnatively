@@ -15,6 +15,8 @@ class LocationController extends Controller {
         "id",
         "name",
         "slug",
+        "count",
+        "image",
     ];
 
     public function index( Request $request ): array {
