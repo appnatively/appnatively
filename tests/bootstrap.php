@@ -157,6 +157,46 @@ function _manually_load_plugin() {
     }
     unset( $_wpforms_path );
 
+    // Load WooCommerce
+    $_woocommerce_path = '';
+    if ( file_exists( $wp_plugins_dir . '/woocommerce/woocommerce.php' ) ) {
+        $_woocommerce_path = $wp_plugins_dir . '/woocommerce/woocommerce.php';
+    } elseif ( file_exists( dirname( __DIR__, 2 ) . '/woocommerce/woocommerce.php' ) ) {
+        $_woocommerce_path = dirname( __DIR__, 2 ) . '/woocommerce/woocommerce.php';
+    }
+
+    if ( $_woocommerce_path ) {
+        require_once $_woocommerce_path;
+        if ( class_exists( '\WC_Install' ) ) {
+            // WC_Install::install() touches current_user_can()/wp_get_current_user(),
+            // which aren't defined yet this early (muplugins_loaded fires before WP's
+            // pluggable.php is loaded). Defer to `init`, once WC's own bootstrap
+            // (hooked on plugins_loaded) and pluggable.php have both run.
+            add_action(
+                'init', function() {
+                    \WC_Install::install();
+                }, 20
+            );
+        }
+    }
+    unset( $_woocommerce_path );
+
+    // Load FluentCart
+    $_fluentcart_path = '';
+    if ( file_exists( $wp_plugins_dir . '/fluent-cart/fluent-cart.php' ) ) {
+        $_fluentcart_path = $wp_plugins_dir . '/fluent-cart/fluent-cart.php';
+    } elseif ( file_exists( dirname( __DIR__, 2 ) . '/fluent-cart/fluent-cart.php' ) ) {
+        $_fluentcart_path = dirname( __DIR__, 2 ) . '/fluent-cart/fluent-cart.php';
+    }
+
+    if ( $_fluentcart_path ) {
+        require_once $_fluentcart_path;
+        if ( class_exists( '\FluentCart\Database\DBMigrator' ) ) {
+            \FluentCart\Database\DBMigrator::migrateUp( false );
+        }
+    }
+    unset( $_fluentcart_path );
+
     require dirname( __DIR__ ) . '/appnatively.php';
 
     // Reset and create database tables for tests
