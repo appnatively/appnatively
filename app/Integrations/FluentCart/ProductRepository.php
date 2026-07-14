@@ -106,6 +106,34 @@ class ProductRepository {
     }
 
     /**
+     * Resolve device-local wishlist product IDs into full product records.
+     *
+     * @param mixed           $data    The current data.
+     * @param WP_REST_Request $request The request object.
+     * @param array           $fields  The verified fields.
+     *
+     * @return ProductPaginatorDTO
+     */
+    public function wishlist( $data, WP_REST_Request $request, array $fields ): ProductPaginatorDTO {
+        $ids = (array) $request->get_param( 'ids' );
+        $ids = array_values( array_filter( array_map( 'intval', $ids ) ) );
+
+        if ( empty( $ids ) ) {
+            return new ProductPaginatorDTO( 1, 0, 0, 1, [] );
+        }
+
+        $products = [];
+        foreach ( $ids as $id ) {
+            $product = Product::with( [ 'detail', 'variants' ] )->find( $id );
+            if ( $product && $product->post_status === 'publish' ) {
+                $products[] = $this->map_to_product_dto( $product, $fields );
+            }
+        }
+
+        return new ProductPaginatorDTO( 1, count( $products ), count( $products ), 1, $products );
+    }
+
+    /**
      * Get categories paginator.
      *
      * @param mixed           $data    The current data.

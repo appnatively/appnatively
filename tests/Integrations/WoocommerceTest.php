@@ -9,9 +9,13 @@ use Crafium\AppNatively\WpMVC\RequestValidator\Request;
 class WoocommerceTest extends \WP_UnitTestCase
 {
     private $simple_product_id;
+
     private $variable_product_id;
+
     private $variation_id;
+
     private $category_id;
+
     private $user_id;
 
     public function setUp(): void {
@@ -21,7 +25,7 @@ class WoocommerceTest extends \WP_UnitTestCase
             $this->markTestSkipped( 'WooCommerce is not loaded.' );
         }
 
-        $term = wp_insert_term( 'Test Category', 'product_cat' );
+        $term              = wp_insert_term( 'Test Category', 'product_cat' );
         $this->category_id = $term['term_id'];
 
         $simple = new \WC_Product_Simple();
@@ -162,7 +166,7 @@ class WoocommerceTest extends \WP_UnitTestCase
         $add_request = $this->build_request(
             [ 'items' => [ [ 'productId' => $this->simple_product_id, 'quantity' => 2 ] ] ]
         );
-        $cart = $woocommerce->cart_add( null, $add_request );
+        $cart        = $woocommerce->cart_add( null, $add_request );
 
         $this->assertEquals( 2, $cart->get_item_count() );
         $items = $cart->get_items();
@@ -177,7 +181,7 @@ class WoocommerceTest extends \WP_UnitTestCase
         $update_request = $this->build_request(
             [ 'items' => [ [ 'itemId' => $item_key, 'quantity' => 5 ] ] ]
         );
-        $updated_cart = $woocommerce->cart_update( null, $update_request );
+        $updated_cart   = $woocommerce->cart_update( null, $update_request );
         $this->assertEquals( 5, $updated_cart->get_item_count() );
 
         // Remove

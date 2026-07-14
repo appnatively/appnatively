@@ -479,13 +479,11 @@ class ProductDTO extends DTO {
         return $this;
     }
 
-    public function get_url()
-    {
+    public function get_url() {
         return $this->url;
     }
 
-    public function set_url( $url)
-    {
+    public function set_url( $url ) {
         $this->url = $url;
 
         return $this;

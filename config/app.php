@@ -11,6 +11,7 @@ use Crafium\AppNatively\App\Models\Term;
 use Crafium\AppNatively\App\Models\TermTaxonomy;
 use Crafium\AppNatively\App\Models\User;
 use Crafium\AppNatively\App\Integrations\Woocommerce;
+use Crafium\AppNatively\App\Integrations\SureCart;
 use Crafium\AppNatively\WpMVC\Helpers\Helpers;
 
 return [
@@ -56,6 +57,7 @@ return [
         // Ecommerce Integrations
         Woocommerce::class,
         FluentCart::class,
+        SureCart::class,
         AuthServiceProvider::class
     ],
 

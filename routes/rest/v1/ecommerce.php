@@ -6,6 +6,7 @@ use Crafium\AppNatively\App\Http\Controllers\Ecommerce\CategoryController;
 use Crafium\AppNatively\App\Http\Controllers\Ecommerce\ProductController;
 use Crafium\AppNatively\App\Http\Controllers\Ecommerce\CartController;
 use Crafium\AppNatively\App\Http\Controllers\Ecommerce\OrderController;
+use Crafium\AppNatively\App\Http\Controllers\Ecommerce\WishlistController;
 use Crafium\AppNatively\WpMVC\Routing\Route;
 
 Route::group(
@@ -35,3 +36,5 @@ Route::group(
 
 Route::get( 'orders', [OrderController::class, 'index'] );
 Route::get( 'orders/{id}', [OrderController::class, 'show'] );
+
+Route::get( 'wishlist', [WishlistController::class, 'index'] );

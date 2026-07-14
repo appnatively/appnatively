@@ -15,8 +15,11 @@ use FluentCart\App\Models\ProductVariation;
 class FluentCartTest extends \WP_UnitTestCase
 {
     private $product_id;
+
     private $variation_id;
+
     private $category_id;
+
     private $user_id;
 
     public function setUp(): void {
@@ -26,10 +29,10 @@ class FluentCartTest extends \WP_UnitTestCase
             $this->markTestSkipped( 'FluentCart is not loaded.' );
         }
 
-        $term = wp_insert_term( 'Test FluentCart Category', 'product-categories' );
+        $term              = wp_insert_term( 'Test FluentCart Category', 'product-categories' );
         $this->category_id = $term['term_id'];
 
-        $product = Product::create(
+        $product          = Product::create(
             [
                 'post_title'   => 'Test FluentCart Product',
                 'post_content' => 'A test product description.',
@@ -51,7 +54,7 @@ class FluentCartTest extends \WP_UnitTestCase
             ]
         );
 
-        $variation = ProductVariation::query()->create(
+        $variation          = ProductVariation::query()->create(
             [
                 'post_id'         => $this->product_id,
                 'variation_title' => 'Default',
@@ -176,7 +179,7 @@ class FluentCartTest extends \WP_UnitTestCase
         $add_request = $this->build_request(
             [ 'items' => [ [ 'variantId' => $this->variation_id, 'quantity' => 2 ] ] ]
         );
-        $cart = $fluent_cart->cart_add( null, $add_request );
+        $cart        = $fluent_cart->cart_add( null, $add_request );
 
         $this->assertEquals( 2, $cart->get_item_count() );
         $items = $cart->get_items();
@@ -191,7 +194,7 @@ class FluentCartTest extends \WP_UnitTestCase
         $update_request = $this->build_request(
             [ 'items' => [ [ 'itemId' => $this->variation_id, 'quantity' => 5 ] ] ]
         );
-        $updated_cart = $fluent_cart->cart_update( null, $update_request );
+        $updated_cart   = $fluent_cart->cart_update( null, $update_request );
         $this->assertEquals( 5, $updated_cart->get_item_count() );
 
         // Remove
@@ -264,7 +267,7 @@ class FluentCartTest extends \WP_UnitTestCase
 
     public function test_order_get_returns_null_for_other_users_order() {
         $other_user_id = $this->factory->user->create( [ 'role' => 'customer' ] );
-        $customer       = Customer::create(
+        $customer      = Customer::create(
             [
                 'user_id'    => $other_user_id,
                 'email'      => 'fluentcart-other@example.com',

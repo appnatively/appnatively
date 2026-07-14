@@ -76,6 +76,37 @@ class ProductRepository {
     }
 
     /**
+     * Resolve device-local wishlist product IDs into full product records.
+     * No pagination, filtering, or sorting — just the exact saved set.
+     *
+     * @param ProductPaginatorDTO|null $product_paginator The product paginator DTO.
+     * @param Request $request The REST request instance.
+     * @param array $fields The requested fields.
+     * @return ProductPaginatorDTO
+     */
+    public function wishlist( ?ProductPaginatorDTO $product_paginator, Request $request, array $fields = [] ): ProductPaginatorDTO {
+        $ids = (array) $request->get_param( "ids" );
+        $ids = array_values( array_filter( array_map( 'intval', $ids ) ) );
+
+        if ( empty( $ids ) ) {
+            return new ProductPaginatorDTO( 1, 0, 0, 1, [] );
+        }
+
+        $columns = $this->get_columns_from_fields( $fields );
+        $posts   = $this->base_product_query()
+            ->where_in( 'posts.ID', $ids )
+            ->select( $columns )
+            ->get();
+
+        $items = [];
+        foreach ( $posts as $post ) {
+            $items[] = $this->map_post_to_product_dto( $post, $fields );
+        }
+
+        return new ProductPaginatorDTO( 1, count( $items ), count( $items ), 1, $items );
+    }
+
+    /**
      * Describe the filters available for the current context (category / search /
      * already-applied filters) with per-option counts, so the client can render the
      * drawer purely from what the backend says is available.
@@ -414,7 +445,7 @@ class ProductRepository {
             return $dto; // Should not happen for valid products
         }
 
-        $dto->set_url("https://google.com");
+        $dto->set_url( "https://google.com" );
 
         if ( in_array( "id", $fields ) ) {
             $dto->set_id( $post->ID );

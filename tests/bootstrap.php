@@ -197,6 +197,19 @@ function _manually_load_plugin() {
     }
     unset( $_fluentcart_path );
 
+    // Load SureCart
+    $_surecart_path = '';
+    if ( file_exists( $wp_plugins_dir . '/surecart/surecart.php' ) ) {
+        $_surecart_path = $wp_plugins_dir . '/surecart/surecart.php';
+    } elseif ( file_exists( dirname( __DIR__, 2 ) . '/surecart/surecart.php' ) ) {
+        $_surecart_path = dirname( __DIR__, 2 ) . '/surecart/surecart.php';
+    }
+
+    if ( $_surecart_path ) {
+        require_once $_surecart_path;
+    }
+    unset( $_surecart_path );
+
     require dirname( __DIR__ ) . '/appnatively.php';
 
     // Reset and create database tables for tests

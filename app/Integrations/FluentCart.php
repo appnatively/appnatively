@@ -51,6 +51,7 @@ class FluentCart extends Provider {
      */
     public function boot(): void {
         add_filter( "craf_appna_ecommerce_fluent-cart_products", [ $this, "products" ], 10, 3 );
+        add_filter( "craf_appna_ecommerce_fluent-cart_wishlist", [ $this, "wishlist" ], 10, 3 );
         add_filter( "craf_appna_ecommerce_fluent-cart_product", [ $this, "product" ], 10, 3 );
         add_filter( "craf_appna_ecommerce_fluent-cart_categories", [ $this, "categories" ], 10, 3 );
         add_filter( "craf_appna_ecommerce_fluent-cart_category", [ $this, "category" ], 10, 3 );
@@ -150,6 +151,19 @@ class FluentCart extends Provider {
      */
     public function product( $data, WP_REST_Request $request, array $fields ): ?ProductDTO {
         return $this->product_repository->product( $data, $request, $fields );
+    }
+
+    /**
+     * Resolve wishlist product IDs into full product records.
+     *
+     * @param mixed           $data    The current data.
+     * @param WP_REST_Request $request The request object.
+     * @param array           $fields  The verified fields.
+     *
+     * @return ProductPaginatorDTO
+     */
+    public function wishlist( $data, WP_REST_Request $request, array $fields ): ProductPaginatorDTO {
+        return $this->product_repository->wishlist( $data, $request, $fields );
     }
 
     /**

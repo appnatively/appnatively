@@ -27,5 +27,11 @@ Route::group(
     }
 );
 
+Route::group(
+    'blog', function() {
+        require __DIR__ . '/blog.php';
+    }
+);
+
 require __DIR__ . '/form.php';
 require __DIR__ . '/auth.php';

@@ -168,6 +168,11 @@ install_wp() {
 		unzip -q $TMPDIR/woocommerce.zip -d "$WP_CORE_DIR"/wp-content/plugins/
 	fi
 
+	if [ ! -d "$WP_CORE_DIR"/wp-content/plugins/surecart ]; then
+		download https://downloads.wordpress.org/plugin/surecart.zip $TMPDIR/surecart.zip
+		unzip -q $TMPDIR/surecart.zip -d "$WP_CORE_DIR"/wp-content/plugins/
+	fi
+
 	if [ ! -d "$WP_CORE_DIR"/wp-content/plugins/fluent-cart ]; then
 		download https://downloads.wordpress.org/plugin/fluent-cart.zip $TMPDIR/fluent-cart.zip
 		unzip -q $TMPDIR/fluent-cart.zip -d "$WP_CORE_DIR"/wp-content/plugins/
