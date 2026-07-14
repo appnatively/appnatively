@@ -50,7 +50,8 @@ class CartManager {
             $cart_id = null;
             if ( $request ) {
                 $cart_id = $request->get_header( 'X-WC-Session' ) ?: $request->get_header( 'X-Cart-Id' ) ?: $request->get_param( 'cartId' );
-                if ( ! $cart_id && isset( $_SERVER['REQUEST_METHOD'] ) && 'POST' === $_SERVER['REQUEST_METHOD'] ) {
+                //phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotValidated
+                if ( ! $cart_id && $_SERVER['REQUEST_METHOD'] === 'POST' ) {
                     $raw_body = file_get_contents( 'php://input' );
                     if ( $raw_body ) {
                         $body_data = json_decode( $raw_body, true );

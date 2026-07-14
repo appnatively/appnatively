@@ -20,6 +20,7 @@ class PluginsController extends Controller {
             "craf_appna_integrated_plugins", [
                 "woocommerce"    => [ "category" => "ecommerce", "label" => "WooCommerce" ],
                 "fluent-cart"    => [ "category" => "ecommerce", "label" => "Fluent Cart" ],
+                "surecart"       => [ "category" => "ecommerce", "label" => "SureCart" ],
                 "formgent"       => [ "category" => "form",      "label" => "FormGent" ],
                 "fluentform"     => [ "category" => "form",      "label" => "Fluent Form" ],
                 "directorist"    => [ "category" => "directory", "label" => "Directorist", "file" => "directorist/directorist-base.php"], // add path if plugin folder and root file is not same
