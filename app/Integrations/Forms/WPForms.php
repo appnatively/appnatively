@@ -4,6 +4,8 @@ namespace Crafium\AppNatively\App\Integrations\Forms;
 
 defined( "ABSPATH" ) || exit;
 
+use Crafium\AppNatively\App\DTO\Forms\FormDTO;
+use Crafium\AppNatively\App\DTO\Forms\FormFieldDTO;
 use Crafium\AppNatively\WpMVC\RequestValidator\Request;
 
 class WPForms extends Form {
@@ -351,9 +353,134 @@ class WPForms extends Form {
         wpforms()->obj( 'process' )->process( $entry );
 
         // Restore the original action to avoid side effects.
-        unset( $_POST['action'] );
+        unset( $_POST['action'] ); // phpcs:ignore WordPress.Security.NonceVerification.Missing
 
         remove_filter( 'wpforms_process_anti_spam_direct_post_bypass', '__return_true' );
         remove_filter( 'wpforms_field_choices_allow_unknown_value', '__return_true' );
+    }
+
+    public function get_forms(): array {
+
+        $forms = wpforms()->obj( 'form' )->get(
+            '', [ 
+                'post_type'   => 'wpforms',
+                'post_status' => 'publish', // Fetches active forms
+                'nopaging'    => true       // Ensures you fetch all forms, not just the first 10
+            ] 
+        );
+
+        if ( ! $forms ) {
+            return [];
+        }
+
+        $result = [];
+
+        foreach ( $forms as $form_post ) {
+
+            $result[] = ( new FormDTO() )
+                ->set_id( (int) $form_post->ID )
+                ->set_title( $form_post->post_title );
+        }
+
+        return $result;
+    }
+
+    protected function get_standardized_type( string $native_type ): ?string {
+        $map = [
+            'text'          => 'text',
+            'number'        => 'number',
+            'email'         => 'email',
+            'checkbox'      => 'checkbox',
+            'select'        => 'single_select',
+            'radio'         => 'radio',
+            'number-slider' => 'range',
+            'gdpr-checkbox' => 'gdpr',
+            'url'           => 'url',
+            'password'      => 'password',
+            'date-time'     => 'date_time_picker',
+            'rating'        => 'rating',
+            'file-upload'   => 'text',
+            'hidden'        => 'text',
+        ];
+
+        return $map[$native_type] ?? null;
+    }
+
+    protected function map_form_to_dto( array $raw_form, array $fields ): FormDTO {
+        $dto = new FormDTO();
+
+        if ( in_array( 'id', $fields, true ) ) {
+            $dto->set_id( (int) $raw_form['id'] );
+        }
+
+        if ( in_array( 'title', $fields, true ) ) {
+            $dto->set_title( $raw_form['title'] ?? '' );
+        }
+
+        if ( in_array( 'status', $fields, true ) ) {
+            $dto->set_status( $raw_form['status'] ?? 'publish' );
+        }
+
+        if ( in_array( 'date_created', $fields, true ) ) {
+            $dto->set_date_created( $raw_form['date_created'] ?? '' );
+        }
+
+        if ( in_array( 'date_updated', $fields, true ) ) {
+            $dto->set_date_updated( $raw_form['date_updated'] ?? '' );
+        }
+
+        if ( in_array( 'fields', $fields, true ) && ! empty( $raw_form['fields'] ) ) {
+            $field_dtos = [];
+
+            foreach ( $raw_form['fields'] as $field ) {
+                $std_type = $this->get_standardized_type( $field['type'] ?? '' );
+
+                if ( ! $std_type ) {
+                    continue;
+                }
+
+                $fdto = new FormFieldDTO();
+                $fdto->set_id( (string) $field['id'] )
+                    ->set_type( $std_type )
+                    ->set_required( ! empty( $field['required'] ) && $field['required'] === '1' )
+                    ->set_label( $field['label'] ?? '' )
+                    ->set_placeholder( $field['placeholder'] ?? '' )
+                    ->set_field_name( (string) $field['id'] );
+
+                if ( ! empty( $field['choices'] ) ) {
+                    $items = [];
+
+                    foreach ( $field['choices'] as $key => $choice ) {
+                        $items[] = [
+                            'id'    => (string) $key,
+                            'label' => $choice['label'] ?? '',
+                            'value' => $choice['value'] ?? $choice['label'] ?? '',
+                        ];
+                    }
+
+                    $fdto->set_items( $items );
+                }
+
+                if ( $std_type === 'range' ) {
+                    $fdto->set_min_value( isset( $field['min'] ) ? (float) $field['min'] : null )
+                        ->set_max_value( isset( $field['max'] ) ? (float) $field['max'] : null );
+                }
+
+                if ( $std_type === 'rating' ) {
+                    $fdto->set_rating_max( isset( $field['rating_max'] ) ? (int) $field['rating_max'] : 5 );
+                }
+
+                if ( $std_type === 'date_time_picker' ) {
+                    $fdto->set_picker_type( 'date' )
+                        ->set_date_format( 'yyyy-MM-dd' );
+                }
+
+                $field_dtos[] = $fdto;
+            }
+
+            $dto->set_fields( $field_dtos );
+        }
+
+        return $dto;
     }
 }

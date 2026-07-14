@@ -2,9 +2,21 @@
 
 defined( 'ABSPATH' ) || exit;
 
+use Crafium\AppNatively\App\Integrations\Forms\GutenaForms;
 use Crafium\AppNatively\App\Providers\AuthServiceProvider;
 use Crafium\AppNatively\App\Http\Middleware\EnsureIsUserAdmin;
 use Crafium\AppNatively\App\Integrations\FluentCart;
+use Crafium\AppNatively\App\Integrations\Directorist;
+use Crafium\AppNatively\App\Integrations\Forms\FormGent;
+use Crafium\AppNatively\App\Integrations\Forms\FluentForm;
+use Crafium\AppNatively\App\Integrations\Forms\EverestForms;
+use Crafium\AppNatively\App\Integrations\Forms\ContactForm7;
+use Crafium\AppNatively\App\Integrations\Forms\Formidable;
+use Crafium\AppNatively\App\Integrations\Forms\Forminator;
+use Crafium\AppNatively\App\Integrations\Forms\HappyForms;
+use Crafium\AppNatively\App\Integrations\Forms\SureForms;
+use Crafium\AppNatively\App\Integrations\Forms\WeForms;
+use Crafium\AppNatively\App\Integrations\Forms\WPForms;
 use Crafium\AppNatively\App\Models\Comment;
 use Crafium\AppNatively\App\Models\Post;
 use Crafium\AppNatively\App\Models\Term;
@@ -57,6 +69,20 @@ return [
         // Ecommerce Integrations
         Woocommerce::class,
         FluentCart::class,
+        // Directory Integrations
+        Directorist::class,
+        // Forms Integrations
+        FormGent::class,
+        FluentForm::class,
+        EverestForms::class,
+        ContactForm7::class,
+        Formidable::class,
+        Forminator::class,
+        GutenaForms::class,
+        HappyForms::class,
+        SureForms::class,
+        WeForms::class,
+        WPForms::class, 
         SureCart::class,
         AuthServiceProvider::class
     ],

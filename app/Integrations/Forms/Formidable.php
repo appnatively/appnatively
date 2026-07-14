@@ -4,6 +4,9 @@ namespace Crafium\AppNatively\App\Integrations\Forms;
 
 defined( "ABSPATH" ) || exit;
 
+use FrmForm;
+use Crafium\AppNatively\App\DTO\Forms\FormDTO;
+use Crafium\AppNatively\App\DTO\Forms\FormFieldDTO;
 use Crafium\AppNatively\WpMVC\RequestValidator\Request;
 
 class Formidable extends Form {
@@ -28,6 +31,7 @@ class Formidable extends Form {
         $fields_array = [];
 
         foreach ( $fields as $field ) {
+            error_log( 'field: ' . print_r( $field, true ), 0 );
             $fields_array[] = [
                 'id'            => (int) $field->id,
                 'type'          => $field->type,
@@ -336,5 +340,131 @@ class Formidable extends Form {
                 do_action( 'frm_after_create_entry', $entry_id, $form_id );
             }
         }
+    }
+
+    public function get_forms(): array {
+        // Formidable native model call to fetch all published, non-template forms
+        $forms = FrmForm::get_published_forms();
+
+        if ( ! $forms ) {
+            return [];
+        }
+
+        $result = [];
+
+        foreach ( $forms as $form ) {
+            $result[] = ( new FormDTO() )
+                ->set_id( (int) $form->id )       // Formidable uses lowercase 'id' properties
+                ->set_title( $form->name )        // Formidable uses 'name' instead of 'post_title'
+                ->set_exclude_to_array( ['fields'] );
+        }
+
+        return $result;
+    }
+
+    protected function get_standardized_type( string $native_type ): ?string {
+        $map = [
+            'text'     => 'text',
+            'email'    => 'email',
+            'url'      => 'url',
+            'number'   => 'number',
+            'checkbox' => 'checkbox',
+            'radio'    => 'radio',
+            'select'   => 'single_select',
+            'gdpr'     => 'gdpr',
+            'textarea' => 'text',
+            'password' => 'password',
+            'date'     => 'date_time_picker',
+            'range'    => 'range',
+            'star'     => 'rating',
+            'scale'    => 'rating',
+        ];
+
+        return $map[$native_type] ?? null;
+    }
+
+    protected function map_form_to_dto( array $raw_form, array $fields ): FormDTO {
+        $dto = new FormDTO();
+
+        if ( in_array( 'id', $fields, true ) ) {
+            $dto->set_id( (int) ( $raw_form['id'] ?? 0 ) );
+        }
+
+        if ( in_array( 'title', $fields, true ) ) {
+            $dto->set_title( $raw_form['name'] ?? '' );
+        }
+
+        if ( in_array( 'status', $fields, true ) ) {
+            $dto->set_status( $raw_form['status'] ?? 'publish' );
+        }
+
+        if ( in_array( 'date_created', $fields, true ) ) {
+            $dto->set_date_created( $raw_form['date_created'] ?? '' );
+        }
+
+        if ( in_array( 'date_updated', $fields, true ) ) {
+            $dto->set_date_updated( $raw_form['date_updated'] ?? '' );
+        }
+
+        if ( in_array( 'fields', $fields, true ) && ! empty( $raw_form['fields'] ) ) {
+            $field_dtos = [];
+
+            foreach ( $raw_form['fields'] as $field ) {
+                $std_type = $this->get_standardized_type( $field['type'] ?? '' );
+
+                if ( ! $std_type ) {
+                    continue;
+                }
+
+                $fdto = new FormFieldDTO();
+                $fdto->set_id( (string) $field['field_key'] )
+                    ->set_type( $std_type )
+                    ->set_required( ! empty( $field['required'] ) )
+                    ->set_label( $field['name'] ?? '' )
+                    ->set_field_name( $field['field_key'] ?? '' );
+
+                if ( ! empty( $field['options'] ) ) {
+                    $items = [];
+
+                    foreach ( $field['options'] as $key => $option ) {
+                        if ( is_string( $option ) ) {
+                            $items[] = [
+                                'id'    => (string) $key,
+                                'label' => $option,
+                                'value' => $option,
+                            ];
+                        } elseif ( is_array( $option ) ) {
+                            $items[] = [
+                                'id'    => $option['value'] ?? (string) $key,
+                                'label' => $option['label'] ?? '',
+                                'value' => $option['value'] ?? '',
+                            ];
+                        }
+                    }
+
+                    $fdto->set_items( $items );
+                }
+
+                if ( $std_type === 'number' ) {
+                    $field_options = $field['field_options'] ?? [];
+                    $fdto->set_min_value( isset( $field_options['minnum'] ) ? (float) $field_options['minnum'] : null )
+                        ->set_max_value( isset( $field_options['maxnum'] ) ? (float) $field_options['maxnum'] : null );
+                }
+
+                if ( $std_type === 'date_time_picker' ) {
+                    $fdto->set_picker_type( 'date' )->set_date_format( 'yyyy-MM-dd' );
+                }
+
+                if ( $std_type === 'rating' ) {
+                    $fdto->set_rating_max( 5 );
+                }
+
+                $field_dtos[] = $fdto;
+            }
+
+            $dto->set_fields( $field_dtos );
+        }
+
+        return $dto;
     }
 }

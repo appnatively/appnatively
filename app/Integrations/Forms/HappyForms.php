@@ -4,9 +4,13 @@ namespace Crafium\AppNatively\App\Integrations\Forms;
 
 defined( 'ABSPATH' ) || exit;
 
+use Crafium\AppNatively\App\Models\Post;
+use Crafium\AppNatively\App\DTO\Forms\FormDTO;
+use Crafium\AppNatively\App\DTO\Forms\FormFieldDTO;
 use Crafium\AppNatively\WpMVC\RequestValidator\Request;
 
-class HappyForms extends Form {
+class HappyForms extends Form
+{
     public function get_key(): string {
         return 'happyforms';
     }
@@ -38,31 +42,31 @@ class HappyForms extends Form {
             'number'           => 'number',
         ];
 
-        return $map[ $type ] ?? null;
+        return $map[$type] ?? null;
     }
 
     private function get_text_rules( array $part ): array {
-        return [ 'string' ];
+        return ['string'];
     }
 
     private function get_email_rules( array $part ): array {
-        return [ 'string', 'email' ];
+        return ['string', 'email'];
     }
 
     private function get_radio_rules( array $part ): array {
-        return [ 'string' ];
+        return ['string'];
     }
 
     private function get_checkbox_rules( array $part ): array {
-        return [ 'array' ];
+        return ['array'];
     }
 
     private function get_select_rules( array $part ): array {
-        return [ 'string' ];
+        return ['string'];
     }
 
     private function get_number_rules( array $part ): array {
-        $rules = [ 'numeric' ];
+        $rules = ['numeric'];
 
         if ( isset( $part['min_value'] ) && $part['min_value'] !== '' ) {
             $rules[] = 'min:' . floatval( $part['min_value'] );
@@ -124,7 +128,7 @@ class HappyForms extends Form {
             }
 
             if ( ! empty( $field_rules ) ) {
-                $rules[ $field_name ] = implode( '|', array_unique( $field_rules ) );
+                $rules[$field_name] = implode( '|', array_unique( $field_rules ) );
             }
         }
 
@@ -148,22 +152,22 @@ class HappyForms extends Form {
             }
 
             if ( ! empty( $part['required'] ) ) {
-                $messages[ "{$name}.required" ] = happyforms_get_validation_message( 'field_empty' );
+                $messages["{$name}.required"] = happyforms_get_validation_message( 'field_empty' );
             }
 
             if ( $mapped === 'email' ) {
-                $messages[ "{$name}.email" ] = happyforms_get_validation_message( 'field_invalid' );
+                $messages["{$name}.email"] = happyforms_get_validation_message( 'field_invalid' );
             }
 
             if ( $mapped === 'number' ) {
-                $messages[ "{$name}.numeric" ] = happyforms_get_validation_message( 'field_invalid' );
+                $messages["{$name}.numeric"] = happyforms_get_validation_message( 'field_invalid' );
 
                 if ( isset( $part['min_value'] ) && $part['min_value'] !== '' ) {
-                    $messages[ "{$name}.min" ] = happyforms_get_validation_message( 'number_min_invalid' );
+                    $messages["{$name}.min"] = happyforms_get_validation_message( 'number_min_invalid' );
                 }
 
                 if ( isset( $part['max_value'] ) && $part['max_value'] !== '' ) {
-                    $messages[ "{$name}.max" ] = happyforms_get_validation_message( 'number_max_invalid' );
+                    $messages["{$name}.max"] = happyforms_get_validation_message( 'number_max_invalid' );
                 }
             }
         }
@@ -237,7 +241,7 @@ class HappyForms extends Form {
                 continue;
             }
 
-            $submission[ $part_id ] = $value;
+            $submission[$part_id] = $value;
         }
 
         if ( empty( $submission ) ) {
@@ -249,11 +253,11 @@ class HappyForms extends Form {
         $message_controller = happyforms_get_message_controller();
 
         if ( 1 === intval( $form['receive_email_alerts'] ) ) {
-            $this->call_private_method( $message_controller, 'email_owner_confirmation', [ $form, $submission ] );
+            $this->call_private_method( $message_controller, 'email_owner_confirmation', [$form, $submission] );
         }
 
         if ( 1 === intval( $form['send_confirmation_email'] ) ) {
-            $this->call_private_method( $message_controller, 'email_user_confirmation', [ $form, $submission ] );
+            $this->call_private_method( $message_controller, 'email_user_confirmation', [$form, $submission] );
         }
     }
 
@@ -261,5 +265,123 @@ class HappyForms extends Form {
         $reflection = new \ReflectionMethod( $object, $method );
         $reflection->setAccessible( true );
         return $reflection->invokeArgs( $object, $args );
+    }
+
+    public function get_forms(): array {
+        // HappyForms registers its custom post type as 'happyform'
+        $posts = Post::select( "ID", "post_title" )
+            ->where( 'post_type', 'happyform' )
+            ->where( 'post_status', 'publish' )
+            ->get();
+
+        $result = [];
+
+        foreach ( $posts as $post ) {
+            $result[] = ( new FormDTO() )
+                ->set_id( (int) $post->ID )
+                ->set_title( $post->post_title )
+                ->set_exclude_to_array( ['fields'] );
+        }
+
+        return $result;
+    }
+
+    protected function get_standardized_type( string $native_type ): ?string {
+        $map = [
+            'single_line_text' => 'text',
+            'email'            => 'email',
+            'radio'            => 'radio',
+            'checkbox'         => 'checkbox',
+            'select'           => 'single_select',
+            'number'           => 'number',
+            'paragraph_text'   => 'text',
+            'url'              => 'url',
+            'date'             => 'date_time_picker',
+            'phone'            => 'text',
+            'placeholder'      => 'text',
+        ];
+
+        return $map[$native_type] ?? null;
+    }
+
+    protected function map_form_to_dto( array $raw_form, array $fields ): FormDTO {
+        $dto = new FormDTO();
+
+        if ( in_array( 'id', $fields, true ) ) {
+            $dto->set_id( (int) ( $raw_form['id'] ?? 0 ) );
+        }
+
+        if ( in_array( 'title', $fields, true ) ) {
+            $dto->set_title( $raw_form['name'] ?? '' );
+        }
+
+        if ( in_array( 'status', $fields, true ) ) {
+            $dto->set_status( $raw_form['status'] ?? 'publish' );
+        }
+
+        if ( in_array( 'date_created', $fields, true ) ) {
+            $dto->set_date_created( $raw_form['date_created'] ?? '' );
+        }
+
+        if ( in_array( 'date_updated', $fields, true ) ) {
+            $dto->set_date_updated( $raw_form['date_updated'] ?? '' );
+        }
+
+        if ( in_array( 'fields', $fields, true ) && ! empty( $raw_form['parts'] ) ) {
+            $field_dtos = [];
+
+            foreach ( $raw_form['parts'] as $part ) {
+                $std_type = $this->get_standardized_type( $part['type'] ?? '' );
+
+                if ( ! $std_type ) {
+                    continue;
+                }
+
+                $fdto = new FormFieldDTO();
+                $fdto->set_id( (string) $part['id'] )
+                    ->set_type( $std_type )
+                    ->set_required( ! empty( $part['required'] ) )
+                    ->set_label( $part['label'] ?? '' )
+                    ->set_placeholder( $part['placeholder'] ?? '' )
+                    ->set_field_name( (string) $part['id'] );
+
+                if ( ! empty( $part['options'] ) ) {
+                    $items = [];
+
+                    foreach ( $part['options'] as $key => $option ) {
+                        if ( is_string( $option ) ) {
+                            $items[] = [
+                                'id'    => (string) $key,
+                                'label' => $option,
+                                'value' => $option,
+                            ];
+                        } elseif ( is_array( $option ) ) {
+                            $items[] = [
+                                'id'    => $option['value'] ?? (string) $key,
+                                'label' => $option['label'] ?? '',
+                                'value' => $option['value'] ?? '',
+                            ];
+                        }
+                    }
+
+                    $fdto->set_items( $items );
+                }
+
+                if ( $std_type === 'number' ) {
+                    $fdto->set_min_value( isset( $part['min_value'] ) && $part['min_value'] !== '' ? (float) $part['min_value'] : null )
+                        ->set_max_value( isset( $part['max_value'] ) && $part['max_value'] !== '' ? (float) $part['max_value'] : null );
+                }
+
+                if ( $std_type === 'date_time_picker' ) {
+                    $fdto->set_picker_type( 'date' )->set_date_format( 'yyyy-MM-dd' );
+                }
+
+                $field_dtos[] = $fdto;
+            }
+
+            $dto->set_fields( $field_dtos );
+        }
+
+        return $dto;
     }
 }

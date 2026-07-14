@@ -4,6 +4,8 @@ namespace Crafium\AppNatively\App\Integrations\Forms;
 
 defined( 'ABSPATH' ) || exit;
 
+use Crafium\AppNatively\App\DTO\Forms\FormDTO;
+use Crafium\AppNatively\App\DTO\Forms\FormFieldDTO;
 use Crafium\AppNatively\WpMVC\RequestValidator\Request;
 
 class GutenaForms extends Form {
@@ -35,8 +37,22 @@ class GutenaForms extends Form {
         $fields = [];
 
         foreach ( $schema['form_fields'] as $name_attr => $field ) {
+            error_log( 'field: ' . print_r( $field, true ), 0 );
             if ( empty( $field['nameAttr'] ) ) {
                 continue;
+            }
+
+            // Gutena persists its schema via parse_blocks(), which does NOT merge
+            // registered block-attribute defaults. Re-apply them from the live
+            // gutena/form-field block type so choice fields expose their option list
+            // (and range fields their min/max) even when left at defaults.
+            $field_block = \WP_Block_Type_Registry::get_instance()->get_registered( 'gutena/form-field' );
+            if ( $field_block && ! empty( $field_block->attributes ) ) {
+                foreach ( $field_block->attributes as $attr_name => $attr_def ) {
+                    if ( ! isset( $field[ $attr_name ] ) && is_array( $attr_def ) && array_key_exists( 'default', $attr_def ) ) {
+                        $field[ $attr_name ] = $attr_def['default'];
+                    }
+                }
             }
 
             $field_type = $field['fieldType'] ?? 'text';
@@ -463,5 +479,137 @@ class GutenaForms extends Form {
         }
 
         wp_mail( $to, $subject, $body, $headers );
+    }
+
+    public function get_forms(): array {
+        if ( ! defined( 'GUTENA_FORMS_VERSION' ) ) {
+            return [];
+        }
+
+        $posts = get_posts(
+            [
+                'post_type'      => 'gutena_forms',
+                'post_status'    => 'publish',
+                'posts_per_page' => -1,
+                'orderby'        => 'ID',
+                'order'          => 'ASC',
+            ] 
+        );
+
+        if ( empty( $posts ) ) {
+            return [];
+        }
+
+        $result = [];
+
+        foreach ( $posts as $post ) {
+            $block_form_id = get_post_meta( $post->ID, 'gutena_form_id', true );
+
+            if ( ! $block_form_id ) {
+                continue;
+            }
+
+            $schema = function_exists( 'gutena_forms_get_form_schema_option' )
+                ? gutena_forms_get_form_schema_option( $block_form_id )
+                : [];
+
+            if ( empty( $schema ) || empty( $schema['form_attrs'] ) || empty( $schema['form_fields'] ) ) {
+                continue;
+            }
+
+            $form_title = $schema['form_attrs']['formName'] ?? $post->post_title;
+
+            $result[] = ( new FormDTO() )
+                ->set_id( (int) $post->ID )
+                ->set_title( $form_title )
+                ->set_exclude_to_array( ['fields'] );
+        }
+
+        return $result;
+    }
+
+    protected function get_standardized_type( string $native_type ): ?string {
+        $map = [
+            'text'     => 'text',
+            'email'    => 'email',
+            'number'   => 'number',
+            'checkbox' => 'checkbox',
+            'select'   => 'single_select',
+            'radio'    => 'radio',
+            'range'    => 'range',
+            'url'      => 'url',
+            'tel'      => 'text',
+            'textarea' => 'text',
+        ];
+
+        return $map[$native_type] ?? null;
+    }
+
+    protected function map_form_to_dto( array $raw_form, array $fields ): FormDTO {
+        $dto = new FormDTO();
+
+        if ( in_array( 'id', $fields, true ) ) {
+            $dto->set_id( (int) ( $raw_form['id'] ?? 0 ) );
+        }
+
+        if ( in_array( 'title', $fields, true ) ) {
+            $dto->set_title( $raw_form['form_name'] ?? '' );
+        }
+
+        if ( in_array( 'status', $fields, true ) ) {
+            $dto->set_status( $raw_form['status'] ?? 'publish' );
+        }
+
+        if ( in_array( 'date_created', $fields, true ) ) {
+            $dto->set_date_created( $raw_form['date_created'] ?? '' );
+        }
+
+        if ( in_array( 'date_updated', $fields, true ) ) {
+            $dto->set_date_updated( $raw_form['date_updated'] ?? '' );
+        }
+
+        if ( in_array( 'fields', $fields, true ) && ! empty( $raw_form['fields'] ) ) {
+            $field_dtos = [];
+
+            foreach ( $raw_form['fields'] as $field ) {
+                $std_type = $this->get_standardized_type( $field['type'] ?? '' );
+
+                if ( ! $std_type ) {
+                    continue;
+                }
+
+                $fdto = new FormFieldDTO();
+                $fdto->set_id( $field['name'] ?? '' )
+                    ->set_type( $std_type )
+                    ->set_required( ! empty( $field['required'] ) )
+                    ->set_label( $field['label'] ?? '' )
+                    ->set_field_name( $field['name'] ?? '' );
+
+                if ( ! empty( $field['options'] ) ) {
+                    $items = [];
+
+                    foreach ( $field['options'] as $key => $value ) {
+                        $items[] = [
+                            'id'    => (string) $key,
+                            'label' => $value,
+                            'value' => $value,
+                        ];
+                    }
+
+                    $fdto->set_items( $items );
+                }
+
+                if ( $std_type === 'number' || $std_type === 'range' ) {
+                    $fdto->set_min_value( isset( $field['min'] ) && $field['min'] !== '' ? (float) $field['min'] : null )
+                        ->set_max_value( isset( $field['max'] ) && $field['max'] !== '' ? (float) $field['max'] : null );
+                }
+
+                $field_dtos[] = $fdto;
+            }
+
+            $dto->set_fields( $field_dtos );
+        }
+
+        return $dto;
     }
 }

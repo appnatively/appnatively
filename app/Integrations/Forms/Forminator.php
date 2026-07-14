@@ -4,7 +4,9 @@ namespace Crafium\AppNatively\App\Integrations\Forms;
 
 defined( 'ABSPATH' ) || exit;
 
-use Crafium\AppNatively\WpMVC\Helpers\Helpers;
+use Crafium\AppNatively\App\Models\Post;
+use Crafium\AppNatively\App\DTO\Forms\FormDTO;
+use Crafium\AppNatively\App\DTO\Forms\FormFieldDTO;
 use Crafium\AppNatively\WpMVC\RequestValidator\Request;
 
 class Forminator extends Form {
@@ -25,6 +27,8 @@ class Forminator extends Form {
         }
 
         $form = \Forminator_API::get_form( $id );
+
+        error_log( 'Forminator form: ' . print_r( $form, true ), 0 );
 
         if ( ! $form || is_wp_error( $form ) ) {
             return [];
@@ -393,5 +397,144 @@ class Forminator extends Form {
                 $mail_sender->process_mail( $form_model, $entry );
             }
         }
+    }
+
+    public function get_forms(): array {
+        // Forminator registers its custom post type as 'forminator_forms'
+        $posts = Post::select( "ID", "post_title" )
+            ->where( 'post_type', 'forminator_forms' )
+            ->where( 'post_status', 'publish' )
+            ->get();
+
+        $result = [];
+
+        foreach ( $posts as $post ) {
+            $result[] = ( new FormDTO() )
+                ->set_id( (int) $post->ID )
+                ->set_title( $post->post_title )
+                ->set_exclude_to_array( ['fields'] );
+        }
+
+        return $result;
+    }
+
+    protected function get_standardized_type( string $native_type ): ?string {
+        $map = [
+            'text'     => 'text',
+            'email'    => 'email',
+            'url'      => 'url',
+            'number'   => 'number',
+            'radio'    => 'radio',
+            'checkbox' => 'checkbox',
+            'select'   => 'single_select',
+            'date'     => 'date_time_picker',
+            'rating'   => 'rating',
+            'slider'   => 'range',
+            'time'     => 'date_time_picker',
+            'consent'  => 'gdpr',
+            'password' => 'password',
+            'textarea' => 'text',
+            'phone'    => 'text',
+        ];
+
+        return $map[$native_type] ?? null;
+    }
+
+    protected function map_form_to_dto( array $raw_form, array $fields ): FormDTO {
+        $dto = new FormDTO();
+
+        if ( in_array( 'id', $fields, true ) ) {
+            $dto->set_id( (int) ( $raw_form['id'] ?? 0 ) );
+        }
+
+        if ( in_array( 'title', $fields, true ) ) {
+            $dto->set_title( $raw_form['name'] ?? $raw_form['title'] ?? '' );
+        }
+
+        if ( in_array( 'status', $fields, true ) ) {
+            $dto->set_status( $raw_form['status'] ?? $raw_form['form_status'] ?? 'publish' );
+        }
+
+        if ( in_array( 'date_created', $fields, true ) ) {
+            $dto->set_date_created( $raw_form['created_at'] ?? $raw_form['date_created'] ?? '' );
+        }
+
+        if ( in_array( 'date_updated', $fields, true ) ) {
+            $dto->set_date_updated( $raw_form['updated_at'] ?? $raw_form['date_updated'] ?? '' );
+        }
+
+        if ( in_array( 'fields', $fields, true ) && ! empty( $raw_form['fields'] ) ) {
+            $field_dtos = [];
+
+            foreach ( $raw_form['fields'] as $field ) {
+                $std_type = $this->get_standardized_type( $field['type'] ?? '' );
+
+                if ( ! $std_type ) {
+                    continue;
+                }
+
+                $fdto = new FormFieldDTO();
+                $fdto->set_id( $field['element_id'] ?? '' )
+                    ->set_type( $std_type )
+                    ->set_required( ! empty( $field['required'] ) && filter_var( $field['required'], FILTER_VALIDATE_BOOLEAN ) )
+                    ->set_label( ( $std_type === 'gdpr' && ! empty( $field['consent_description'] ) ) ? $field['consent_description'] : ( $field['field_label'] ?? $field['label'] ?? '' ) )
+                    ->set_placeholder( $field['placeholder'] ?? '' )
+                    ->set_field_name( $field['element_id'] ?? '' );
+
+                if ( ! empty( $field['options'] ) ) {
+                    $items = [];
+
+                    foreach ( $field['options'] as $key => $option ) {
+                        if ( is_string( $option ) ) {
+                            $items[] = [
+                                'id'    => (string) $key,
+                                'label' => $option,
+                                'value' => $option,
+                            ];
+                        } elseif ( is_array( $option ) ) {
+                            $items[] = [
+                                'id'    => $option['value'] ?? (string) $key,
+                                'label' => $option['label'] ?? '',
+                                'value' => $option['value'] ?? '',
+                            ];
+                        }
+                    }
+
+                    $fdto->set_items( $items );
+                }
+
+                if ( $std_type === 'number' ) {
+                    $fdto->set_min_value( isset( $field['min'] ) && $field['min'] !== '' ? (float) $field['min'] : null )
+                        ->set_max_value( isset( $field['max'] ) && $field['max'] !== '' ? (float) $field['max'] : null );
+                }
+
+                if ( $std_type === 'range' ) {
+                    $fdto->set_min_value( isset( $field['min'] ) && $field['min'] !== '' ? (float) $field['min'] : null )
+                        ->set_max_value( isset( $field['max'] ) && $field['max'] !== '' ? (float) $field['max'] : null );
+                }
+
+                if ( $std_type === 'rating' ) {
+                    $fdto->set_rating_max( isset( $field['max_rating'] ) ? (int) $field['max_rating'] : 5 );
+                }
+
+                if ( $std_type === 'date_time_picker' ) {
+                    if ( ( $field['type'] ?? '' ) === 'time' ) {
+                        $fdto->set_picker_type( 'time' )->set_date_format( 'hh:mm a' );
+                    } else {
+                        $fdto->set_picker_type( 'date' )->set_date_format( 'yyyy-MM-dd' );
+                    }
+                }
+
+                if ( $std_type === 'text' && ! empty( $field['text_limit'] ) && ! empty( $field['limit'] ) ) {
+                    $fdto->set_character_limit( (int) $field['limit'] );
+                }
+
+                $field_dtos[] = $fdto;
+            }
+
+            $dto->set_fields( $field_dtos );
+        }
+
+        return $dto;
     }
 }

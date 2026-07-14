@@ -6,7 +6,10 @@ defined( "ABSPATH" ) || exit;
 
 use Crafium\AppNatively\WpMVC\Helpers\Helpers;
 use Crafium\AppNatively\WpMVC\RequestValidator\Request;
+use Crafium\AppNatively\App\DTO\Forms\FormDTO;
+use Crafium\AppNatively\App\DTO\Forms\FormFieldDTO;
 
+use Crafium\AppNatively\App\Models\Post;
 class FormGent extends Form {
     public function get_key(): string {
         return 'formgent';
@@ -51,17 +54,6 @@ class FormGent extends Form {
         }
         return $rules;
     }
-
-    // private function get_password_rules( array $field ): array {
-    //     $rules = [ 'string' ];
-    //     if ( ! empty( $field['character_limit'] ) && ! empty( $field['limit'] ) ) {
-    //         $rules[] = 'max:' . absint( $field['limit'] );
-    //     }
-    //     if ( ! empty( $field['limit_min'] ) && ! empty( $field['min'] ) ) {
-    //         $rules[] = 'min:' . absint( $field['min'] );
-    //     }
-    //     return $rules;
-    // }
 
     private function get_email_rules( array $field ): array {
         $rules = [ 'string', 'email' ];
@@ -139,7 +131,7 @@ class FormGent extends Form {
     }
 
     private function get_gdpr_rules( array $field ): array {
-        return [ 'integer', 'in:0,1' ];
+        return [ 'integer', 'in:1' ];
     }
 
     protected function get_validation_rules( array $form ) : array {
@@ -197,7 +189,8 @@ class FormGent extends Form {
                     $field_rules = $this->get_date_time_picker_rules( $field );
                     break;
                 case 'gdpr':
-                    $field_rules = $this->get_gdpr_rules( $field );
+                    $field_rules   = $this->get_gdpr_rules( $field );
+                    $field_rules[] = 'required';
                     break;
                 default:
                     continue 2;
@@ -260,9 +253,10 @@ class FormGent extends Form {
                     }
                     break;
                 case 'gdpr':
-                    $gdpr_msg                            = $validation_messages['gdpr'] ?? 'You must agree to proceed';
-                    $messages[ "{$field_name}.integer" ] = $gdpr_msg;
-                    $messages[ "{$field_name}.in" ]      = $gdpr_msg;
+                    $gdpr_msg                             = $validation_messages['gdpr'] ?? 'You must agree to proceed';
+                    $messages[ "{$field_name}.required" ] = $gdpr_msg;
+                    $messages[ "{$field_name}.integer" ]  = $gdpr_msg;
+                    $messages[ "{$field_name}.in" ]       = $gdpr_msg;
                     break;
                 case 'rating':
                     $messages[ "{$field_name}.integer" ] = $validation_messages['number'] ?? 'This field must contain numeric value';
@@ -398,5 +392,119 @@ class FormGent extends Form {
         }
 
         do_action( "formgent_after_create_form_response", $response_id, $form_object, $request );
+    }
+
+    public function get_forms(): array {
+
+        $posts = Post::select( "ID", "post_title" )->where( 'post_type', 'formgent_form' )
+            ->where( 'post_status', 'publish' )
+            ->get();
+
+        $result = [];
+
+        foreach ( $posts as $post ) {
+            $result[] = ( new FormDTO() )->set_id( (int) $post->ID )
+                ->set_title( $post->post_title )
+                ->set_exclude_to_array( ['fields'] );
+        }
+
+        return $result;
+    }
+
+    protected function get_standardized_type( string $native_type ): ?string {
+        $map = [
+            'text'            => 'text',
+            'number'          => 'number',
+            'email'           => 'email',
+            'website'         => 'url',
+            'single-choice'   => 'radio',
+            'multiple-choice' => 'checkbox',
+            'dropdown'        => 'single_select',
+            'range-slider'    => 'range',
+            'rating'          => 'rating',
+            'date-picker'     => 'date_time_picker',
+            'gdpr'            => 'gdpr',
+        ];
+
+        return $map[$native_type] ?? null;
+    }
+
+    protected function map_form_to_dto( array $raw_form, array $fields ): FormDTO {
+        $dto = new FormDTO();
+
+        if ( in_array( 'id', $fields, true ) ) {
+            $dto->set_id( (int) ( $raw_form['id'] ?? 0 ) );
+        }
+
+        if ( in_array( 'title', $fields, true ) ) {
+            $dto->set_title( $raw_form['name'] ?? '' );
+        }
+
+        if ( in_array( 'fields', $fields, true ) ) {
+            $form_object = (object) $raw_form;
+            $form_fields = formgent_get_form_fields( $form_object );
+
+            if ( ! empty( $form_fields ) ) {
+                $field_dtos = [];
+
+                foreach ( $form_fields as $field ) {
+                    $std_type = $this->get_standardized_type( $field['field_type'] ?? '' );
+
+                    if ( ! $std_type ) {
+                        continue;
+                    }
+
+                    $fdto = new FormFieldDTO();
+                    $fdto->set_id( $field['name'] ?? '' )
+                        ->set_type( $std_type )
+                        ->set_required( $std_type === 'gdpr' ? true : ! empty( $field['required'] ) )
+                        ->set_label( $field['label'] ?? $field['name'] ?? '' )
+                        ->set_placeholder( $field['placeholder'] ?? '' )
+                        ->set_field_name( $field['name'] ?? '' );
+
+                    if ( ! empty( $field['options'] ) ) {
+                        $items = [];
+
+                        foreach ( $field['options'] as $key => $option ) {
+                            $items[] = [
+                                'id'    => (string) $key,
+                                'label' => is_string( $option ) ? $option : ( $option['label'] ?? '' ),
+                                'value' => is_string( $option ) ? $option : ( $option['value'] ?? '' ),
+                            ];
+                        }
+
+                        $fdto->set_items( $items );
+                    }
+
+                    if ( $std_type === 'range' ) {
+                        $fdto->set_min_value( isset( $field['min_value'] ) ? (float) $field['min_value'] : null )
+                            ->set_max_value( isset( $field['max_value'] ) ? (float) $field['max_value'] : null )
+                            ->set_range_step( isset( $field['step'] ) ? (float) $field['step'] : null );
+                    }
+
+                    if ( $std_type === 'rating' ) {
+                        $fdto->set_rating_max( isset( $field['rating_limit'] ) ? (int) $field['rating_limit'] : 5 );
+                    }
+
+                    if ( $std_type === 'date_time_picker' ) {
+                        $fdto->set_picker_type( $field['option'] ?? 'date' );
+                    }
+
+                    if ( $std_type === 'gdpr' ) {
+                        $fdto->set_label( $field['description'] ?? $field['label'] ?? $field['name'] ?? '' );
+                    }
+
+                    if ( $std_type === 'text' && ! empty( $field['character_limit'] ) && ! empty( $field['limit'] ) ) {
+                        $fdto->set_character_limit( (int) $field['limit'] );
+                    }
+
+                    $field_dtos[] = $fdto;
+                }
+
+                $dto->set_fields( $field_dtos );
+            }
+        }
+
+        return $dto;
     }
 }
