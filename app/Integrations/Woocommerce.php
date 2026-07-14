@@ -9,6 +9,7 @@ use Crafium\AppNatively\App\DTO\Ecommerce\CategoryDTO;
 use Crafium\AppNatively\App\DTO\Ecommerce\CategoryPaginatorDTO;
 use Crafium\AppNatively\App\DTO\Ecommerce\ProductDTO;
 use Crafium\AppNatively\App\DTO\Ecommerce\ProductPaginatorDTO;
+use Crafium\AppNatively\App\DTO\Ecommerce\ProductFiltersDTO;
 use Crafium\AppNatively\App\DTO\Ecommerce\OrderDTO;
 use Crafium\AppNatively\App\DTO\Ecommerce\OrderPaginatorDTO;
 use Crafium\AppNatively\WpMVC\Contracts\Provider;
@@ -16,7 +17,6 @@ use Crafium\AppNatively\WpMVC\RequestValidator\Request;
 use Crafium\AppNatively\App\Integrations\WooCommerce\CartManager;
 use Crafium\AppNatively\App\Integrations\WooCommerce\ProductRepository;
 use Crafium\AppNatively\App\Integrations\WooCommerce\OrderRepository;
-use Crafium\AppNatively\App\Integrations\WooCommerce\AuthManager;
 
 class Woocommerce extends Provider {
     /**
@@ -57,6 +57,7 @@ class Woocommerce extends Provider {
      */
     public function boot() {
         add_filter( "craf_appna_ecommerce_woocommerce_products", [$this, "products"], 10, 3 );
+        add_filter( "craf_appna_ecommerce_woocommerce_products_filters", [$this, "products_filters"], 10, 2 );
         add_filter( "craf_appna_ecommerce_woocommerce_product", [$this, "product"], 10, 3 );
         add_filter( "craf_appna_ecommerce_woocommerce_categories", [$this, "categories"], 10, 3 );
         add_filter( "craf_appna_ecommerce_woocommerce_category", [$this, "category"], 10, 3 );
@@ -125,6 +126,13 @@ class Woocommerce extends Provider {
      */
     public function product( ?ProductDTO $product_dto, Request $request, array $fields = [] ): ?ProductDTO {
         return $this->product_repository->product( $product_dto, $request, $fields );
+    }
+
+    /**
+     * Available product filters for the current context.
+     */
+    public function products_filters( ?ProductFiltersDTO $product_filters, Request $request ): ProductFiltersDTO {
+        return $this->product_repository->filters( $product_filters, $request );
     }
 
     /**

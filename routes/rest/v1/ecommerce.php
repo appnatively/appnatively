@@ -11,6 +11,7 @@ use Crafium\AppNatively\WpMVC\Routing\Route;
 Route::group(
     'products', function() {
         Route::get( '/', [ProductController::class, 'index'] );
+        Route::get( '/filters', [ProductController::class, 'filters'] );
         Route::get( '/{id}', [ProductController::class, 'show'] );
     }
 );
