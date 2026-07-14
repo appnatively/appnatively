@@ -4,6 +4,9 @@ namespace Crafium\AppNatively\App\Integrations\Forms;
 
 defined( "ABSPATH" ) || exit;
 
+use Crafium\AppNatively\App\Models\Post;
+use Crafium\AppNatively\App\DTO\Forms\FormDTO;
+use Crafium\AppNatively\App\DTO\Forms\FormFieldDTO;
 use Crafium\AppNatively\WpMVC\Helpers\Helpers;
 use Crafium\AppNatively\WpMVC\RequestValidator\Request;
 
@@ -23,6 +26,7 @@ class ContactForm7 extends Form {
 
     protected function get_form( int $id ) {
         $form = wpcf7_contact_form( $id );
+        error_log( print_r( $form, true ) );
         if ( $form ) {
             $this->cf7_form = $form;
             return [
@@ -333,12 +337,13 @@ class ContactForm7 extends Form {
             $posted_data['_wpnonce'] = wpcf7_create_nonce();
         }
 
-        $original_post = $_POST;
+        $original_post = $_POST; // phpcs:ignore WordPress.Security.NonceVerification.Missing
         $_POST         = $posted_data;
 
         $original_server = $_SERVER;
 
-        if ( empty( $_SERVER['HTTP_USER_AGENT'] ) || strlen( $_SERVER['HTTP_USER_AGENT'] ) < 2 ) {
+        $http_user_agent = isset( $_SERVER['HTTP_USER_AGENT'] ) ? sanitize_text_field( wp_unslash( $_SERVER['HTTP_USER_AGENT'] ) ) : '';
+        if ( empty( $http_user_agent ) || strlen( $http_user_agent ) < 2 ) {
             $_SERVER['HTTP_USER_AGENT'] = 'AppNatively/1.0';
         }
 
@@ -347,7 +352,8 @@ class ContactForm7 extends Form {
             $_SERVER['REMOTE_ADDR'] = $ip;
         }
 
-        if ( ! \WP_Http::is_ip_address( $_SERVER['REMOTE_ADDR'] ?? '' ) ) {
+        $remote_addr = isset( $_SERVER['REMOTE_ADDR'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) ) : '';
+        if ( ! \WP_Http::is_ip_address( $remote_addr ) ) {
             $_SERVER['REMOTE_ADDR'] = '127.0.0.1';
         }
 
@@ -385,5 +391,201 @@ class ContactForm7 extends Form {
             $_POST   = $original_post;
             $_SERVER = $original_server;
         }
+    }
+
+    public function get_forms(): array {
+        // Contact form 7 uses 'wpcf7_contact_form' as its custom post type
+        $posts = Post::select( "ID", "post_title" )
+            ->where( 'post_type', 'wpcf7_contact_form' )
+            ->where( 'post_status', 'publish' )
+            ->get();
+
+        $result = [];
+
+        foreach ( $posts as $post ) {
+            $result[] = ( new FormDTO() )
+                ->set_id( (int) $post->ID )
+                ->set_title( $post->post_title )
+                ->set_exclude_to_array( ['fields'] );
+        }
+
+        return $result;
+    }
+
+    protected function get_standardized_type( string $native_type ): ?string {
+        $map = [
+            'text'       => 'text',
+            'email'      => 'email',
+            'url'        => 'url',
+            'number'     => 'number',
+            'date'       => 'date_time_picker',
+            'checkbox'   => 'checkbox',
+            'radio'      => 'radio',
+            'select'     => 'single_select',
+            'acceptance' => 'gdpr',
+            'textarea'   => 'text',
+            'tel'        => 'text',
+            'password'   => 'password',
+            'range'      => 'range',
+            'quiz'       => 'text',
+        ];
+
+        return $map[$native_type] ?? null;
+    }
+
+    private function extract_cf7_labels( string $template ): array {
+        $labels = [];
+
+        if ( empty( $template ) ) {
+            return $labels;
+        }
+
+        // Match all <label ...>...</label> blocks (case-insensitive, dotall).
+        if ( ! preg_match_all( '/<label\b([^>]*)>(.*?)<\/label>/is', $template, $label_matches, PREG_SET_ORDER ) ) {
+            return $labels;
+        }
+
+        $tag_name_regex = '/\[([a-zA-Z]+)(?:\*)?\s+([A-Za-z0-9_\-\.]+)/';
+
+        // Resolve tag name for each id:option across the whole template (for the for/id pattern).
+        $id_to_name = [];
+        if ( preg_match_all( '/\[([a-zA-Z]+)(?:\*)?\s+([A-Za-z0-9_\-\.]+)([^\]]*)\]/', $template, $all_tags, PREG_SET_ORDER ) ) {
+            foreach ( $all_tags as $t ) {
+                $name = strtr( $t[2], '.', '_' );
+                $rest = $t[3] ?? '';
+                if ( preg_match( '/\bid:([A-Za-z0-9_\-]+)/', $rest, $idm ) ) {
+                    $id_to_name[ $idm[1] ] = $name;
+                }
+            }
+        }
+
+        foreach ( $label_matches as $lm ) {
+            $attrs = $lm[1];
+            $inner = $lm[2];
+
+            // Clean the label text: strip form-tag tokens and HTML tags, collapse whitespace.
+            $text = preg_replace( '/\[[^\]]*\]/', '', $inner );
+            $text = trim( strip_tags( $text ) );
+            $text = preg_replace( '/\s+/', ' ', $text );
+
+            if ( $text === '' ) {
+                continue;
+            }
+
+            // Pattern 1: a form-tag name appears inside the <label>.
+            if ( preg_match_all( $tag_name_regex, $inner, $tags_inside, PREG_SET_ORDER ) ) {
+                foreach ( $tags_inside as $t ) {
+                    $name            = strtr( $t[2], '.', '_' );
+                    $labels[ $name ] = $text;
+                }
+                continue;
+            }
+
+            // Pattern 2: <label for="x">...</label> paired with [... id:x].
+            if ( preg_match( '/\bfor\s*=\s*["\']?([A-Za-z0-9_\-]+)/i', $attrs, $fm ) ) {
+                $for_id = $fm[1];
+                if ( isset( $id_to_name[ $for_id ] ) ) {
+                    $labels[ $id_to_name[ $for_id ] ] = $text;
+                }
+            }
+        }
+
+        return $labels;
+    }
+
+    protected function map_form_to_dto( array $raw_form, array $fields ): FormDTO {
+        $dto = new FormDTO();
+
+        if ( in_array( 'id', $fields, true ) ) {
+            $dto->set_id( (int) ( $raw_form['id'] ?? 0 ) );
+        }
+
+        if ( in_array( 'title', $fields, true ) ) {
+            $dto->set_title( $raw_form['title'] ?? '' );
+        }
+
+        if ( in_array( 'status', $fields, true ) ) {
+            $dto->set_status( $raw_form['status'] ?? 'publish' );
+        }
+
+        if ( in_array( 'date_created', $fields, true ) ) {
+            $dto->set_date_created( $raw_form['date_created'] ?? '' );
+        }
+
+        if ( in_array( 'date_updated', $fields, true ) ) {
+            $dto->set_date_updated( $raw_form['date_updated'] ?? '' );
+        }
+
+        if ( in_array( 'fields', $fields, true ) && ! empty( $raw_form['id'] ) ) {
+            $cf7_form   = wpcf7_contact_form( (int) $raw_form['id'] );
+            $field_dtos = [];
+
+            if ( $cf7_form ) {
+                $tags      = $cf7_form->scan_form_tags();
+                $label_map = $this->extract_cf7_labels( (string) $cf7_form->prop( 'form' ) );
+
+                foreach ( $tags as $tag ) {
+                    if ( empty( $tag->name ) || empty( $tag->basetype ) ) {
+                        continue;
+                    }
+
+                    $std_type = $this->get_standardized_type( $tag->basetype );
+
+                    if ( ! $std_type ) {
+                        continue;
+                    }
+
+                    $fdto = new FormFieldDTO();
+                    $fdto->set_id( $tag->name )
+                        ->set_type( $std_type )
+                        ->set_required( $tag->is_required() )
+                        ->set_label( $label_map[ $tag->name ] ?? '' )
+                        ->set_placeholder( $tag->get_option( 'placeholder', '', true ) ?: '' )
+                        ->set_field_name( $tag->name );
+
+                    $maxlength = $tag->get_maxlength_option();
+                    if ( $maxlength ) {
+                        $fdto->set_max_length( (int) $maxlength );
+                    }
+
+                    $minlength = $tag->get_minlength_option();
+                    if ( $minlength ) {
+                        $fdto->set_min_length( (int) $minlength );
+                    }
+
+                    if ( $std_type === 'number' ) {
+                        $min = $tag->get_option( 'min', 'signed_num', true );
+                        $max = $tag->get_option( 'max', 'signed_num', true );
+
+                        if ( false !== $min ) {
+                            $fdto->set_min_value( (float) $min );
+                        }
+                        if ( false !== $max ) {
+                            $fdto->set_max_value( (float) $max );
+                        }
+                    }
+
+                    if ( in_array( $std_type, [ 'radio', 'checkbox', 'single_select' ], true ) ) {
+                        $items = [];
+
+                        foreach ( $tag->values as $key => $value ) {
+                            $items[] = [
+                                'id'    => (string) $key,
+                                'label' => $tag->labels[$key] ?? $value,
+                                'value' => $value,
+                            ];
+                        }
+
+                        $fdto->set_items( $items );
+                    }
+
+                    $field_dtos[] = $fdto;
+                }
+            }
+
+            $dto->set_fields( $field_dtos );
+        }
+
+        return $dto;
     }
 }

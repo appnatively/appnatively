@@ -4,14 +4,17 @@ namespace Crafium\AppNatively\App\Integrations\Forms;
 
 defined( "ABSPATH" ) || exit;
 
+use Crafium\AppNatively\App\DTO\Forms\FormDTO;
+use Crafium\AppNatively\App\DTO\Forms\FormFieldDTO;
 use Crafium\AppNatively\WpMVC\Helpers\Helpers;
 use Crafium\AppNatively\WpMVC\RequestValidator\Request;
 
-class FluentForm extends Form {
+class FluentForm extends Form
+{
     public function get_key(): string {
         return 'fluentform';
     }
-    
+
     public function boot(): void {
         if ( ! function_exists( 'fluentFormApi' ) && ! defined( 'FLUENTFORM' ) ) {
             return;
@@ -145,7 +148,7 @@ class FluentForm extends Form {
         return $rules;
     }
 
-    protected function get_validation_rules( array $form ) : array {
+    protected function get_validation_rules( array $form ): array {
         $form_fields = $this->get_form_fields_array( $form );
         if ( empty( $form_fields['fields'] ) ) {
             return [];
@@ -235,9 +238,9 @@ class FluentForm extends Form {
 
         $resolve_message = function ( array $rule, string $rule_key, string $fallback ) use ( $default_messages ): string {
             if ( ! empty( $rule['global'] ) ) {
-                return $rule['global_message'] ?? ( $default_messages[ $rule_key ] ?? $fallback );
+                return $rule['global_message'] ?? ( $default_messages[$rule_key] ?? $fallback );
             }
-            return $rule['message'] ?? ( $default_messages[ $rule_key ] ?? $fallback );
+            return $rule['message'] ?? ( $default_messages[$rule_key] ?? $fallback );
         };
 
         foreach ( $flattened_fields as $field ) {
@@ -256,36 +259,36 @@ class FluentForm extends Form {
 
             $is_required = ! empty( $validation_rules['required']['value'] );
             if ( $is_required ) {
-                $messages[ "{$field_name}.required" ] = $resolve_message( $validation_rules['required'], 'required', 'This field is required' );
+                $messages["{$field_name}.required"] = $resolve_message( $validation_rules['required'], 'required', 'This field is required' );
             }
 
             switch ( $mapped_type ) {
                 case 'email':
                     if ( ! empty( $validation_rules['email']['value'] ) ) {
-                        $messages[ "{$field_name}.email" ] = $resolve_message( $validation_rules['email'], 'email', 'This field must contain a valid email' );
+                        $messages["{$field_name}.email"] = $resolve_message( $validation_rules['email'], 'email', 'This field must contain a valid email' );
                     }
                     break;
                 case 'url':
-                    $messages[ "{$field_name}.url" ] = $default_messages['url'] ?? 'This field must contain a valid url';
+                    $messages["{$field_name}.url"] = $default_messages['url'] ?? 'This field must contain a valid url';
                     break;
                 case 'number':
-                    $messages[ "{$field_name}.numeric" ] = $default_messages['numeric'] ?? 'This field must contain numeric value';
+                    $messages["{$field_name}.numeric"] = $default_messages['numeric'] ?? 'This field must contain numeric value';
                     if ( ! empty( $validation_rules['min']['value'] ) ) {
-                        $messages[ "{$field_name}.min" ] = $resolve_message( $validation_rules['min'], 'min', 'Validation fails for minimum value' );
+                        $messages["{$field_name}.min"] = $resolve_message( $validation_rules['min'], 'min', 'Validation fails for minimum value' );
                     }
                     if ( ! empty( $validation_rules['max']['value'] ) ) {
-                        $messages[ "{$field_name}.max" ] = $resolve_message( $validation_rules['max'], 'max', 'Validation fails for maximum value' );
+                        $messages["{$field_name}.max"] = $resolve_message( $validation_rules['max'], 'max', 'Validation fails for maximum value' );
                     }
                     break;
                 case 'gdpr':
-                    $gdpr_msg                            = $default_messages['required'] ?? 'This field is required';
-                    $messages[ "{$field_name}.integer" ] = $gdpr_msg;
-                    $messages[ "{$field_name}.in" ]      = $gdpr_msg;
+                    $gdpr_msg                          = $default_messages['required'] ?? 'This field is required';
+                    $messages["{$field_name}.integer"] = $gdpr_msg;
+                    $messages["{$field_name}.in"]      = $gdpr_msg;
                     break;
                 case 'rating':
-                    $messages[ "{$field_name}.integer" ] = $default_messages['numeric'] ?? 'This field must contain numeric value';
+                    $messages["{$field_name}.integer"] = $default_messages['numeric'] ?? 'This field must contain numeric value';
                     if ( ! empty( $validation_rules['max']['value'] ) ) {
-                        $messages[ "{$field_name}.max" ] = $resolve_message( $validation_rules['max'], 'max', 'Validation fails for maximum value' );
+                        $messages["{$field_name}.max"] = $resolve_message( $validation_rules['max'], 'max', 'Validation fails for maximum value' );
                     }
                     break;
             }
@@ -294,7 +297,7 @@ class FluentForm extends Form {
         return $messages;
     }
 
-    private function extract_fluentform_fields( array $elements ) : array {
+    private function extract_fluentform_fields( array $elements ): array {
         $fields = [];
         foreach ( $elements as $element ) {
             if ( ! empty( $element['columns'] ) ) {
@@ -385,7 +388,7 @@ class FluentForm extends Form {
                 'user_id'       => is_user_logged_in() ? wp_get_current_user()->ID : null,
                 'created_at'    => current_time( 'mysql' ),
                 'updated_at'    => current_time( 'mysql' ),
-            ] 
+            ]
         );
 
         // Insert into wp_fluentform_entry_details using Fluent Forms native service
@@ -397,5 +400,215 @@ class FluentForm extends Form {
         // Trigger the submission inserted hook so notifications/feeds run
         // phpcs:ignore WordPress.NamingConventions.ValidHookName.UseUnderscores
         do_action( 'fluentform/submission_inserted', $submission_id, $form_data, $form_model ?: (object) $form );
+    }
+
+    public function get_forms(): array {
+        // Query Fluent Forms' custom database table directly
+        $forms = wpFluent()->table( 'fluentform_forms' )
+            ->select( ['id', 'title', 'status'] )
+            ->where( 'status', 'published' ) // Filters active forms
+            ->get();
+
+        $result = [];
+
+        foreach ( $forms as $form ) {
+            // Map the properties from the custom table object to your DTO
+            $result[] = ( new FormDTO() )->set_id( (int) $form->id )
+                ->set_title( $form->title )
+                ->set_exclude_to_array( ['fields'] );
+        }
+
+        return $result;
+    }
+
+    protected function get_standardized_type( string $native_type ): ?string {
+        $map = [
+            'input_text'     => 'text',
+            'input_number'   => 'number',
+            'input_email'    => 'email',
+            'input_url'      => 'url',
+            'input_radio'    => 'radio',
+            'input_checkbox' => 'checkbox',
+            'select'         => 'single_select',
+            'ratings'        => 'rating',
+            'input_date'     => 'date_time_picker',
+            'input_password' => 'password',
+            'gdpr'           => 'gdpr',
+            'input_hidden'   => 'text',
+            'textarea'       => 'text',
+            'input_textarea' => 'text',
+        ];
+
+        return $map[$native_type] ?? null;
+    }
+
+    protected function map_form_to_dto( array $raw_form, array $fields ): FormDTO {
+        $dto = new FormDTO();
+
+        if ( in_array( 'id', $fields, true ) ) {
+            $dto->set_id( (int) ( $raw_form['id'] ?? 0 ) );
+        }
+
+        if ( in_array( 'title', $fields, true ) ) {
+            $dto->set_title( $raw_form['title'] ?? '' );
+        }
+
+        if ( in_array( 'status', $fields, true ) ) {
+            $dto->set_status( $raw_form['status'] ?? 'publish' );
+        }
+
+        if ( in_array( 'date_created', $fields, true ) ) {
+            $dto->set_date_created( $raw_form['created_at'] ?? '' );
+        }
+
+        if ( in_array( 'date_updated', $fields, true ) ) {
+            $dto->set_date_updated( $raw_form['updated_at'] ?? '' );
+        }
+
+        if ( in_array( 'fields', $fields, true ) ) {
+            $form_fields = $this->get_form_fields_array( $raw_form );
+
+            if ( ! empty( $form_fields['fields'] ) ) {
+                $flattened  = $this->extract_fluentform_fields( $form_fields['fields'] );
+                $field_dtos = [];
+
+                foreach ( $flattened as $field ) {
+                    $element_type = $field['element'] ?? '';
+                    $std_type     = $this->get_standardized_type( $element_type );
+
+                    if ( ! $std_type ) {
+                        continue;
+                    }
+
+                    $field_name = $field['attributes']['name'] ?? $field['name'] ?? '';
+
+                    if ( ! $field_name ) {
+                        continue;
+                    }
+
+                    $fdto = new FormFieldDTO();
+                    $fdto->set_id( $field_name )
+                        ->set_type( $std_type )
+                        ->set_required( ! empty( $field['settings']['validation_rules']['required']['value'] ) || ! empty( $field['required'] ) )
+                        ->set_label( $field['settings']['label'] ?? $field['label'] ?? '' )
+                        ->set_placeholder( $field['attributes']['placeholder'] ?? '' )
+                        ->set_field_name( $field_name );
+
+                    $options = ! empty( $field['settings']['advanced_options'] )
+                        ? $field['settings']['advanced_options']
+                        : ( $field['options'] ?? [] );
+
+                    if ( ! empty( $options ) ) {
+                        $items = [];
+
+                        foreach ( $options as $key => $option ) {
+                            if ( is_string( $option ) ) {
+                                // Legacy {value => label} map
+                                $items[] = [
+                                    'id'    => (string) $key,
+                                    'label' => $option,
+                                    'value' => $option,
+                                ];
+                            } elseif ( is_array( $option ) ) {
+                                $items[] = [
+                                    'id'    => isset( $option['id'] ) ? (string) $option['id'] : (string) $key,
+                                    'label' => $option['label'] ?? $option['value'] ?? (string) $key,
+                                    'value' => $option['value'] ?? $option['label'] ?? (string) $key,
+                                ];
+                            }
+                        }
+
+                        if ( $items ) {
+                            $fdto->set_items( $items );
+                        }
+                    }
+
+                    if ( $std_type === 'number' ) {
+                        $fdto->set_min_value( isset( $field['settings']['validation_rules']['min']['value'] ) ? (float) $field['settings']['validation_rules']['min']['value'] : null )
+                            ->set_max_value( isset( $field['settings']['validation_rules']['max']['value'] ) ? (float) $field['settings']['validation_rules']['max']['value'] : null );
+                    }
+
+                    if ( $std_type === 'rating' ) {
+                        $fdto->set_rating_max( 5 );
+                    }
+
+                    if ( $std_type === 'date_time_picker' ) {
+                        $format = $field['settings']['date_format'] ?? 'd/m/Y';
+                        $fdto->set_picker_type( $this->fluentform_date_picker_type( $format ) )
+                            ->set_date_format( $this->flatpickr_to_date_fns_format( $format ) );
+                    }
+
+                    if ( $std_type === 'text' && ! empty( $field['settings']['validation_rules']['max']['value'] ) ) {
+                        $fdto->set_character_limit( (int) $field['settings']['validation_rules']['max']['value'] );
+                    }
+
+                    $field_dtos[] = $fdto;
+                }
+
+                $dto->set_fields( $field_dtos );
+            }
+        }
+
+        return $dto;
+    }
+
+    private function fluentform_date_picker_type( string $format ): string {
+        $time_tokens = ['H', 'h', 'G', 'i', 'S', 's', 'K'];
+        $date_tokens = ['d', 'D', 'l', 'j', 'J', 'w', 'W', 'F', 'm', 'n', 'M', 'U', 'Y', 'y', 'Z'];
+
+        $has_time = false;
+        foreach ( $time_tokens as $t ) {
+            if ( strpos( $format, $t ) !== false ) {
+                $has_time = true;
+                break;
+            }
+        }
+
+        $has_date = false;
+        foreach ( $date_tokens as $t ) {
+            if ( strpos( $format, $t ) !== false ) {
+                $has_date = true;
+                break;
+            }
+        }
+
+        if ( $has_time && ! $has_date ) {
+            return 'time';
+        }
+        if ( $has_time && $has_date ) {
+            return 'both';
+        }
+        return 'date';
+    }
+
+    private function flatpickr_to_date_fns_format( string $format ): string {
+        $map = [
+            'Y' => 'yyyy',
+            'y' => 'yy',
+            'm' => 'MM',
+            'n' => 'M',
+            'M' => 'MMM',
+            'F' => 'MMMM',
+            'd' => 'dd',
+            'j' => 'd',
+            'D' => 'EEE',
+            'l' => 'EEEE',
+            'J' => 'do',
+            'H' => 'HH',
+            'G' => 'H',
+            'h' => 'hh',
+            'g' => 'h',
+            'i' => 'mm',
+            'S' => 'ss',
+            's' => 'ss',
+            'K' => 'a',
+            'Z' => 'xxx',
+        ];
+
+        $out = '';
+        for ( $k = 0, $len = strlen( $format ); $k < $len; $k++ ) {
+            $out .= $map[$format[$k]] ?? $format[$k];
+        }
+        return $out;
     }
 }

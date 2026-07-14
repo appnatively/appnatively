@@ -2,13 +2,56 @@
 
 namespace Crafium\AppNatively\App\Http\Controllers;
 
+use Crafium\AppNatively\App\DTO\Forms\FormsDTO;
+
 defined( "ABSPATH" ) || exit;
 
+use Crafium\AppNatively\App\DTO\Forms\FormDTO;
+use Crafium\AppNatively\App\DTO\Forms\FormPaginatorDTO;
 use Crafium\AppNatively\App\Http\Controllers\Controller;
+use Crafium\AppNatively\WpMVC\Exceptions\Exception;
 use Crafium\AppNatively\WpMVC\Routing\Response;
 use Crafium\AppNatively\WpMVC\RequestValidator\Request;
 
 class FormController extends Controller {
+    public function index( Request $request ): array {
+        $request->validate(
+            [
+                "integration" => "required|string",
+            ]
+        );
+
+        $integration = sanitize_text_field( $request->get_param( "integration" ) );
+        $forms       = apply_filters( "craf_appna_form_{$integration}_forms", null, $request );
+
+        if ( ! $forms instanceof FormsDTO ) {
+            throw new Exception( esc_html__( "Forms integration not found", 'appnatively' ) );
+        }
+        return Response::send( ["data" => $forms] );
+    }
+
+    public function show( Request $request ): array {
+        $request->validate(
+            [
+                "id"          => "required|numeric",
+                "integration" => "required|string",
+            ]
+        );
+
+        $integration = sanitize_text_field( $request->get_param( "integration" ) );
+        $form        = apply_filters( "craf_appna_form_{$integration}_form", null, $request );
+
+        if ( ! $form instanceof FormDTO ) {
+            throw new Exception( esc_html__( "Form not found", 'appnatively' ) );
+        }
+
+        return Response::send(
+            [
+                "data" => $form,
+            ]
+        );
+    }
+
     public function store( Request $request ): array {
         $request->validate(
             [
@@ -30,6 +73,7 @@ class FormController extends Controller {
         return Response::send( ['message' => __( 'Form submitted successfully', 'appnatively' ), 'success' => true] );
     }
 
+    // form specific class e jabe
     private function get_processing_errors( string $integration ): ?array {
         if ( $integration !== 'wpforms' || ! function_exists( 'wpforms' ) ) {
             return null;

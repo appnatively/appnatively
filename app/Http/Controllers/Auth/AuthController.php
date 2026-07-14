@@ -28,7 +28,7 @@ class AuthController extends Controller {
         $user = wp_authenticate( sanitize_email( $request->get_param( 'email' ) ), $request->get_param( 'password' ) );
 
         if ( is_wp_error( $user ) ) {
-            throw new Exception( "Invalid email or password", 401 );
+            throw new Exception( "The provided login credentials are invalid.", 401 );
         }
 
         $token = $this->generate_token( $user->ID );

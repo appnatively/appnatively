@@ -11,6 +11,8 @@ class ProductDTO extends DTO {
 
     private string $name;
 
+    private string $url;
+
     private string $slug;
 
     private string $type;
@@ -474,6 +476,16 @@ class ProductDTO extends DTO {
      */
     public function set_date_updated( string $date_updated ): self {
         $this->date_updated = $date_updated;
+        return $this;
+    }
+
+    public function get_url() {
+        return $this->url;
+    }
+
+    public function set_url( $url ) {
+        $this->url = $url;
+
         return $this;
     }
 }

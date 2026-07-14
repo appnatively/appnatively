@@ -218,7 +218,7 @@ class EverestFormTest extends \WP_UnitTestCase {
         if ( ! empty( $entry_ids ) ) {
             $ids_placeholder = implode( ',', array_fill( 0, count( $entry_ids ), '%d' ) );
             $wpdb->query(
-                $wpdb->prepare( "DELETE FROM {$meta_table} WHERE entry_id IN ({$ids_placeholder})", $entry_ids ) // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+                $wpdb->prepare( "DELETE FROM {$meta_table} WHERE entry_id IN ({$ids_placeholder})", $entry_ids ) // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare
             );
         }
 
