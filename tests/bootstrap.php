@@ -33,6 +33,20 @@ function _manually_load_plugin() {
     }
     $wp_plugins_dir = $wp_core_dir . '/wp-content/plugins';
 
+    $load_plugin = function( string $relative_path ) use ( $wp_plugins_dir ): void {
+        $plugin_path = '';
+
+        if ( file_exists( $wp_plugins_dir . '/' . $relative_path ) ) {
+            $plugin_path = $wp_plugins_dir . '/' . $relative_path;
+        } elseif ( file_exists( dirname( __DIR__, 2 ) . '/' . $relative_path ) ) {
+            $plugin_path = dirname( __DIR__, 2 ) . '/' . $relative_path;
+        }
+
+        if ( $plugin_path ) {
+            require_once $plugin_path;
+        }
+    };
+
     // Load FluentForm
     if ( file_exists( $wp_plugins_dir . '/fluentform/fluentform.php' ) ) {
         require_once $wp_plugins_dir . '/fluentform/fluentform.php';
@@ -209,6 +223,12 @@ function _manually_load_plugin() {
         require_once $_surecart_path;
     }
     unset( $_surecart_path );
+
+    $load_plugin( 'directorist/directorist-base.php' );
+    $load_plugin( 'geodirectory/geodirectory.php' );
+    $load_plugin( 'hivepress/hivepress.php' );
+    $load_plugin( 'business-directory-plugin/business-directory-plugin.php' );
+    $load_plugin( 'classified-listing/classified-listing.php' );
 
     require dirname( __DIR__ ) . '/appnatively.php';
 

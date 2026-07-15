@@ -34,6 +34,7 @@ class Directorist extends Provider {
         add_filter( "craf_appna_directory_directorist_listings", [$this, "listings"], 10, 3 );
         add_filter( "craf_appna_directory_directorist_listing", [$this, "listing"], 10, 3 );
         add_filter( "craf_appna_directory_directorist_related_listings", [$this, "related_listings"], 10, 3 );
+        add_filter( "craf_appna_directory_directorist_reviews", [$this, "reviews"], 10, 2 );
         add_filter( "craf_appna_directory_directorist_categories", [$this, "categories"], 10, 3 );
         add_filter( "craf_appna_directory_directorist_category", [$this, "category"], 10, 3 );
         add_filter( "craf_appna_directory_directorist_tags", [$this, "tags"], 10, 3 );
@@ -56,10 +57,10 @@ class Directorist extends Provider {
         $sort      = sanitize_text_field( (string) $request->get_param( "sort" ) );
         $post_type = defined( "ATBDP_POST_TYPE" ) ? ATBDP_POST_TYPE : "at_biz_dir";
 
-        $categories = $request->get_param( "categories" );
-        $tags       = $request->get_param( "tags" );
-        $locations  = $request->get_param( "locations" );
-        $isFeatured = $request->get_param( "isFeatured" );
+        $categories  = $request->get_param( "categories" );
+        $tags        = $request->get_param( "tags" );
+        $locations   = $request->get_param( "locations" );
+        $is_featured = $request->get_param( "isFeatured" );
 
         $order_by = "date";
         $order    = "DESC";
@@ -121,7 +122,7 @@ class Directorist extends Provider {
             $wp_query_args["tax_query"] = $tax_query;
         }
 
-        if ( ! empty( $isFeatured ) && filter_var( $isFeatured, FILTER_VALIDATE_BOOLEAN ) ) {
+        if ( ! empty( $is_featured ) && filter_var( $is_featured, FILTER_VALIDATE_BOOLEAN ) ) {
             $wp_query_args["meta_query"] = [
                 [
                     "key"   => "_featured",
@@ -251,6 +252,71 @@ class Directorist extends Provider {
             max( 1, (int) $query->max_num_pages ),
             $items
         );
+    }
+
+    /**
+     * Get approved reviews for a Directorist listing.
+     *
+     * @param array|null $reviews The review payload.
+     * @param Request    $request The REST request instance.
+     * @return array|null
+     */
+    public function reviews( ?array $reviews, Request $request ): ?array {
+        $listing_id = (int) $request->get_param( "id" );
+        $page       = (int) $request->get_param( "page" ) ?: 1;
+        $per_page   = (int) $request->get_param( "per_page" ) ?: 10;
+        $post_type  = defined( "ATBDP_POST_TYPE" ) ? ATBDP_POST_TYPE : "at_biz_dir";
+        $post       = get_post( $listing_id );
+
+        if ( ! $post instanceof WP_Post || $post->post_type !== $post_type || $post->post_status !== "publish" ) {
+            return null;
+        }
+
+        $base_args = [
+            "post_id" => $listing_id,
+            "status"  => "approve",
+            "type"    => "review",
+        ];
+
+        $total = (int) get_comments(
+            array_merge(
+                $base_args,
+                [
+                    "count" => true,
+                ]
+            )
+        );
+
+        $comments = get_comments(
+            array_merge(
+                $base_args,
+                [
+                    "number"  => $per_page,
+                    "offset"  => ( $page - 1 ) * $per_page,
+                    "orderby" => "comment_date_gmt",
+                    "order"   => "DESC",
+                ]
+            )
+        );
+
+        $rating_counts = $this->get_review_rating_counts( $listing_id );
+        $average       = function_exists( "directorist_get_listing_rating" )
+            ? (float) directorist_get_listing_rating( $listing_id )
+            : $this->calculate_average_rating( $rating_counts );
+        $review_count  = function_exists( "directorist_get_listing_review_count" )
+            ? (int) directorist_get_listing_review_count( $listing_id )
+            : $total;
+
+        return [
+            "current_page"   => $page,
+            "per_page"       => $per_page,
+            "total"          => $total,
+            "last_page"      => max( 1, (int) ceil( $total / $per_page ) ),
+            "average_rating" => $average,
+            "review_count"   => $review_count,
+            "rating_counts"  => $rating_counts,
+            "items"          => array_map( [$this, "map_review_comment"], $comments ),
+        ];
     }
 
     /**
@@ -895,5 +961,86 @@ class Directorist extends Provider {
             },
             $terms
         );
+    }
+
+    /**
+     * Map a WordPress review comment to the mobile API shape.
+     *
+     * @param \WP_Comment $comment The review comment.
+     * @return array
+     */
+    private function map_review_comment( \WP_Comment $comment ): array {
+        return [
+            "id"           => (int) $comment->comment_ID,
+            "reviewer"     => (string) $comment->comment_author,
+            "review"       => (string) $comment->comment_content,
+            "rating"       => (float) get_comment_meta( $comment->comment_ID, "rating", true ),
+            "date_created" => (string) get_comment_date( DATE_ATOM, $comment ),
+            "avatar_url"   => (string) get_avatar_url(
+                $comment,
+                [
+                    "size" => 96,
+                ]
+            ),
+        ];
+    }
+
+    /**
+     * Get rating distribution for a listing.
+     *
+     * @param int $listing_id The listing ID.
+     * @return array
+     */
+    private function get_review_rating_counts( int $listing_id ): array {
+        $counts     = get_post_meta( $listing_id, "_directorist_listing_rating_counts", true );
+        $normalized = [
+            "1" => 0,
+            "2" => 0,
+            "3" => 0,
+            "4" => 0,
+            "5" => 0,
+        ];
+
+        if ( is_array( $counts ) ) {
+            foreach ( $normalized as $rating => $count ) {
+                $normalized[$rating] = (int) ( $counts[$rating] ?? 0 );
+            }
+
+            return $normalized;
+        }
+
+        $comments = get_comments(
+            [
+                "post_id" => $listing_id,
+                "status"  => "approve",
+                "type"    => "review",
+            ]
+        );
+
+        foreach ( $comments as $comment ) {
+            $rating = (int) round( (float) get_comment_meta( $comment->comment_ID, "rating", true ) );
+            $rating = max( 1, min( 5, $rating ) );
+            $normalized[(string) $rating]++;
+        }
+
+        return $normalized;
+    }
+
+    /**
+     * Calculate the average rating from distribution counts.
+     *
+     * @param array $rating_counts The rating counts.
+     * @return float
+     */
+    private function calculate_average_rating( array $rating_counts ): float {
+        $total = 0;
+        $sum   = 0;
+
+        foreach ( $rating_counts as $rating => $count ) {
+            $total += (int) $count;
+            $sum   += (int) $rating * (int) $count;
+        }
+
+        return $total > 0 ? round( $sum / $total, 1 ) : 0.0;
     }
 }

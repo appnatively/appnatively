@@ -157,146 +157,43 @@ class ListingController extends Controller {
             ]
         );
 
-        $listing_id = (int) $request->get_param( "id" );
-        $page       = (int) $request->get_param( "page" ) ?: 1;
-        $per_page   = (int) $request->get_param( "per_page" ) ?: 10;
-        $post_type  = defined( "ATBDP_POST_TYPE" ) ? ATBDP_POST_TYPE : "at_biz_dir";
-        $post       = get_post( $listing_id );
+        $integration = sanitize_text_field( $request->get_param( "integration" ) );
+        $hook        = "craf_appna_directory_{$integration}_reviews";
 
-        if ( ! $post instanceof \WP_Post || $post->post_type !== $post_type || $post->post_status !== "publish" ) {
+        if ( ! has_filter( $hook ) ) {
+            throw new Exception( esc_html__( "Reviews integration not found", "appnatively" ) );
+        }
+
+        $reviews = apply_filters( $hook, null, $request );
+
+        if ( null === $reviews ) {
             throw new Exception( esc_html__( "Listing not found", "appnatively" ) );
         }
 
-        $base_args = [
-            "post_id" => $listing_id,
-            "status"  => "approve",
-            "type"    => "review",
-        ];
+        if ( ! $this->is_valid_review_payload( $reviews ) ) {
+            throw new Exception( esc_html__( "Reviews integration not found", "appnatively" ) );
+        }
 
-        $total = (int) get_comments(
-            array_merge(
-                $base_args,
-                [
-                    "count" => true,
-                ]
-            )
-        );
-
-        $comments = get_comments(
-            array_merge(
-                $base_args,
-                [
-                    "number"  => $per_page,
-                    "offset"  => ( $page - 1 ) * $per_page,
-                    "orderby" => "comment_date_gmt",
-                    "order"   => "DESC",
-                ]
-            )
-        );
-
-        $rating_counts = $this->get_review_rating_counts( $listing_id );
-        $items         = array_map( [$this, "map_review_comment"], $comments );
-        $average       = function_exists( "directorist_get_listing_rating" )
-            ? (float) directorist_get_listing_rating( $listing_id )
-            : $this->calculate_average_rating( $rating_counts );
-        $review_count  = function_exists( "directorist_get_listing_review_count" )
-            ? (int) directorist_get_listing_review_count( $listing_id )
-            : $total;
-
-        return Response::send(
-            [
-                "data" => [
-                    "current_page"   => $page,
-                    "per_page"       => $per_page,
-                    "total"          => $total,
-                    "last_page"      => max( 1, (int) ceil( $total / $per_page ) ),
-                    "average_rating" => $average,
-                    "review_count"   => $review_count,
-                    "rating_counts"  => $rating_counts,
-                    "items"          => $items,
-                ],
-            ]
-        );
+        return Response::send( ["data" => $reviews] );
     }
 
     /**
-     * Map a WordPress review comment to the mobile API shape.
+     * Validate provider review payload shape.
      *
-     * @param \WP_Comment $comment The review comment.
-     * @return array
+     * @param mixed $reviews The provider review payload.
+     * @return bool
      */
-    private function map_review_comment( \WP_Comment $comment ): array {
-        return [
-            "id"           => (int) $comment->comment_ID,
-            "reviewer"     => (string) $comment->comment_author,
-            "review"       => (string) $comment->comment_content,
-            "rating"       => (float) get_comment_meta( $comment->comment_ID, "rating", true ),
-            "date_created" => (string) get_comment_date( DATE_ATOM, $comment ),
-            "avatar_url"   => (string) get_avatar_url(
-                $comment,
-                [
-                    "size" => 96,
-                ]
-            ),
-        ];
-    }
+    private function is_valid_review_payload( $reviews ): bool {
+        if ( ! is_array( $reviews ) ) {
+            return false;
+        }
 
-    /**
-     * Get rating distribution for a listing.
-     *
-     * @param int $listing_id The listing ID.
-     * @return array
-     */
-    private function get_review_rating_counts( int $listing_id ): array {
-        $counts = get_post_meta( $listing_id, "_directorist_listing_rating_counts", true );
-        $normalized = [
-            "1" => 0,
-            "2" => 0,
-            "3" => 0,
-            "4" => 0,
-            "5" => 0,
-        ];
-
-        if ( is_array( $counts ) ) {
-            foreach ( $normalized as $rating => $count ) {
-                $normalized[$rating] = (int) ( $counts[$rating] ?? 0 );
+        foreach ( ["current_page", "per_page", "total", "last_page", "average_rating", "review_count", "rating_counts", "items"] as $key ) {
+            if ( ! array_key_exists( $key, $reviews ) ) {
+                return false;
             }
-
-            return $normalized;
         }
 
-        $comments = get_comments(
-            [
-                "post_id" => $listing_id,
-                "status"  => "approve",
-                "type"    => "review",
-            ]
-        );
-
-        foreach ( $comments as $comment ) {
-            $rating = (int) round( (float) get_comment_meta( $comment->comment_ID, "rating", true ) );
-            $rating = max( 1, min( 5, $rating ) );
-            $normalized[(string) $rating]++;
-        }
-
-        return $normalized;
-    }
-
-    /**
-     * Calculate the average rating from distribution counts.
-     *
-     * @param array $rating_counts The rating counts.
-     * @return float
-     */
-    private function calculate_average_rating( array $rating_counts ): float {
-        $total = 0;
-        $sum   = 0;
-
-        foreach ( $rating_counts as $rating => $count ) {
-            $total += (int) $count;
-            $sum   += (int) $rating * (int) $count;
-        }
-
-        return $total > 0 ? round( $sum / $total, 1 ) : 0.0;
+        return is_array( $reviews["rating_counts"] ) && is_array( $reviews["items"] );
     }
 }

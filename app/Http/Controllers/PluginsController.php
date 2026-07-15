@@ -18,21 +18,25 @@ class PluginsController extends Controller {
     public function index( Request $request ): array {
         $integrated_plugins_list = apply_filters(
             "craf_appna_integrated_plugins", [
-                "woocommerce"    => [ "category" => "ecommerce", "label" => "WooCommerce" ],
-                "fluent-cart"    => [ "category" => "ecommerce", "label" => "Fluent Cart" ],
-                "surecart"       => [ "category" => "ecommerce", "label" => "SureCart" ],
-                "formgent"       => [ "category" => "form",      "label" => "FormGent" ],
-                "fluentform"     => [ "category" => "form",      "label" => "Fluent Form" ],
-                "directorist"    => [ "category" => "directory", "label" => "Directorist", "file" => "directorist/directorist-base.php"], // add path if plugin folder and root file is not same
-                "contact-form-7" => [ "category" => "form", "label" => "Contact Form 7", "file" => "contact-form-7/wp-contact-form-7.php"],
-                "everest-forms"  => [ "category" => "form", "label" => "Everest Forms"],
-                "formidable"     => [ "category" => "form", "label" => "Formidable"],
-                "forminator"     => [ "category" => "form", "label" => "Forminator"],
-                "gutena-forms"   => [ "category" => "form", "label" => "Gutena Forms"],
-                "happyforms"     => [ "category" => "form", "label" => "Happy Forms"],
-                "sureforms"      => [ "category" => "form", "label" => "SureForms"],
-                "weforms"        => [ "category" => "form", "label" => "WeForms"],
-                "wpforms-lite"   => [ "category" => "form", "label" => "WPForms", "file" => "wpforms-lite/wpforms.php"],
+                "woocommerce"               => [ "category" => "ecommerce", "label" => "WooCommerce" ],
+                "fluent-cart"               => [ "category" => "ecommerce", "label" => "Fluent Cart" ],
+                "surecart"                  => [ "category" => "ecommerce", "label" => "SureCart" ],
+                "formgent"                  => [ "category" => "form",      "label" => "FormGent" ],
+                "fluentform"                => [ "category" => "form",      "label" => "Fluent Form" ],
+                "directorist"               => [ "category" => "directory", "label" => "Directorist", "file" => "directorist/directorist-base.php"], // add path if plugin folder and root file is not same
+                "geodirectory"              => [ "category" => "directory", "label" => "GeoDirectory", "file" => "geodirectory/geodirectory.php"],
+                "hivepress"                 => [ "category" => "directory", "label" => "HivePress", "file" => "hivepress/hivepress.php"],
+                "business-directory-plugin" => [ "category" => "directory", "label" => "Business Directory Plugin", "file" => "business-directory-plugin/business-directory-plugin.php"],
+                "classified-listing"        => [ "category" => "directory", "label" => "Classified Listing", "file" => "classified-listing/classified-listing.php"],
+                "contact-form-7"            => [ "category" => "form", "label" => "Contact Form 7", "file" => "contact-form-7/wp-contact-form-7.php"],
+                "everest-forms"             => [ "category" => "form", "label" => "Everest Forms"],
+                "formidable"                => [ "category" => "form", "label" => "Formidable"],
+                "forminator"                => [ "category" => "form", "label" => "Forminator"],
+                "gutena-forms"              => [ "category" => "form", "label" => "Gutena Forms"],
+                "happyforms"                => [ "category" => "form", "label" => "Happy Forms"],
+                "sureforms"                 => [ "category" => "form", "label" => "SureForms"],
+                "weforms"                   => [ "category" => "form", "label" => "WeForms"],
+                "wpforms-lite"              => [ "category" => "form", "label" => "WPForms", "file" => "wpforms-lite/wpforms.php"],
             ]
         );
 

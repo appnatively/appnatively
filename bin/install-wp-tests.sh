@@ -28,6 +28,21 @@ download() {
     fi
 }
 
+install_wp_plugin() {
+	local plugin_slug=$1
+	local plugin_version=${2-}
+	local archive_name=$plugin_slug
+
+	if [ ! -z "$plugin_version" ]; then
+		archive_name="$plugin_slug.$plugin_version"
+	fi
+
+	if [ ! -d "$WP_CORE_DIR"/wp-content/plugins/"$plugin_slug" ]; then
+		download https://downloads.wordpress.org/plugin/${archive_name}.zip $TMPDIR/${archive_name}.zip
+		unzip -q $TMPDIR/${archive_name}.zip -d "$WP_CORE_DIR"/wp-content/plugins/
+	fi
+}
+
 # Check if svn is installed
 check_svn_installed() {
     if ! command -v svn > /dev/null; then
@@ -177,6 +192,12 @@ install_wp() {
 		download https://downloads.wordpress.org/plugin/fluent-cart.zip $TMPDIR/fluent-cart.zip
 		unzip -q $TMPDIR/fluent-cart.zip -d "$WP_CORE_DIR"/wp-content/plugins/
 	fi
+
+	install_wp_plugin directorist "${DIRECTORIST_VERSION-8.8.3}"
+	install_wp_plugin geodirectory "${GEODIRECTORY_VERSION-2.8.166}"
+	install_wp_plugin hivepress "${HIVEPRESS_VERSION-1.7.26}"
+	install_wp_plugin business-directory-plugin "${BUSINESS_DIRECTORY_PLUGIN_VERSION-6.4.25}"
+	install_wp_plugin classified-listing "${CLASSIFIED_LISTING_VERSION-5.5.0}"
 }
 
 install_test_suite() {

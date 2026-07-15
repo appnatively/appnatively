@@ -29,9 +29,9 @@ class TagController extends Controller {
             ]
         );
 
-        $integration    = sanitize_text_field( $request->get_param( "integration" ) );
-        $fields         = craf_appna_get_verified_fields( $request->get_param( "fields" ), $this->allowed_fields );
-        $tag_paginator  = apply_filters( "craf_appna_directory_{$integration}_tags", null, $request, $fields );
+        $integration   = sanitize_text_field( $request->get_param( "integration" ) );
+        $fields        = craf_appna_get_verified_fields( $request->get_param( "fields" ), $this->allowed_fields );
+        $tag_paginator = apply_filters( "craf_appna_directory_{$integration}_tags", null, $request, $fields );
 
         if ( ! $tag_paginator instanceof TermPaginatorDTO ) {
             throw new Exception( esc_html__( "Tags integration not found", "appnatively" ) );

@@ -7,6 +7,10 @@ use Crafium\AppNatively\App\Providers\AuthServiceProvider;
 use Crafium\AppNatively\App\Http\Middleware\EnsureIsUserAdmin;
 use Crafium\AppNatively\App\Integrations\FluentCart;
 use Crafium\AppNatively\App\Integrations\Directorist;
+use Crafium\AppNatively\App\Integrations\GeoDirectory;
+use Crafium\AppNatively\App\Integrations\HivePress;
+use Crafium\AppNatively\App\Integrations\BusinessDirectoryPlugin;
+use Crafium\AppNatively\App\Integrations\ClassifiedListing;
 use Crafium\AppNatively\App\Integrations\Forms\FormGent;
 use Crafium\AppNatively\App\Integrations\Forms\FluentForm;
 use Crafium\AppNatively\App\Integrations\Forms\EverestForms;
@@ -76,6 +80,10 @@ return [
 
         // Directory Integrations
         Directorist::class,
+        GeoDirectory::class,
+        HivePress::class,
+        BusinessDirectoryPlugin::class,
+        ClassifiedListing::class,
 
         // Forms Integrations
         FormGent::class,
