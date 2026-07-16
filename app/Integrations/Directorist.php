@@ -34,6 +34,7 @@ class Directorist extends Provider {
         add_filter( "craf_appna_directory_directorist_listings", [$this, "listings"], 10, 3 );
         add_filter( "craf_appna_directory_directorist_listing", [$this, "listing"], 10, 3 );
         add_filter( "craf_appna_directory_directorist_related_listings", [$this, "related_listings"], 10, 3 );
+        add_filter( "craf_appna_directory_directorist_wishlist", [$this, "wishlist"], 10, 3 );
         add_filter( "craf_appna_directory_directorist_categories", [$this, "categories"], 10, 3 );
         add_filter( "craf_appna_directory_directorist_category", [$this, "category"], 10, 3 );
         add_filter( "craf_appna_directory_directorist_tags", [$this, "tags"], 10, 3 );
@@ -251,6 +252,44 @@ class Directorist extends Provider {
             max( 1, (int) $query->max_num_pages ),
             $items
         );
+    }
+
+    /**
+     * Resolve device-local wishlist listing IDs into full listing records.
+     *
+     * @param ListingPaginatorDTO|null $listing_paginator The listing paginator.
+     * @param Request                  $request The REST request instance.
+     * @param array                    $fields The requested fields.
+     * @return ListingPaginatorDTO
+     */
+    public function wishlist( ?ListingPaginatorDTO $listing_paginator, Request $request, array $fields = [] ): ListingPaginatorDTO {
+        $ids = (array) $request->get_param( "ids" );
+        $ids = array_values( array_filter( array_map( 'intval', $ids ) ) );
+
+        if ( empty( $ids ) ) {
+            return new ListingPaginatorDTO( 1, 0, 0, 1, [] );
+        }
+
+        $post_type = defined( "ATBDP_POST_TYPE" ) ? ATBDP_POST_TYPE : "at_biz_dir";
+
+        $query = new WP_Query(
+            [
+                "post_type"      => $post_type,
+                "post_status"    => "publish",
+                "posts_per_page" => count( $ids ),
+                "post__in"       => $ids,
+                "orderby"        => "post__in",
+            ]
+        );
+
+        $items = [];
+        foreach ( $query->posts as $listing ) {
+            if ( $listing instanceof WP_Post ) {
+                $items[] = $this->map_listing_to_dto( $listing, $fields );
+            }
+        }
+
+        return new ListingPaginatorDTO( 1, count( $items ), count( $items ), 1, $items );
     }
 
     /**
