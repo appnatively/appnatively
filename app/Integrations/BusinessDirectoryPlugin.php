@@ -217,7 +217,7 @@ class BusinessDirectoryPlugin extends Provider {
             $dto->set_slug( (string) $post->post_name );
         }
         if ( in_array( "description", $fields, true ) ) {
-            $dto->set_description( (string) apply_filters( "the_content", $post->post_content ) );
+            $dto->set_description( $this->apply_listing_content_filters( $post ) );
         }
         if ( in_array( "excerpt", $fields, true ) ) {
             $dto->set_excerpt( (string) get_the_excerpt( $post ) );
@@ -438,5 +438,20 @@ class BusinessDirectoryPlugin extends Provider {
         }
         $coordinate = (float) $value;
         return ( $coordinate >= $min && $coordinate <= $max ) ? $coordinate : null;
+    }
+
+    private function apply_listing_content_filters( WP_Post $post ): string {
+        $previous_post   = $GLOBALS["post"] ?? null;
+        $GLOBALS["post"] = $post;
+
+        $content = (string) apply_filters( "the_content", $post->post_content );
+
+        if ( null === $previous_post ) {
+            unset( $GLOBALS["post"] );
+        } else {
+            $GLOBALS["post"] = $previous_post;
+        }
+
+        return $content;
     }
 }

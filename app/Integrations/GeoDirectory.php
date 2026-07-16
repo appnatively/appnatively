@@ -88,14 +88,17 @@ class GeoDirectory extends Provider {
     }
 
     private function is_loaded(): bool {
-        return function_exists( "geodir_get_post_info" ) || function_exists( "geodir_get_default_posttype" ) || class_exists( "GeoDirectory" );
+        return function_exists( "geodir_get_post_info" ) || function_exists( "geodir_get_posttypes" ) || class_exists( "GeoDirectory" );
     }
 
     private function post_type(): string {
-        if ( function_exists( "geodir_get_default_posttype" ) ) {
-            $post_type = (string) geodir_get_default_posttype();
-            if ( "" !== $post_type ) {
-                return $post_type;
+        if ( function_exists( "geodir_get_posttypes" ) ) {
+            $post_types = geodir_get_posttypes( "array" );
+            if ( is_array( $post_types ) && ! empty( $post_types ) ) {
+                $post_type = (string) array_key_first( $post_types );
+                if ( "" !== $post_type ) {
+                    return $post_type;
+                }
             }
         }
 
@@ -264,7 +267,7 @@ class GeoDirectory extends Provider {
             $dto->set_slug( (string) $post->post_name );
         }
         if ( in_array( "description", $fields, true ) ) {
-            $dto->set_description( (string) apply_filters( "the_content", $post->post_content ) );
+            $dto->set_description( $this->apply_listing_content_filters( $post ) );
         }
         if ( in_array( "excerpt", $fields, true ) ) {
             $dto->set_excerpt( (string) get_the_excerpt( $post ) );
@@ -276,31 +279,31 @@ class GeoDirectory extends Provider {
             $dto->set_image( $this->get_listing_image( (int) $post->ID ) );
         }
         if ( in_array( "views_count", $fields, true ) ) {
-            $dto->set_views_count( (int) $this->get_value( $post->ID, $info, ["view_count", "post_views", "geodir_views_count"] ) );
+            $dto->set_views_count( 0 );
         }
         if ( in_array( "address", $fields, true ) ) {
-            $dto->set_address( $this->get_value( $post->ID, $info, ["address", "street", "street2"] ) );
+            $dto->set_address( $this->get_value( $info, ["address", "street", "street2"] ) );
         }
         if ( in_array( "latitude", $fields, true ) ) {
-            $dto->set_latitude( $this->normalize_coordinate( $this->get_value( $post->ID, $info, ["latitude", "post_latitude"] ), -90, 90 ) );
+            $dto->set_latitude( $this->normalize_coordinate( $this->get_value( $info, ["latitude", "post_latitude"] ), -90, 90 ) );
         }
         if ( in_array( "longitude", $fields, true ) ) {
-            $dto->set_longitude( $this->normalize_coordinate( $this->get_value( $post->ID, $info, ["longitude", "post_longitude"] ), -180, 180 ) );
+            $dto->set_longitude( $this->normalize_coordinate( $this->get_value( $info, ["longitude", "post_longitude"] ), -180, 180 ) );
         }
         if ( in_array( "phone", $fields, true ) ) {
-            $dto->set_phone( $this->get_value( $post->ID, $info, ["phone"] ) );
+            $dto->set_phone( $this->get_value( $info, ["phone"] ) );
         }
         if ( in_array( "email", $fields, true ) ) {
-            $dto->set_email( $this->get_value( $post->ID, $info, ["email"] ) );
+            $dto->set_email( $this->get_value( $info, ["email"] ) );
         }
         if ( in_array( "website", $fields, true ) ) {
-            $dto->set_website( $this->get_value( $post->ID, $info, ["website"] ) );
+            $dto->set_website( $this->get_value( $info, ["website"] ) );
         }
         if ( in_array( "favorite", $fields, true ) ) {
             $dto->set_favorite( false );
         }
         if ( in_array( "featured", $fields, true ) ) {
-            $dto->set_featured( (bool) $this->get_value( $post->ID, $info, ["is_featured", "featured"] ) );
+            $dto->set_featured( (bool) $this->get_value( $info, ["is_featured", "featured"] ) );
         }
         if ( in_array( "new", $fields, true ) ) {
             $dto->set_new( false );
@@ -331,18 +334,12 @@ class GeoDirectory extends Provider {
         return function_exists( "geodir_get_post_info" ) ? geodir_get_post_info( $post_id ) : null;
     }
 
-    private function get_value( int $post_id, $info, array $keys ): string {
-        foreach ( $keys as $key ) {
-            if ( is_object( $info ) && isset( $info->{$key} ) && "" !== $info->{$key} ) {
-                return is_scalar( $info->{$key} ) ? (string) $info->{$key} : "";
-            }
-            if ( is_array( $info ) && isset( $info[$key] ) && "" !== $info[$key] ) {
-                return is_scalar( $info[$key] ) ? (string) $info[$key] : "";
-            }
+    private function get_value( $info, array $keys ): string {
+        $values = is_object( $info ) ? get_object_vars( $info ) : ( is_array( $info ) ? $info : [] );
 
-            $meta = get_post_meta( $post_id, $key, true );
-            if ( "" !== $meta && null !== $meta ) {
-                return is_scalar( $meta ) ? (string) $meta : "";
+        foreach ( $keys as $key ) {
+            if ( array_key_exists( $key, $values ) && "" !== $values[$key] && null !== $values[$key] ) {
+                return is_scalar( $values[$key] ) ? (string) $values[$key] : "";
             }
         }
 
@@ -351,9 +348,9 @@ class GeoDirectory extends Provider {
 
     private function get_pricing( int $post_id, $info ): array {
         return [
-            "price"       => $this->get_value( $post_id, $info, ["price", "price_from"] ),
-            "price_type"  => $this->get_value( $post_id, $info, ["price_type"] ),
-            "price_range" => $this->get_value( $post_id, $info, ["price_range"] ),
+            "price"       => $this->get_value( $info, ["price", "price_from"] ),
+            "price_type"  => $this->get_value( $info, ["price_type"] ),
+            "price_range" => $this->get_value( $info, ["price_range"] ),
         ];
     }
 
@@ -681,5 +678,20 @@ class GeoDirectory extends Provider {
 
         $coordinate = (float) $value;
         return ( $coordinate >= $min && $coordinate <= $max ) ? $coordinate : null;
+    }
+
+    private function apply_listing_content_filters( WP_Post $post ): string {
+        $previous_post   = $GLOBALS["post"] ?? null;
+        $GLOBALS["post"] = $post;
+
+        $content = (string) apply_filters( "the_content", $post->post_content );
+
+        if ( null === $previous_post ) {
+            unset( $GLOBALS["post"] );
+        } else {
+            $GLOBALS["post"] = $previous_post;
+        }
+
+        return $content;
     }
 }

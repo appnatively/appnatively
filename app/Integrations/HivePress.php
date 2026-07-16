@@ -120,7 +120,13 @@ class HivePress extends Provider {
     }
 
     public function reviews( ?array $reviews, Request $request ): ?array {
-        return $this->get_listing_post( (int) $request->get_param( "id" ) ) ? $this->empty_reviews( $request ) : null;
+        $listing_id = (int) $request->get_param( "id" );
+
+        if ( ! $this->get_listing_post( $listing_id ) ) {
+            return null;
+        }
+
+        return $this->query_comment_reviews( $listing_id, $request );
     }
 
     public function categories( ?CategoryPaginatorDTO $category_paginator, Request $request, array $fields = [] ): CategoryPaginatorDTO {
@@ -137,11 +143,22 @@ class HivePress extends Provider {
     }
 
     public function locations( ?TermPaginatorDTO $location_paginator, Request $request, array $fields = [] ): TermPaginatorDTO {
-        return $this->empty_term_paginator( $request );
+        $taxonomy = $this->location_taxonomy();
+        if ( ! $taxonomy ) {
+            return $this->empty_term_paginator( $request );
+        }
+
+        return $this->query_terms( $taxonomy, $request, $fields );
     }
 
     public function location( ?TermDTO $location, Request $request, array $fields = [] ): ?TermDTO {
-        return null;
+        $taxonomy = $this->location_taxonomy();
+        if ( ! $taxonomy ) {
+            return null;
+        }
+
+        $term = get_term( (int) $request->get_param( "id" ), $taxonomy );
+        return ( $term && ! is_wp_error( $term ) ) ? $this->map_term_to_dto( $term, $fields ) : null;
     }
 
     private function is_loaded(): bool {
@@ -208,7 +225,7 @@ class HivePress extends Provider {
             $dto->set_slug( (string) $post->post_name );
         }
         if ( in_array( "description", $fields, true ) ) {
-            $dto->set_description( (string) apply_filters( "the_content", $post->post_content ) );
+            $dto->set_description( $this->apply_listing_content_filters( $post ) );
         }
         if ( in_array( "excerpt", $fields, true ) ) {
             $dto->set_excerpt( (string) get_the_excerpt( $post ) );
@@ -265,13 +282,14 @@ class HivePress extends Provider {
             $dto->set_categories( $this->get_listing_terms( $post->ID, $this->category_taxonomy ) );
         }
         if ( in_array( "locations", $fields, true ) ) {
-            $dto->set_locations( [] );
+            $taxonomy = $this->location_taxonomy();
+            $dto->set_locations( $taxonomy ? $this->get_listing_terms( (int) $post->ID, $taxonomy ) : [] );
         }
         if ( in_array( "tags", $fields, true ) ) {
             $dto->set_tags( [] );
         }
         if ( in_array( "rating", $fields, true ) ) {
-            $dto->set_rating( 0.0 );
+            $dto->set_rating( $this->get_listing_aggregate_rating( (int) $post->ID, 0.0 ) );
         }
 
         return $dto;
@@ -411,6 +429,72 @@ class HivePress extends Provider {
         return "";
     }
 
+    private function query_comment_reviews( int $listing_id, Request $request ): array {
+        $page     = (int) $request->get_param( "page" ) ?: 1;
+        $per_page = (int) $request->get_param( "per_page" ) ?: 10;
+        $base     = [
+            "post_id" => $listing_id,
+            "status"  => "approve",
+            "type"    => "hp_review",
+            "parent"  => 0,
+        ];
+
+        $total    = (int) get_comments( array_merge( $base, ["count" => true] ) );
+        $comments = get_comments( array_merge( $base, [
+            "number"  => $per_page,
+            "offset"  => ( $page - 1 ) * $per_page,
+            "orderby" => "comment_date_gmt",
+            "order"   => "DESC",
+        ]));
+
+        $items         = [];
+        $rating_counts = $this->empty_rating_counts();
+        $sum           = 0.0;
+
+        foreach ( $comments as $comment ) {
+            $rating = (float) $comment->comment_karma;
+            if ( $rating > 0 ) {
+                $bucket = (string) max( 1, min( 5, (int) round( $rating ) ) );
+                $rating_counts[ $bucket ]++;
+                $sum += $rating;
+            }
+            $items[] = $this->map_review_comment( $comment, $rating );
+        }
+
+        $average = count( $comments ) > 0 ? round( $sum / count( $comments ), 1 ) : 0.0;
+
+        return [
+            "current_page"   => $page,
+            "per_page"       => $per_page,
+            "total"          => $total,
+            "last_page"      => max( 1, (int) ceil( $total / $per_page ) ),
+            "average_rating" => $this->get_listing_aggregate_rating( $listing_id, $average ),
+            "review_count"   => $total,
+            "rating_counts"  => $rating_counts,
+            "items"          => $items,
+        ];
+    }
+
+    private function map_review_comment( \WP_Comment $comment, float $rating ): array {
+        return [
+            "id"           => (int) $comment->comment_ID,
+            "reviewer"     => (string) $comment->comment_author,
+            "review"       => (string) $comment->comment_content,
+            "rating"       => $rating,
+            "date_created" => (string) get_comment_date( DATE_ATOM, $comment ),
+            "avatar_url"   => (string) get_avatar_url( $comment, ["size" => 96] ),
+        ];
+    }
+
+    private function get_listing_aggregate_rating( int $listing_id, float $fallback ): float {
+        $stored = get_post_meta( $listing_id, "hp_rating", true );
+        return is_numeric( $stored ) && (float) $stored > 0 ? (float) $stored : $fallback;
+    }
+
+    private function empty_rating_counts(): array {
+        return ["1" => 0, "2" => 0, "3" => 0, "4" => 0, "5" => 0];
+    }
+
     private function empty_reviews( Request $request ): array {
         $page     = (int) $request->get_param( "page" ) ?: 1;
         $per_page = (int) $request->get_param( "per_page" ) ?: 10;
@@ -425,6 +509,50 @@ class HivePress extends Provider {
             "rating_counts"  => ["1" => 0, "2" => 0, "3" => 0, "4" => 0, "5" => 0],
             "items"          => [],
         ];
+    }
+
+    private function location_taxonomy(): ?string {
+        if ( ! get_option( "hp_geolocation_generate_regions" ) ) {
+            return null;
+        }
+
+        $taxonomy = "hp_listing_region";
+        return taxonomy_exists( $taxonomy ) ? $taxonomy : null;
+    }
+
+    private function query_terms( string $taxonomy, Request $request, array $fields ): TermPaginatorDTO {
+        $page     = (int) $request->get_param( "page" ) ?: 1;
+        $per_page = (int) $request->get_param( "per_page" ) ?: 10;
+        $terms    = $this->get_terms_page( $taxonomy, $request, $page, $per_page );
+        $items    = [];
+
+        foreach ( $terms["items"] as $term ) {
+            $items[] = $this->map_term_to_dto( $term, $fields );
+        }
+
+        return new TermPaginatorDTO( $page, $per_page, $terms["total"], $terms["last_page"], $items );
+    }
+
+    private function map_term_to_dto( $term, array $fields ): TermDTO {
+        $dto = new TermDTO();
+
+        if ( in_array( "id", $fields, true ) ) {
+            $dto->set_id( (int) $term->term_id );
+        }
+        if ( in_array( "name", $fields, true ) ) {
+            $dto->set_name( (string) $term->name );
+        }
+        if ( in_array( "slug", $fields, true ) ) {
+            $dto->set_slug( (string) $term->slug );
+        }
+        if ( in_array( "count", $fields, true ) ) {
+            $dto->set_count( (int) $term->count );
+        }
+        if ( in_array( "image", $fields, true ) ) {
+            $dto->set_image( [] );
+        }
+
+        return $dto;
     }
 
     private function empty_term_paginator( Request $request ): TermPaginatorDTO {
@@ -449,5 +577,20 @@ class HivePress extends Provider {
 
         $coordinate = (float) $value;
         return ( $coordinate >= $min && $coordinate <= $max ) ? $coordinate : null;
+    }
+
+    private function apply_listing_content_filters( WP_Post $post ): string {
+        $previous_post   = $GLOBALS["post"] ?? null;
+        $GLOBALS["post"] = $post;
+
+        $content = (string) apply_filters( "the_content", $post->post_content );
+
+        if ( null === $previous_post ) {
+            unset( $GLOBALS["post"] );
+        } else {
+            $GLOBALS["post"] = $previous_post;
+        }
+
+        return $content;
     }
 }
