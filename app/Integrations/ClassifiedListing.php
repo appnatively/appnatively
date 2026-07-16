@@ -222,7 +222,7 @@ class ClassifiedListing extends Provider {
             $dto->set_description( $this->apply_listing_content_filters( $post ) );
         }
         if ( in_array( "excerpt", $fields, true ) ) {
-            $dto->set_excerpt( (string) get_the_excerpt( $post ) );
+            $dto->set_excerpt( $this->get_listing_excerpt( $post ) );
         }
         if ( in_array( "status", $fields, true ) ) {
             $dto->set_status( (string) $post->post_status );
@@ -472,5 +472,20 @@ class ClassifiedListing extends Provider {
         }
 
         return $content;
+    }
+
+    private function get_listing_excerpt( WP_Post $post ): string {
+        $previous_post   = $GLOBALS["post"] ?? null;
+        $GLOBALS["post"] = $post;
+
+        $excerpt = (string) get_the_excerpt( $post );
+
+        if ( null === $previous_post ) {
+            unset( $GLOBALS["post"] );
+        } else {
+            $GLOBALS["post"] = $previous_post;
+        }
+
+        return $excerpt;
     }
 }

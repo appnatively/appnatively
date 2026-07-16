@@ -712,7 +712,7 @@ class Directorist extends Provider {
             $dto->set_description( $this->apply_listing_content_filters( $listing ) );
         }
         if ( in_array( "excerpt", $fields, true ) ) {
-            $dto->set_excerpt( (string) get_the_excerpt( $listing ) );
+            $dto->set_excerpt( $this->get_listing_excerpt( $listing ) );
         }
         if ( in_array( "status", $fields, true ) ) {
             $dto->set_status( (string) $listing->post_status );
@@ -1057,5 +1057,20 @@ class Directorist extends Provider {
         }
 
         return $content;
+    }
+
+    private function get_listing_excerpt( WP_Post $post ): string {
+        $previous_post   = $GLOBALS["post"] ?? null;
+        $GLOBALS["post"] = $post;
+
+        $excerpt = (string) get_the_excerpt( $post );
+
+        if ( null === $previous_post ) {
+            unset( $GLOBALS["post"] );
+        } else {
+            $GLOBALS["post"] = $previous_post;
+        }
+
+        return $excerpt;
     }
 }
