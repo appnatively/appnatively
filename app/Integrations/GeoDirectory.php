@@ -63,7 +63,7 @@ class GeoDirectory extends Provider {
             return null;
         }
 
-        return $this->query_comment_reviews( $listing_id, $request, ["rating", "geodir_overallrating", "overall_rating"] );
+        return $this->query_comment_reviews( $listing_id, $request, ["rating", "_rating", "geodir_overallrating", "_geodir_overallrating", "overall_rating"] );
     }
 
     public function categories( ?CategoryPaginatorDTO $category_paginator, Request $request, array $fields = [] ): CategoryPaginatorDTO {
@@ -605,6 +605,11 @@ class GeoDirectory extends Provider {
             $items[] = $this->map_review_comment( $comment, $rating );
         }
 
+        $stored_rating_counts = $this->get_stored_review_rating_counts( $listing_id );
+        if ( null !== $stored_rating_counts ) {
+            $rating_counts = $stored_rating_counts;
+        }
+
         return [
             "current_page"   => $page,
             "per_page"       => $per_page,
@@ -629,6 +634,20 @@ class GeoDirectory extends Provider {
     }
 
     private function get_comment_rating( int $comment_id, array $keys ): float {
+        if ( class_exists( "\GeoDir_Comments" ) && method_exists( "\GeoDir_Comments", "get_comment_rating" ) ) {
+            $rating = \GeoDir_Comments::get_comment_rating( $comment_id );
+            if ( is_numeric( $rating ) ) {
+                return (float) $rating;
+            }
+        }
+
+        if ( class_exists( "\GeoDir_Comments" ) && method_exists( "\GeoDir_Comments", "get_review" ) ) {
+            $review = \GeoDir_Comments::get_review( $comment_id );
+            if ( is_object( $review ) && isset( $review->rating ) && is_numeric( $review->rating ) ) {
+                return (float) $review->rating;
+            }
+        }
+
         foreach ( $keys as $key ) {
             $rating = get_comment_meta( $comment_id, $key, true );
             if ( is_numeric( $rating ) ) {
@@ -637,6 +656,24 @@ class GeoDirectory extends Provider {
         }
 
         return 0.0;
+    }
+
+    private function get_stored_review_rating_counts( int $listing_id ): ?array {
+        $rating_counts = $this->empty_rating_counts();
+
+        if ( class_exists( "\GeoDir_Comments" ) && method_exists( "\GeoDir_Comments", "get_post_review_rating_counts" ) ) {
+            $counts = \GeoDir_Comments::get_post_review_rating_counts( $listing_id, 1 );
+            if ( is_array( $counts ) ) {
+                foreach ( $counts as $rating => $count ) {
+                    $bucket = (string) max( 1, min( 5, (int) round( (float) $rating ) ) );
+                    $rating_counts[$bucket] += (int) $count;
+                }
+
+                return $rating_counts;
+            }
+        }
+
+        return null;
     }
 
     private function empty_rating_counts(): array {
