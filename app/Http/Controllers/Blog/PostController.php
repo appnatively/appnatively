@@ -117,6 +117,64 @@ class PostController extends Controller {
     }
 
     /**
+     * Display posts related to the specified resource.
+     *
+     * @param Request $request The REST request instance.
+     * @return array
+     * @throws Exception
+     */
+    public function related( Request $request ): array {
+        $request->validate(
+            [
+                "id"       => "required|numeric",
+                "page"     => "nullable|integer|min:1",
+                "per_page" => "nullable|integer|min:1|max:100",
+                "fields"   => "nullable|string",
+            ]
+        );
+
+        $id       = (int) $request->get_param( "id" );
+        $page     = (int) $request->get_param( "page" ) ?: 1;
+        $per_page = (int) $request->get_param( "per_page" ) ?: 10;
+        $fields   = craf_appna_get_verified_fields( $request->get_param( "fields" ), $this->allowed_fields );
+
+        $category_ids = wp_get_post_categories( $id );
+
+        $query_args = [
+            "post_type"      => "post",
+            "post_status"    => "publish",
+            "paged"          => $page,
+            "posts_per_page" => $per_page,
+            "post__not_in"   => [$id],
+            "orderby"        => "date",
+            "order"          => "DESC",
+        ];
+
+        if ( !empty( $category_ids ) ) {
+            $query_args["category__in"] = $category_ids;
+        }
+
+        $query = new WP_Query( $query_args );
+
+        $items = [];
+        foreach ( $query->posts as $post ) {
+            if ( $post instanceof WP_Post ) {
+                $items[] = $this->map_post_to_dto( $post, $fields );
+            }
+        }
+
+        $post_paginator = new PostPaginatorDTO(
+            $page,
+            $per_page,
+            (int) $query->found_posts,
+            (int) $query->max_num_pages,
+            $items
+        );
+
+        return Response::send( ["data" => $post_paginator] );
+    }
+
+    /**
      * Display the specified resource.
      *
      * @param Request $request The REST request instance.
