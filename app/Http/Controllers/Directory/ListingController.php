@@ -5,6 +5,7 @@ namespace Crafium\AppNatively\App\Http\Controllers\Directory;
 defined( "ABSPATH" ) || exit;
 
 use Crafium\AppNatively\App\Http\Controllers\Controller;
+use Crafium\AppNatively\App\DTO\Directory\ListingDTO;
 use Crafium\AppNatively\App\DTO\Directory\ListingPaginatorDTO;
 use Crafium\AppNatively\WpMVC\Exceptions\Exception;
 use Crafium\AppNatively\WpMVC\Routing\Response;
@@ -26,6 +27,8 @@ class ListingController extends Controller {
         "image",
         "views_count",
         "address",
+        "latitude",
+        "longitude",
         "phone",
         "email",
         "website",
@@ -55,6 +58,10 @@ class ListingController extends Controller {
                 "sort"        => "nullable|string",
                 "fields"      => "nullable|string",
                 "integration" => "required|string",
+                "categories"  => "nullable|array",
+                "tags"        => "nullable|array",
+                "locations"   => "nullable|array",
+                "isFeatured"  => "nullable|boolean",
             ]
         );
 
@@ -67,5 +74,126 @@ class ListingController extends Controller {
         }
 
         return Response::send( ["data" => $listing_paginator] );
+    }
+
+    /**
+     * Display the specified resource.
+     *
+     * @param Request $request The REST request instance.
+     * @return array
+     * @throws Exception
+     */
+    public function show( Request $request ): array {
+        $request->validate(
+            [
+                "id"          => "required|numeric",
+                "integration" => "required|string",
+            ]
+        );
+
+        $integration = sanitize_text_field( $request->get_param( "integration" ) );
+        $fields      = craf_appna_get_verified_fields( $request->get_param( "fields" ), $this->allowed_fields );
+
+        if ( empty( $fields ) ) {
+            $fields = $this->allowed_fields;
+        }
+
+        $listing = apply_filters( "craf_appna_directory_{$integration}_listing", null, $request, $fields );
+
+        if ( ! $listing instanceof ListingDTO ) {
+            throw new Exception( esc_html__( "Listing not found", "appnatively" ) );
+        }
+
+        return Response::send(
+            [
+                "data" => $listing
+            ]
+        );
+    }
+
+    /**
+     * Display related listings for the specified resource.
+     *
+     * @param Request $request The REST request instance.
+     * @return array
+     * @throws Exception
+     */
+    public function related( Request $request ): array {
+        $request->validate(
+            [
+                "id"          => "required|numeric",
+                "page"        => "nullable|integer|min:1",
+                "per_page"    => "nullable|integer|min:1|max:100",
+                "fields"      => "nullable|string",
+                "integration" => "required|string",
+            ]
+        );
+
+        $integration       = sanitize_text_field( $request->get_param( "integration" ) );
+        $fields            = craf_appna_get_verified_fields( $request->get_param( "fields" ), $this->allowed_fields );
+        $listing_paginator = apply_filters( "craf_appna_directory_{$integration}_related_listings", null, $request, $fields );
+
+        if ( ! $listing_paginator instanceof ListingPaginatorDTO ) {
+            throw new Exception( esc_html__( "Related listings integration not found", "appnatively" ) );
+        }
+
+        return Response::send( ["data" => $listing_paginator] );
+    }
+
+    /**
+     * Display approved reviews for the specified listing.
+     *
+     * @param Request $request The REST request instance.
+     * @return array
+     * @throws Exception
+     */
+    public function reviews( Request $request ): array {
+        $request->validate(
+            [
+                "id"          => "required|numeric",
+                "page"        => "nullable|integer|min:1",
+                "per_page"    => "nullable|integer|min:1|max:100",
+                "integration" => "required|string",
+            ]
+        );
+
+        $integration = sanitize_text_field( $request->get_param( "integration" ) );
+        $hook        = "craf_appna_directory_{$integration}_reviews";
+
+        if ( ! has_filter( $hook ) ) {
+            throw new Exception( esc_html__( "Reviews integration not found", "appnatively" ) );
+        }
+
+        $reviews = apply_filters( $hook, null, $request );
+
+        if ( null === $reviews ) {
+            throw new Exception( esc_html__( "Listing not found", "appnatively" ) );
+        }
+
+        if ( ! $this->is_valid_review_payload( $reviews ) ) {
+            throw new Exception( esc_html__( "Reviews integration not found", "appnatively" ) );
+        }
+
+        return Response::send( ["data" => $reviews] );
+    }
+
+    /**
+     * Validate provider review payload shape.
+     *
+     * @param mixed $reviews The provider review payload.
+     * @return bool
+     */
+    private function is_valid_review_payload( $reviews ): bool {
+        if ( ! is_array( $reviews ) ) {
+            return false;
+        }
+
+        foreach ( ["current_page", "per_page", "total", "last_page", "average_rating", "review_count", "rating_counts", "items"] as $key ) {
+            if ( ! array_key_exists( $key, $reviews ) ) {
+                return false;
+            }
+        }
+
+        return is_array( $reviews["rating_counts"] ) && is_array( $reviews["items"] );
     }
 }

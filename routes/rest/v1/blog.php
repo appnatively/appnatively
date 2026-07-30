@@ -9,6 +9,7 @@ use Crafium\AppNatively\WpMVC\Routing\Route;
 Route::group(
     'posts', function() {
         Route::get( '/', [PostController::class, 'index'] );
+        Route::get( '/{id}/related', [PostController::class, 'related'] );
         Route::get( '/{id}', [PostController::class, 'show'] );
     }
 );

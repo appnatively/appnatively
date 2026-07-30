@@ -10,7 +10,7 @@ use Crafium\AppNatively\WpMVC\RequestValidator\Request;
 
 class WPForms extends Form {
     public function get_key(): string {
-        return 'wpforms-lite';
+        return 'wpforms';
     }
 
     public function boot(): void {

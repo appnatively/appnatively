@@ -33,21 +33,55 @@ function _manually_load_plugin() {
     }
     $wp_plugins_dir = $wp_core_dir . '/wp-content/plugins';
 
+    $load_plugin = function( string $relative_path ) use ( $wp_plugins_dir ): void {
+        $plugin_path = '';
+
+        if ( file_exists( $wp_plugins_dir . '/' . $relative_path ) ) {
+            $plugin_path = $wp_plugins_dir . '/' . $relative_path;
+        } elseif ( file_exists( dirname( __DIR__, 2 ) . '/' . $relative_path ) ) {
+            $plugin_path = dirname( __DIR__, 2 ) . '/' . $relative_path;
+        }
+
+        if ( $plugin_path ) {
+            require_once $plugin_path;
+        }
+    };
+
     // Load FluentForm
-    if ( file_exists( $wp_plugins_dir . '/fluentform/fluentform.php' ) ) {
-        require_once $wp_plugins_dir . '/fluentform/fluentform.php';
+    $_fluentform_path = '';
+    if ( file_exists( $wp_plugins_dir . '/fluentform/fluentform.php' )
+        && file_exists( $wp_plugins_dir . '/fluentform/boot/globals.php' )
+    ) {
+        $_fluentform_path = $wp_plugins_dir . '/fluentform/fluentform.php';
+    } elseif ( file_exists( dirname( __DIR__, 2 ) . '/fluentform/fluentform.php' ) ) {
+        $_fluentform_path = dirname( __DIR__, 2 ) . '/fluentform/fluentform.php';
+    }
+
+    if ( $_fluentform_path ) {
+        require_once $_fluentform_path;
         if ( class_exists( '\FluentForm\Database\DBMigrator' ) ) {
             \FluentForm\Database\DBMigrator::run();
         }
     }
+    unset( $_fluentform_path );
 
     // Load FormGent
-    if ( file_exists( $wp_plugins_dir . '/formgent/formgent.php' ) ) {
-        require_once $wp_plugins_dir . '/formgent/formgent.php';
+    $_formgent_path = '';
+    if ( file_exists( $wp_plugins_dir . '/formgent/formgent.php' )
+        && file_exists( $wp_plugins_dir . '/formgent/vendor/vendor-src/composer/platform_check.php' )
+    ) {
+        $_formgent_path = $wp_plugins_dir . '/formgent/formgent.php';
+    } elseif ( file_exists( dirname( __DIR__, 2 ) . '/formgent/formgent.php' ) ) {
+        $_formgent_path = dirname( __DIR__, 2 ) . '/formgent/formgent.php';
+    }
+
+    if ( $_formgent_path ) {
+        require_once $_formgent_path;
         if ( class_exists( '\FormGent\Database\Setup' ) ) {
             ( new \FormGent\Database\Setup() )->execute();
         }
     }
+    unset( $_formgent_path );
 
     // Load Forminator
     $_forminator_path = '';
@@ -77,7 +111,9 @@ function _manually_load_plugin() {
 
     // Load HappyForms
     $_happyforms_path = '';
-    if ( file_exists( $wp_plugins_dir . '/happyforms/happyforms.php' ) ) {
+    if ( file_exists( $wp_plugins_dir . '/happyforms/happyforms.php' )
+        && file_exists( $wp_plugins_dir . '/happyforms/core/helpers/helper-activation.php' )
+    ) {
         $_happyforms_path = $wp_plugins_dir . '/happyforms/happyforms.php';
     } elseif ( file_exists( dirname( __DIR__, 2 ) . '/happyforms/happyforms.php' ) ) {
         $_happyforms_path = dirname( __DIR__, 2 ) . '/happyforms/happyforms.php';
@@ -102,18 +138,38 @@ function _manually_load_plugin() {
     unset( $_gutenaforms_path );
 
     // Load weForms
-    if ( file_exists( $wp_plugins_dir . '/weforms/weforms.php' ) ) {
-        require_once $wp_plugins_dir . '/weforms/weforms.php';
+    $_weforms_path = '';
+    if ( file_exists( $wp_plugins_dir . '/weforms/weforms.php' )
+        && file_exists( $wp_plugins_dir . '/weforms/includes/functions.php' )
+    ) {
+        $_weforms_path = $wp_plugins_dir . '/weforms/weforms.php';
+    } elseif ( file_exists( dirname( __DIR__, 2 ) . '/weforms/weforms.php' ) ) {
+        $_weforms_path = dirname( __DIR__, 2 ) . '/weforms/weforms.php';
+    }
+
+    if ( $_weforms_path ) {
+        require_once $_weforms_path;
         if ( function_exists( 'weforms' ) ) {
             require_once WEFORMS_INCLUDES . '/class-installer.php';
             ( new \WeForms_Installer() )->create_tables();
         }
     }
+    unset( $_weforms_path );
 
     // Load Contact Form 7
-    if ( file_exists( $wp_plugins_dir . '/contact-form-7/wp-contact-form-7.php' ) ) {
-        require_once $wp_plugins_dir . '/contact-form-7/wp-contact-form-7.php';
+    $_contact_form_7_path = '';
+    if ( file_exists( $wp_plugins_dir . '/contact-form-7/wp-contact-form-7.php' )
+        && file_exists( $wp_plugins_dir . '/contact-form-7/includes/contact-form.php' )
+    ) {
+        $_contact_form_7_path = $wp_plugins_dir . '/contact-form-7/wp-contact-form-7.php';
+    } elseif ( file_exists( dirname( __DIR__, 2 ) . '/contact-form-7/wp-contact-form-7.php' ) ) {
+        $_contact_form_7_path = dirname( __DIR__, 2 ) . '/contact-form-7/wp-contact-form-7.php';
     }
+
+    if ( $_contact_form_7_path ) {
+        require_once $_contact_form_7_path;
+    }
+    unset( $_contact_form_7_path );
 
     // Load SureForms
     $_sureforms_path = '';
@@ -159,7 +215,9 @@ function _manually_load_plugin() {
 
     // Load WooCommerce
     $_woocommerce_path = '';
-    if ( file_exists( $wp_plugins_dir . '/woocommerce/woocommerce.php' ) ) {
+    if ( file_exists( $wp_plugins_dir . '/woocommerce/woocommerce.php' )
+        && file_exists( $wp_plugins_dir . '/woocommerce/src/Packages.php' )
+    ) {
         $_woocommerce_path = $wp_plugins_dir . '/woocommerce/woocommerce.php';
     } elseif ( file_exists( dirname( __DIR__, 2 ) . '/woocommerce/woocommerce.php' ) ) {
         $_woocommerce_path = dirname( __DIR__, 2 ) . '/woocommerce/woocommerce.php';
@@ -199,7 +257,9 @@ function _manually_load_plugin() {
 
     // Load SureCart
     $_surecart_path = '';
-    if ( file_exists( $wp_plugins_dir . '/surecart/surecart.php' ) ) {
+    if ( file_exists( $wp_plugins_dir . '/surecart/surecart.php' )
+        && file_exists( $wp_plugins_dir . '/surecart/app/src/SureCart.php' )
+    ) {
         $_surecart_path = $wp_plugins_dir . '/surecart/surecart.php';
     } elseif ( file_exists( dirname( __DIR__, 2 ) . '/surecart/surecart.php' ) ) {
         $_surecart_path = dirname( __DIR__, 2 ) . '/surecart/surecart.php';
@@ -209,6 +269,21 @@ function _manually_load_plugin() {
         require_once $_surecart_path;
     }
     unset( $_surecart_path );
+
+    $load_plugin( 'directorist/directorist-base.php' );
+    $load_plugin( 'geodirectory/geodirectory.php' );
+    if ( defined( 'GEODIRECTORY_PLUGIN_DIR' )
+        && ! class_exists( 'GeoDir_Admin_Install' )
+        && file_exists( GEODIRECTORY_PLUGIN_DIR . 'includes/admin/class-geodir-admin-install.php' )
+    ) {
+        require_once GEODIRECTORY_PLUGIN_DIR . 'includes/admin/class-geodir-admin-install.php';
+    }
+    if ( class_exists( 'GeoDir_Admin_Install' ) ) {
+        GeoDir_Admin_Install::create_tables();
+    }
+    $load_plugin( 'hivepress/hivepress.php' );
+    $load_plugin( 'business-directory-plugin/business-directory-plugin.php' );
+    $load_plugin( 'classified-listing/classified-listing.php' );
 
     require dirname( __DIR__ ) . '/appnatively.php';
 
