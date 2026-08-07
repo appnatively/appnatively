@@ -6,6 +6,7 @@ defined( "ABSPATH" ) || exit;
 
 use Crafium\AppNatively\App\DTO\Ecommerce\CartDTO;
 use Crafium\AppNatively\App\DTO\Ecommerce\CartItemDTO;
+use Crafium\AppNatively\App\Integrations\Concerns\EcommerceIntegrationHelpers;
 use Crafium\AppNatively\WpMVC\RequestValidator\Request;
 use Crafium\AppNatively\WpMVC\Exceptions\Exception;
 use SureCart\Models\Checkout;
@@ -13,6 +14,8 @@ use SureCart\Models\LineItem;
 use SureCart\Models\User as SureCartUser;
 
 class CartManager {
+    use EcommerceIntegrationHelpers;
+
     /**
      * Line items to expand when fetching a checkout, so the mapped CartDTO
      * has product name/image and variant info without extra requests.
@@ -20,53 +23,6 @@ class CartManager {
      * @var string[]
      */
     private const CHECKOUT_EXPAND = [ 'line_items', 'line_items.price', 'line_items.product', 'line_items.variant' ];
-
-    /**
-     * Authenticate the mobile-app user from a Bearer token, if present.
-     * Same convention used by the WooCommerce/FluentCart integrations.
-     *
-     * @param Request $request The REST request instance.
-     * @return void
-     */
-    private function authenticate( Request $request ): void {
-        if ( get_current_user_id() ) {
-            return;
-        }
-
-        $auth_header = $request->get_header( 'Authorization' );
-        if ( ! $auth_header || ! preg_match( '/Bearer\s+(.*)$/i', $auth_header, $matches ) ) {
-            return;
-        }
-
-        $hashed_token = hash( 'sha256', $matches[1] );
-        $users        = get_users(
-            [
-                //phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
-                'meta_key'    => 'craf_appna_auth_token',
-                //phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value
-                'meta_value'  => $hashed_token,
-                'number'      => 1,
-                'count_total' => false,
-            ]
-        );
-
-        if ( ! empty( $users ) ) {
-            wp_set_current_user( $users[0]->ID );
-        }
-    }
-
-    /**
-     * Resolve the client-held SureCart checkout id, the same X-Cart-Id/cartId
-     * convention the FluentCart integration uses (SureCart has no cookie/session
-     * of its own for this — the client must persist and resend the checkout id).
-     *
-     * @param Request $request The REST request instance.
-     * @return string|null
-     */
-    private function resolve_checkout_id( Request $request ): ?string {
-        $checkout_id = $request->get_header( 'X-Cart-Id' ) ?: $request->get_param( 'cartId' );
-        return ( $checkout_id && is_string( $checkout_id ) && $checkout_id !== 'cart' ) ? $checkout_id : null;
-    }
 
     /**
      * The current user's SureCart customer id, if any.
@@ -82,61 +38,44 @@ class CartManager {
     }
 
     /**
-     * Normalize a relation value that may come back as a plain array, a
-     * SureCart\Models\Collection (->data), a single object, or empty.
+     * Whether the given checkout is unclaimed (guest) or belongs to the
+     * requesting user. Guards against a leaked/guessed checkout id being used
+     * to read or mutate a different customer's cart.
      *
-     * @param mixed $value The relation value.
-     * @return array
+     * @param Checkout|null $checkout
+     * @return bool
      */
-    private function to_list( $value ): array {
-        if ( empty( $value ) ) {
-            return [];
+    private function owns_checkout( ?Checkout $checkout ): bool {
+        if ( ! $checkout || empty( $checkout->customer ) ) {
+            return true;
         }
-        if ( is_array( $value ) ) {
-            return $value;
-        }
-        if ( isset( $value->data ) && is_array( $value->data ) ) {
-            return $value->data;
-        }
-        return [ $value ];
+
+        return (string) $checkout->customer === (string) $this->current_customer_id();
     }
 
     /**
-     * Format a raw minor-unit (cents) amount as a plain decimal string, matching
-     * the plain numeric strings the WooCommerce/FluentCart integrations return.
+     * Resolve the requesting user's owned checkout (by client-supplied id) along
+     * with the set of line-item ids that actually belong to it, throwing a 404
+     * if the checkout is missing or not owned. Shared by cart_update()/cart_remove(),
+     * which both need this "load + validate ownership + whitelist item ids" sequence.
      *
-     * @param mixed $cents Raw amount in the currency's minor unit.
-     * @return string
+     * @param Request $request The REST request instance.
+     * @return array{0: Checkout, 1: array} [checkout, valid_item_ids]
      */
-    private function format_amount( $cents ): string {
-        return number_format( ( (int) $cents ) / 100, 2, '.', '' );
-    }
-
-    /**
-     * Reverse-lookup the WP-mirrored sc_product post id for a real SureCart
-     * product id, so CartItemDTO.product_id can satisfy its int type.
-     *
-     * @param string $sc_id The SureCart product id.
-     * @return int
-     */
-    private function resolve_post_id_for_sc_id( string $sc_id ): int {
-        if ( ! $sc_id ) {
-            return 0;
+    private function load_owned_checkout_with_valid_item_ids( Request $request ): array {
+        $checkout_id = $this->resolve_cart_id_param( $request );
+        if ( ! $checkout_id ) {
+            throw new Exception( esc_html__( 'Cart not found.', 'appnatively' ), 404 );
         }
 
-        $posts = get_posts(
-            [
-                'post_type'      => 'sc_product',
-                'posts_per_page' => 1,
-                'fields'         => 'ids',
-                //phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
-                'meta_key'       => 'sc_id',
-                //phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value
-                'meta_value'     => $sc_id,
-            ]
-        );
+        $checkout = Checkout::with( [ 'line_items' ] )->find( $checkout_id );
+        if ( is_wp_error( $checkout ) || ! $checkout || ! $this->owns_checkout( $checkout ) ) {
+            throw new Exception( esc_html__( 'Cart not found.', 'appnatively' ), 404 );
+        }
 
-        return (int) ( $posts[0] ?? 0 );
+        $valid_item_ids = wp_list_pluck( $this->to_list( $checkout->line_items ?? null ), 'id' );
+
+        return [ $checkout, $valid_item_ids ];
     }
 
     /**
@@ -181,7 +120,7 @@ class CartManager {
     private function cart_get_by_id( string $checkout_id ): CartDTO {
         $checkout = Checkout::with( self::CHECKOUT_EXPAND )->find( $checkout_id );
 
-        if ( is_wp_error( $checkout ) || ! $checkout || empty( $checkout->id ) ) {
+        if ( is_wp_error( $checkout ) || ! $checkout || empty( $checkout->id ) || ! $this->owns_checkout( $checkout ) ) {
             return $this->map_to_cart_dto( null );
         }
 
@@ -205,7 +144,7 @@ class CartManager {
                 ->set_total( '0' )
                 ->set_currency( $currency )
                 ->set_item_count( 0 )
-                ->set_checkout_url( (string) \SureCart::pages()->url( 'checkout' ) );
+                ->set_checkout_url( esc_url( (string) \SureCart::pages()->url( 'checkout' ) ) );
         }
 
         $items      = [];
@@ -240,15 +179,15 @@ class CartManager {
             ->set_total( $this->format_amount( $checkout->total_amount ?? 0 ) )
             ->set_currency( (string) ( $checkout->currency ?? $currency ) )
             ->set_item_count( $item_count )
-            ->set_checkout_url( add_query_arg( 'checkout_id', $checkout->id, (string) \SureCart::pages()->url( 'checkout' ) ) );
+            ->set_checkout_url( esc_url( add_query_arg( 'checkout_id', $checkout->id, (string) \SureCart::pages()->url( 'checkout' ) ) ) );
     }
 
     /**
      * Get cart details.
      */
     public function cart_get( ?CartDTO $cart_dto, Request $request ): CartDTO {
-        $this->authenticate( $request );
-        $checkout_id = $this->resolve_checkout_id( $request );
+        $this->authenticate_from_bearer_token( $request );
+        $checkout_id = $this->resolve_cart_id_param( $request );
 
         return $checkout_id ? $this->cart_get_by_id( $checkout_id ) : $this->map_to_cart_dto( null );
     }
@@ -257,11 +196,11 @@ class CartManager {
      * Add item(s) to cart, creating the checkout on the first item if needed.
      */
     public function cart_add( ?CartDTO $cart_dto, Request $request ): CartDTO {
-        $this->authenticate( $request );
+        $this->authenticate_from_bearer_token( $request );
 
-        $checkout_id = $this->resolve_checkout_id( $request );
+        $checkout_id = $this->resolve_cart_id_param( $request );
         $checkout    = $checkout_id ? Checkout::find( $checkout_id ) : null;
-        if ( is_wp_error( $checkout ) ) {
+        if ( is_wp_error( $checkout ) || ( $checkout && ! $this->owns_checkout( $checkout ) ) ) {
             $checkout = null;
         }
 
@@ -324,19 +263,16 @@ class CartManager {
      * Update item quantities.
      */
     public function cart_update( ?CartDTO $cart_dto, Request $request ): CartDTO {
-        $this->authenticate( $request );
+        $this->authenticate_from_bearer_token( $request );
 
-        $checkout_id = $this->resolve_checkout_id( $request );
-        if ( ! $checkout_id ) {
-            throw new Exception( esc_html__( 'Cart not found.', 'appnatively' ), 404 );
-        }
+        [ $checkout, $valid_item_ids ] = $this->load_owned_checkout_with_valid_item_ids( $request );
 
         $items = (array) $request->get_param( 'items' );
         foreach ( $items as $item ) {
             $item_id  = sanitize_text_field( $item['itemId'] ?? '' );
             $quantity = (int) ( $item['quantity'] ?? 0 );
 
-            if ( ! $item_id || $quantity < 1 ) {
+            if ( ! $item_id || $quantity < 1 || ! in_array( $item_id, $valid_item_ids, true ) ) {
                 continue;
             }
 
@@ -347,29 +283,26 @@ class CartManager {
             }
         }
 
-        return $this->cart_get_by_id( $checkout_id );
+        return $this->cart_get_by_id( (string) $checkout->id );
     }
 
     /**
      * Remove item(s) from cart.
      */
     public function cart_remove( ?CartDTO $cart_dto, Request $request ): CartDTO {
-        $this->authenticate( $request );
+        $this->authenticate_from_bearer_token( $request );
 
-        $checkout_id = $this->resolve_checkout_id( $request );
-        if ( ! $checkout_id ) {
-            throw new Exception( esc_html__( 'Cart not found.', 'appnatively' ), 404 );
-        }
+        [ $checkout, $valid_item_ids ] = $this->load_owned_checkout_with_valid_item_ids( $request );
 
         $item_ids = (array) $request->get_param( 'itemIds' );
         foreach ( $item_ids as $item_id ) {
             $item_id = sanitize_text_field( $item_id );
-            if ( $item_id ) {
+            if ( $item_id && in_array( $item_id, $valid_item_ids, true ) ) {
                 LineItem::delete( $item_id );
             }
         }
 
-        return $this->cart_get_by_id( $checkout_id );
+        return $this->cart_get_by_id( (string) $checkout->id );
     }
 
     /**
@@ -377,15 +310,15 @@ class CartManager {
      * line item individually.
      */
     public function cart_clear( ?CartDTO $cart_dto, Request $request ): CartDTO {
-        $this->authenticate( $request );
+        $this->authenticate_from_bearer_token( $request );
 
-        $checkout_id = $this->resolve_checkout_id( $request );
+        $checkout_id = $this->resolve_cart_id_param( $request );
         if ( ! $checkout_id ) {
             return $this->map_to_cart_dto( null );
         }
 
         $checkout = Checkout::with( [ 'line_items' ] )->find( $checkout_id );
-        if ( ! is_wp_error( $checkout ) && $checkout ) {
+        if ( ! is_wp_error( $checkout ) && $checkout && $this->owns_checkout( $checkout ) ) {
             foreach ( $this->to_list( $checkout->line_items ?? null ) as $line_item ) {
                 if ( ! empty( $line_item->id ) ) {
                     LineItem::delete( $line_item->id );

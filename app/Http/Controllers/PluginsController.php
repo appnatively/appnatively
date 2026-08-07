@@ -37,6 +37,8 @@ class PluginsController extends Controller {
                 "sureforms"                 => [ "category" => "form", "label" => "SureForms"],
                 "weforms"                   => [ "category" => "form", "label" => "WeForms"],
                 "wpforms-lite"              => [ "category" => "form", "label" => "WPForms", "file" => "wpforms-lite/wpforms.php"],
+                "bit-form"                  => [ "category" => "form", "label" => "Bit Form", "file" => "bit-form/bitforms.php"],
+                "ninja-forms"               => [ "category" => "form", "label" => "Ninja Forms"],
             ]
         );
 

@@ -12,6 +12,7 @@ use Crafium\AppNatively\App\DTO\Ecommerce\ProductDimensionDTO;
 use Crafium\AppNatively\App\DTO\Ecommerce\ProductImageDTO;
 use Crafium\AppNatively\App\DTO\Ecommerce\ProductPaginatorDTO;
 use Crafium\AppNatively\App\DTO\Ecommerce\ProductVariantDTO;
+use Crafium\AppNatively\App\Integrations\Concerns\EcommerceIntegrationHelpers;
 use Crafium\AppNatively\WpMVC\Exceptions\Exception;
 use FluentCart\App\Helpers\Helper;
 
@@ -21,6 +22,8 @@ use FluentCart\App\Services\Filter\ProductFilter;
 use FluentCart\Framework\Http\Request\Request;
 
 class ProductRepository {
+    use EcommerceIntegrationHelpers;
+
     /**
      * Bridge WP_REST_Request to FluentCart Request.
      *
@@ -249,11 +252,11 @@ class ProductRepository {
             }
 
             if ( in_array( "price", $fields ) ) {
-                $dto->set_price( (string) $detail->min_price );
+                $dto->set_price( $this->format_amount( $detail->min_price ) );
             }
 
             if ( in_array( "compare_at_price", $fields ) ) {
-                $dto->set_compare_at_price( (string) $detail->max_price );
+                $dto->set_compare_at_price( $this->format_amount( $detail->max_price ) );
             }
 
             if ( in_array( "on_sale", $fields ) ) {
@@ -340,8 +343,8 @@ class ProductRepository {
                 $var_dto->set_id( (int) $variation->id )
                     ->set_sku( (string) $variation->sku )
                     ->set_name( (string) $variation->variation_title )
-                    ->set_price( (string) $variation->item_price )
-                    ->set_compare_at_price( (string) $variation->compare_price )
+                    ->set_price( $this->format_amount( $variation->item_price ) )
+                    ->set_compare_at_price( $this->format_amount( $variation->compare_price ) )
                     ->set_inventory_status( (string) $variation->stock_status )
                     ->set_manage_stock( (bool) $variation->manage_stock )
                     ->set_stock_quantity( (int) $variation->available );

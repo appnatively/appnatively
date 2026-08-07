@@ -10,6 +10,7 @@ use Crafium\AppNatively\App\DTO\Directory\ListingDTO;
 use Crafium\AppNatively\App\DTO\Directory\ListingPaginatorDTO;
 use Crafium\AppNatively\App\DTO\Directory\TermDTO;
 use Crafium\AppNatively\App\DTO\Directory\TermPaginatorDTO;
+use Crafium\AppNatively\App\Integrations\Concerns\ListingIntegrationHelpers;
 use Crafium\AppNatively\App\Models\Term;
 use Crafium\AppNatively\WpMVC\Contracts\Provider;
 use Crafium\AppNatively\WpMVC\RequestValidator\Request;
@@ -18,6 +19,8 @@ use WP_Post;
 use WP_Query;
 
 class Directorist extends Provider {
+    use ListingIntegrationHelpers;
+
     /**
      * Register any application services.
      *
@@ -44,6 +47,42 @@ class Directorist extends Provider {
     }
 
     /**
+     * Get the Directorist listing post type slug.
+     *
+     * @return string
+     */
+    private function get_post_type(): string {
+        return defined( "ATBDP_POST_TYPE" ) ? ATBDP_POST_TYPE : "at_biz_dir";
+    }
+
+    /**
+     * Get the Directorist category taxonomy slug.
+     *
+     * @return string
+     */
+    private function get_category_taxonomy(): string {
+        return defined( "ATBDP_CATEGORY" ) ? ATBDP_CATEGORY : "at_biz_dir-category";
+    }
+
+    /**
+     * Get the Directorist tags taxonomy slug.
+     *
+     * @return string
+     */
+    private function get_tags_taxonomy(): string {
+        return defined( "ATBDP_TAGS" ) ? ATBDP_TAGS : "at_biz_dir-tags";
+    }
+
+    /**
+     * Get the Directorist location taxonomy slug.
+     *
+     * @return string
+     */
+    private function get_location_taxonomy(): string {
+        return defined( "ATBDP_LOCATION" ) ? ATBDP_LOCATION : "at_biz_dir-location";
+    }
+
+    /**
      * Get listings paginator.
      *
      * @param ListingPaginatorDTO|null $listing_paginator The listing paginator.
@@ -56,7 +95,7 @@ class Directorist extends Provider {
         $per_page  = (int) $request->get_param( "per_page" ) ?: 10;
         $search    = sanitize_text_field( (string) $request->get_param( "search" ) );
         $sort      = sanitize_text_field( (string) $request->get_param( "sort" ) );
-        $post_type = defined( "ATBDP_POST_TYPE" ) ? ATBDP_POST_TYPE : "at_biz_dir";
+        $post_type = $this->get_post_type();
 
         $categories  = $request->get_param( "categories" );
         $tags        = $request->get_param( "tags" );
@@ -97,7 +136,7 @@ class Directorist extends Provider {
 
         if ( ! empty( $categories ) && is_array( $categories ) ) {
             $tax_query[] = [
-                "taxonomy" => defined( "ATBDP_CATEGORY" ) ? ATBDP_CATEGORY : "at_biz_dir-category",
+                "taxonomy" => $this->get_category_taxonomy(),
                 "field"    => "term_id",
                 "terms"    => array_map( "intval", $categories ),
             ];
@@ -105,7 +144,7 @@ class Directorist extends Provider {
 
         if ( ! empty( $tags ) && is_array( $tags ) ) {
             $tax_query[] = [
-                "taxonomy" => defined( "ATBDP_TAGS" ) ? ATBDP_TAGS : "at_biz_dir-tags",
+                "taxonomy" => $this->get_tags_taxonomy(),
                 "field"    => "term_id",
                 "terms"    => array_map( "intval", $tags ),
             ];
@@ -113,7 +152,7 @@ class Directorist extends Provider {
 
         if ( ! empty( $locations ) && is_array( $locations ) ) {
             $tax_query[] = [
-                "taxonomy" => defined( "ATBDP_LOCATION" ) ? ATBDP_LOCATION : "at_biz_dir-location",
+                "taxonomy" => $this->get_location_taxonomy(),
                 "field"    => "term_id",
                 "terms"    => array_map( "intval", $locations ),
             ];
@@ -160,7 +199,7 @@ class Directorist extends Provider {
      */
     public function listing( ?ListingDTO $listing, Request $request, array $fields = [] ): ?ListingDTO {
         $listing_id = (int) $request->get_param( "id" );
-        $post_type  = defined( "ATBDP_POST_TYPE" ) ? ATBDP_POST_TYPE : "at_biz_dir";
+        $post_type  = $this->get_post_type();
         $post       = get_post( $listing_id );
 
         if ( ! $post instanceof WP_Post || $post->post_type !== $post_type || $post->post_status !== "publish" ) {
@@ -182,15 +221,15 @@ class Directorist extends Provider {
         $listing_id = (int) $request->get_param( "id" );
         $page       = (int) $request->get_param( "page" ) ?: 1;
         $per_page   = (int) $request->get_param( "per_page" ) ?: 10;
-        $post_type  = defined( "ATBDP_POST_TYPE" ) ? ATBDP_POST_TYPE : "at_biz_dir";
+        $post_type  = $this->get_post_type();
         $post       = get_post( $listing_id );
 
         if ( ! $post instanceof WP_Post || $post->post_type !== $post_type || $post->post_status !== "publish" ) {
             return new ListingPaginatorDTO( $page, $per_page, 0, 1, [] );
         }
 
-        $category_taxonomy = defined( "ATBDP_CATEGORY" ) ? ATBDP_CATEGORY : "at_biz_dir-category";
-        $tag_taxonomy      = defined( "ATBDP_TAGS" ) ? ATBDP_TAGS : "at_biz_dir-tags";
+        $category_taxonomy = $this->get_category_taxonomy();
+        $tag_taxonomy      = $this->get_tags_taxonomy();
         $category_ids      = wp_get_post_terms( $listing_id, $category_taxonomy, ["fields" => "ids"] );
         $tag_ids           = wp_get_post_terms( $listing_id, $tag_taxonomy, ["fields" => "ids"] );
 
@@ -266,7 +305,7 @@ class Directorist extends Provider {
         $listing_id = (int) $request->get_param( "id" );
         $page       = (int) $request->get_param( "page" ) ?: 1;
         $per_page   = (int) $request->get_param( "per_page" ) ?: 10;
-        $post_type  = defined( "ATBDP_POST_TYPE" ) ? ATBDP_POST_TYPE : "at_biz_dir";
+        $post_type  = $this->get_post_type();
         $post       = get_post( $listing_id );
 
         if ( ! $post instanceof WP_Post || $post->post_type !== $post_type || $post->post_status !== "publish" ) {
@@ -335,7 +374,7 @@ class Directorist extends Provider {
             return new ListingPaginatorDTO( 1, 0, 0, 1, [] );
         }
 
-        $post_type = defined( "ATBDP_POST_TYPE" ) ? ATBDP_POST_TYPE : "at_biz_dir";
+        $post_type = $this->get_post_type();
 
         $query = new WP_Query(
             [
@@ -369,7 +408,7 @@ class Directorist extends Provider {
         $page     = (int) $request->get_param( "page" ) ?: 1;
         $per_page = (int) $request->get_param( "per_page" ) ?: 10;
         $search   = sanitize_text_field( (string) $request->get_param( "search" ) );
-        $taxonomy = defined( "ATBDP_CATEGORY" ) ? ATBDP_CATEGORY : "at_biz_dir-category";
+        $taxonomy = $this->get_category_taxonomy();
 
         $query = Term::join( "term_taxonomy", "terms.term_id", "=", "term_taxonomy.term_id" )
             ->where( "term_taxonomy.taxonomy", $taxonomy );
@@ -431,7 +470,7 @@ class Directorist extends Provider {
      */
     public function category( ?CategoryDTO $category, Request $request, array $fields = [] ): ?CategoryDTO {
         $category_id = (int) $request->get_param( "id" );
-        $taxonomy    = defined( "ATBDP_CATEGORY" ) ? ATBDP_CATEGORY : "at_biz_dir-category";
+        $taxonomy    = $this->get_category_taxonomy();
         $term        = get_term( $category_id, $taxonomy );
 
         if ( ! $term || is_wp_error( $term ) ) {
@@ -453,7 +492,7 @@ class Directorist extends Provider {
         $page     = (int) $request->get_param( "page" ) ?: 1;
         $per_page = (int) $request->get_param( "per_page" ) ?: 10;
         $search   = sanitize_text_field( (string) $request->get_param( "search" ) );
-        $taxonomy = defined( "ATBDP_TAGS" ) ? ATBDP_TAGS : "at_biz_dir-tags";
+        $taxonomy = $this->get_tags_taxonomy();
 
         $query = Term::join( "term_taxonomy", "terms.term_id", "=", "term_taxonomy.term_id" )
             ->where( "term_taxonomy.taxonomy", $taxonomy )
@@ -514,7 +553,7 @@ class Directorist extends Provider {
         $page     = (int) $request->get_param( "page" ) ?: 1;
         $per_page = (int) $request->get_param( "per_page" ) ?: 10;
         $search   = sanitize_text_field( (string) $request->get_param( "search" ) );
-        $taxonomy = defined( "ATBDP_LOCATION" ) ? ATBDP_LOCATION : "at_biz_dir-location";
+        $taxonomy = $this->get_location_taxonomy();
 
         $query = Term::join( "term_taxonomy", "terms.term_id", "=", "term_taxonomy.term_id" )
             ->where( "term_taxonomy.taxonomy", $taxonomy )
@@ -565,7 +604,7 @@ class Directorist extends Provider {
 
     public function location( ?TermDTO $location, Request $request, array $fields = [] ): ?TermDTO {
         $location_id = (int) $request->get_param( "id" );
-        $taxonomy    = defined( "ATBDP_LOCATION" ) ? ATBDP_LOCATION : "at_biz_dir-location";
+        $taxonomy    = $this->get_location_taxonomy();
         $term        = get_term( $location_id, $taxonomy );
 
         if ( ! $term || is_wp_error( $term ) ) {
@@ -795,41 +834,19 @@ class Directorist extends Provider {
             $dto->set_pricing( $this->get_listing_pricing( $listing->ID ) );
         }
         if ( in_array( "categories", $fields, true ) ) {
-            $dto->set_categories( $this->get_listing_terms( $listing->ID, defined( "ATBDP_CATEGORY" ) ? ATBDP_CATEGORY : "at_biz_dir-category" ) );
+            $dto->set_categories( $this->get_listing_terms( $listing->ID, $this->get_category_taxonomy() ) );
         }
         if ( in_array( "locations", $fields, true ) ) {
-            $dto->set_locations( $this->get_listing_terms( $listing->ID, defined( "ATBDP_LOCATION" ) ? ATBDP_LOCATION : "at_biz_dir-location" ) );
+            $dto->set_locations( $this->get_listing_terms( $listing->ID, $this->get_location_taxonomy() ) );
         }
         if ( in_array( "tags", $fields, true ) ) {
-            $dto->set_tags( $this->get_listing_terms( $listing->ID, defined( "ATBDP_TAGS" ) ? ATBDP_TAGS : "at_biz_dir-tags" ) );
+            $dto->set_tags( $this->get_listing_terms( $listing->ID, $this->get_tags_taxonomy() ) );
         }
         if ( in_array( "rating", $fields, true ) ) {
             $dto->set_rating( $this->get_listing_rating( $listing->ID ) );
         }
 
         return $dto;
-    }
-
-    /**
-     * Normalize a latitude/longitude meta value.
-     *
-     * @param mixed $value Raw coordinate value.
-     * @param float $min Minimum valid coordinate.
-     * @param float $max Maximum valid coordinate.
-     * @return float|null
-     */
-    private function normalize_coordinate( $value, float $min, float $max ): ?float {
-        if ( $value === null || $value === "" || ! is_numeric( $value ) ) {
-            return null;
-        }
-
-        $coordinate = (float) $value;
-
-        if ( $coordinate < $min || $coordinate > $max ) {
-            return null;
-        }
-
-        return $coordinate;
     }
 
     /**
@@ -929,7 +946,7 @@ class Directorist extends Provider {
         foreach ( $keys as $key ) {
             $value = get_post_meta( $listing_id, $key, true );
             if ( "" !== $value && null !== $value ) {
-                return is_scalar( $value ) ? (string) $value : "";
+                return is_scalar( $value ) ? sanitize_text_field( (string) $value ) : "";
             }
         }
 
@@ -955,8 +972,8 @@ class Directorist extends Provider {
 
         return [
             "id"    => (int) $image_id,
-            "src"   => (string) $src,
-            "alt"   => (string) get_post_meta( $image_id, "_wp_attachment_image_alt", true ),
+            "src"   => esc_url_raw( (string) $src ),
+            "alt"   => sanitize_text_field( (string) get_post_meta( $image_id, "_wp_attachment_image_alt", true ) ),
             "title" => (string) get_the_title( $image_id ),
         ];
     }
@@ -1010,8 +1027,8 @@ class Directorist extends Provider {
     private function map_review_comment( \WP_Comment $comment ): array {
         return [
             "id"           => (int) $comment->comment_ID,
-            "reviewer"     => (string) $comment->comment_author,
-            "review"       => (string) $comment->comment_content,
+            "reviewer"     => sanitize_text_field( (string) $comment->comment_author ),
+            "review"       => wp_kses_post( (string) $comment->comment_content ),
             "rating"       => (float) get_comment_meta( $comment->comment_ID, "rating", true ),
             "date_created" => (string) get_comment_date( DATE_ATOM, $comment ),
             "avatar_url"   => (string) get_avatar_url(
@@ -1082,33 +1099,4 @@ class Directorist extends Provider {
         return $total > 0 ? round( $sum / $total, 1 ) : 0.0;
     }
 
-    private function apply_listing_content_filters( WP_Post $post ): string {
-        $previous_post   = $GLOBALS["post"] ?? null;
-        $GLOBALS["post"] = $post;
-
-        $content = (string) apply_filters( "the_content", $post->post_content );
-
-        if ( null === $previous_post ) {
-            unset( $GLOBALS["post"] );
-        } else {
-            $GLOBALS["post"] = $previous_post;
-        }
-
-        return $content;
-    }
-
-    private function get_listing_excerpt( WP_Post $post ): string {
-        $previous_post   = $GLOBALS["post"] ?? null;
-        $GLOBALS["post"] = $post;
-
-        $excerpt = (string) get_the_excerpt( $post );
-
-        if ( null === $previous_post ) {
-            unset( $GLOBALS["post"] );
-        } else {
-            $GLOBALS["post"] = $previous_post;
-        }
-
-        return $excerpt;
-    }
 }

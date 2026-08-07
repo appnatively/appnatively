@@ -40,7 +40,7 @@ class Woocommerce extends Provider {
     public function __construct() {
         $this->cart_manager       = new CartManager();
         $this->product_repository = new ProductRepository();
-        $this->order_repository   = new OrderRepository( $this->cart_manager );
+        $this->order_repository   = new OrderRepository();
     }
 
     /**

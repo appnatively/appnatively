@@ -18,6 +18,56 @@ class WPForms extends Form {
             return;
         }
         parent::boot();
+        add_filter( "craf_appna_form_{$this->get_key()}_submit_errors", [ $this, 'get_submit_errors' ] );
+    }
+
+    /**
+     * WPForms' own spam/anti-spam checks reject an entry silently (no exception),
+     * so surface that failure through the generic per-integration submit-errors hook.
+     */
+    public function get_submit_errors() {
+        $process = wpforms()->obj( 'process' );
+
+        if ( ! empty( $process->errors ) ) {
+            $messages = $this->collect_error_messages( $process->errors );
+
+            if ( ! empty( $messages ) ) {
+                return implode( ' ', $messages );
+            }
+        }
+
+        if ( ! empty( $process->spam_errors ) && empty( $process->entry_id ) ) {
+            return __( 'Form submission was flagged as spam. Please try again.', 'appnatively' );
+        }
+
+        return null;
+    }
+
+    private function collect_error_messages( array $errors ): array {
+        $messages = [];
+
+        foreach ( $errors as $form_id => $error_data ) {
+            if ( ! empty( $error_data['header'] ) ) {
+                $messages[] = $error_data['header'];
+            }
+            if ( ! empty( $error_data['footer'] ) ) {
+                $messages[] = $error_data['footer'];
+            }
+            if ( ! empty( $error_data['recaptcha'] ) ) {
+                $messages[] = $error_data['recaptcha'];
+            }
+            if ( ! empty( $error_data['footer_styled'] ) ) {
+                $messages[] = $error_data['footer_styled'];
+            }
+
+            foreach ( $error_data as $field_id => $field_message ) {
+                if ( is_string( $field_message ) && ! in_array( $field_id, [ 'header', 'footer', 'recaptcha', 'footer_styled' ], true ) ) {
+                    $messages[] = $field_message;
+                }
+            }
+        }
+
+        return $messages;
     }
 
     protected function get_form( int $id ) {
@@ -39,17 +89,7 @@ class WPForms extends Form {
     }
 
     private function map_field_type( string $type ) {
-        $map = [
-            'text'          => 'text',
-            'number'        => 'number',
-            'email'         => 'email',
-            'checkbox'      => 'checkbox',
-            'select'        => 'select',
-            'number-slider' => 'number_slider',
-            'gdpr-checkbox' => 'gdpr',
-        ];
-
-        return $map[$type] ?? null;
+        return $this->get_standardized_type( $type );
     }
 
     private function get_text_rules( array $field ): array {
@@ -80,19 +120,47 @@ class WPForms extends Form {
         return [ 'string', 'email' ];
     }
 
+    private function get_url_rules( array $field ): array {
+        return [ 'string', 'url' ];
+    }
+
+    private function get_password_rules( array $field ): array {
+        return [ 'string' ];
+    }
+
+    private function get_date_time_picker_rules( array $field ): array {
+        return [ 'string' ];
+    }
+
+    private function get_rating_rules( array $field ): array {
+        $rules = [ 'integer' ];
+
+        if ( ! empty( $field['rating_max'] ) ) {
+            $rules[] = 'max:' . absint( $field['rating_max'] );
+        }
+
+        return $rules;
+    }
+
     private function get_gdpr_rules( array $field ): array {
-        return [ 'integer', 'in:0,1' ];
+        // GDPR consent must always be affirmatively given, regardless of whether the
+        // plugin author happened to mark the field "required" in the form builder.
+        return [ 'integer', 'in:1', 'required' ];
     }
 
     private function get_checkbox_rules( array $field ): array {
         return [ 'array' ];
     }
 
-    private function get_select_rules( array $field ): array {
+    private function get_radio_rules( array $field ): array {
         return [ 'string', 'max:255' ];
     }
 
-    private function get_number_slider_rules( array $field ): array {
+    private function get_single_select_rules( array $field ): array {
+        return [ 'string', 'max:255' ];
+    }
+
+    private function get_range_rules( array $field ): array {
         $rules       = [];
         $slider_type = isset( $field['slider_type'] ) ? $field['slider_type'] : 'number';
         if ( 'number' === $slider_type ) {
@@ -141,14 +209,29 @@ class WPForms extends Form {
                 case 'checkbox':
                     $field_rules = $this->get_checkbox_rules( $field );
                     break;
-                case 'select':
-                    $field_rules = $this->get_select_rules( $field );
+                case 'single_select':
+                    $field_rules = $this->get_single_select_rules( $field );
+                    break;
+                case 'radio':
+                    $field_rules = $this->get_radio_rules( $field );
+                    break;
+                case 'url':
+                    $field_rules = $this->get_url_rules( $field );
+                    break;
+                case 'password':
+                    $field_rules = $this->get_password_rules( $field );
+                    break;
+                case 'date_time_picker':
+                    $field_rules = $this->get_date_time_picker_rules( $field );
+                    break;
+                case 'rating':
+                    $field_rules = $this->get_rating_rules( $field );
                     break;
                 case 'gdpr':
                     $field_rules = $this->get_gdpr_rules( $field );
                     break;
-                case 'number_slider':
-                    $field_rules = $this->get_number_slider_rules( $field );
+                case 'range':
+                    $field_rules = $this->get_range_rules( $field );
                     break;
                 default:
                     continue 2;
@@ -186,7 +269,9 @@ class WPForms extends Form {
 
             $field_id = (string) $field['id'];
 
-            if ( ! empty( $field['required'] ) && $field['required'] === '1' ) {
+            $is_required = $mapped_type === 'gdpr' || ( ! empty( $field['required'] ) && $field['required'] === '1' );
+
+            if ( $is_required ) {
                 $messages["{$field_id}.required"] = wpforms_setting(
                     'validation-required',
                     __( 'This field is required.', 'wpforms-lite' )
@@ -200,7 +285,7 @@ class WPForms extends Form {
                 );
             }
 
-            if ( $mapped_type === 'number' || $mapped_type === 'number_slider' ) {
+            if ( $mapped_type === 'number' || $mapped_type === 'range' ) {
                 $messages["{$field_id}.numeric"] = wpforms_setting(
                     'validation-number',
                     __( 'Please enter a valid number.', 'wpforms-lite' )
@@ -253,7 +338,7 @@ class WPForms extends Form {
             return false;
         }
 
-        return in_array( $mapped_type, [ 'number', 'number_slider' ], true );
+        return in_array( $mapped_type, [ 'number', 'range' ], true );
     }
 
     private function field_has_max_rule( array $field, string $mapped_type ): bool {
@@ -261,50 +346,37 @@ class WPForms extends Form {
             return false;
         }
 
-        return in_array( $mapped_type, [ 'number', 'number_slider' ], true );
+        return in_array( $mapped_type, [ 'number', 'range' ], true );
     }
 
-    public function form_submit( Request $request ) {
-        $form = $this->get_form( $request->get_param( 'form_id' ) );
-        if ( ! $form ) {
-            throw new \Exception( __( 'Form not found', 'appnatively' ) );
+    protected function prepare_request_for_validation( Request $request, array $form ): void {
+        if ( empty( $form['fields'] ) ) {
+            return;
         }
 
-        if ( ! empty( $form['fields'] ) ) {
-            foreach ( $form['fields'] as $field ) {
-                if ( empty( $field['type'] ) || empty( $field['id'] ) ) {
-                    continue;
-                }
+        foreach ( $form['fields'] as $field ) {
+            if ( empty( $field['type'] ) || empty( $field['id'] ) ) {
+                continue;
+            }
 
-                $mapped_type = $this->map_field_type( $field['type'] );
-                if ( ! $mapped_type ) {
-                    continue;
-                }
-                $field_name = $field['id'];
-                $value      = $request->get_param( $field_name );
-                if ( $value === null ) {
-                    continue;
-                }
+            $mapped_type = $this->map_field_type( $field['type'] );
+            if ( ! $mapped_type ) {
+                continue;
+            }
+            $field_name = $field['id'];
+            $value      = $request->get_param( $field_name );
+            if ( $value === null ) {
+                continue;
+            }
 
-                if ( $mapped_type === 'number_slider' && is_array( $value ) ) {
-                    $request->set_param( $field['id'], isset( $value['max'] ) && $value['max'] !== '' ? (int) $value['max'] : 0 );
-                }
+            if ( $mapped_type === 'range' && is_array( $value ) ) {
+                $request->set_param( $field['id'], isset( $value['max'] ) && $value['max'] !== '' ? (int) $value['max'] : 0 );
+            }
 
-                if ( $mapped_type === 'gdpr' ) {
-                    $request->set_param( $field_name, (int) $value );
-                }
+            if ( $mapped_type === 'gdpr' ) {
+                $request->set_param( $field_name, (int) $value );
             }
         }
-
-        $validation = $request->make(
-            $request,
-            $this->get_validation_rules( $form ),
-            $this->get_validation_messages( $form )
-        );
-        $validation->throw_if_fails();
-        $request->errors = $validation->errors();
-
-        $this->submit( $request, $form );
     }
 
     protected function submit( Request $request, array $form ) {
@@ -350,13 +422,15 @@ class WPForms extends Form {
 
         add_filter( 'wpforms_field_choices_allow_unknown_value', '__return_true' );
 
-        wpforms()->obj( 'process' )->process( $entry );
+        try {
+            wpforms()->obj( 'process' )->process( $entry );
+        } finally {
+            // Restore the original action to avoid side effects.
+            unset( $_POST['action'] ); // phpcs:ignore WordPress.Security.NonceVerification.Missing
 
-        // Restore the original action to avoid side effects.
-        unset( $_POST['action'] ); // phpcs:ignore WordPress.Security.NonceVerification.Missing
-
-        remove_filter( 'wpforms_process_anti_spam_direct_post_bypass', '__return_true' );
-        remove_filter( 'wpforms_field_choices_allow_unknown_value', '__return_true' );
+            remove_filter( 'wpforms_process_anti_spam_direct_post_bypass', '__return_true' );
+            remove_filter( 'wpforms_field_choices_allow_unknown_value', '__return_true' );
+        }
     }
 
     public function get_forms(): array {
@@ -415,18 +489,6 @@ class WPForms extends Form {
 
         if ( in_array( 'title', $fields, true ) ) {
             $dto->set_title( $raw_form['title'] ?? '' );
-        }
-
-        if ( in_array( 'status', $fields, true ) ) {
-            $dto->set_status( $raw_form['status'] ?? 'publish' );
-        }
-
-        if ( in_array( 'date_created', $fields, true ) ) {
-            $dto->set_date_created( $raw_form['date_created'] ?? '' );
-        }
-
-        if ( in_array( 'date_updated', $fields, true ) ) {
-            $dto->set_date_updated( $raw_form['date_updated'] ?? '' );
         }
 
         if ( in_array( 'fields', $fields, true ) && ! empty( $raw_form['fields'] ) ) {

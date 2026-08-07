@@ -9,12 +9,14 @@ namespace Crafium\AppNatively\App\DTO\Ecommerce;
 
 defined( "ABSPATH" ) || exit;
 
+use Crafium\AppNatively\App\DTO\DTO;
+
 /**
  * Class OrderDTO
  *
  * Data Transfer Object for orders.
  */
-class OrderDTO {
+class OrderDTO extends DTO {
     /**
      * Order ID.
      *
@@ -174,8 +176,17 @@ class OrderDTO {
             'lineItems'          => array_map(
                 function( $item ) {
                     return $item->to_array();
-                }, $this->line_items 
+                }, $this->line_items
             ),
         ];
+    }
+
+    /**
+     * Specify data which should be serialized to JSON.
+     *
+     * @return array
+     */
+    public function jsonSerialize(): array {
+        return $this->to_array();
     }
 }

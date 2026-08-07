@@ -243,6 +243,14 @@ class EverestFormTest extends \WP_UnitTestCase {
         $this->assertEquals( $this->form_id, $form['id'] );
     }
 
+    public function test_get_form_excludes_unpublished_form() {
+        wp_update_post( [ 'ID' => $this->form_id, 'post_status' => 'draft' ] );
+
+        $everest_forms = $this->get_integration_instance();
+        $form          = $everest_forms->expose_get_form( $this->form_id );
+        $this->assertEmpty( $form );
+    }
+
     public function test_get_validation_rules() {
         $everest_forms = $this->get_integration_instance();
         $form          = $everest_forms->expose_get_form( $this->form_id );

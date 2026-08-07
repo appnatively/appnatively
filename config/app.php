@@ -21,6 +21,8 @@ use Crafium\AppNatively\App\Integrations\Forms\HappyForms;
 use Crafium\AppNatively\App\Integrations\Forms\SureForms;
 use Crafium\AppNatively\App\Integrations\Forms\WeForms;
 use Crafium\AppNatively\App\Integrations\Forms\WPForms;
+use Crafium\AppNatively\App\Integrations\Forms\BitForm;
+use Crafium\AppNatively\App\Integrations\Forms\NinjaForms;
 use Crafium\AppNatively\App\Models\Comment;
 use Crafium\AppNatively\App\Models\Post;
 use Crafium\AppNatively\App\Models\Term;
@@ -97,6 +99,8 @@ return [
         SureForms::class,
         WeForms::class,
         WPForms::class,
+        BitForm::class,
+        NinjaForms::class,
     ],
 
     /**

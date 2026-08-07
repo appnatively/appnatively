@@ -196,6 +196,14 @@ class HappyFormTest extends \WP_UnitTestCase {
         $this->assertArrayHasKey( 'parts', $form );
     }
 
+    public function test_get_form_excludes_unpublished_form() {
+        wp_update_post( [ 'ID' => $this->form_id, 'post_status' => 'draft' ] );
+
+        $happyforms = $this->get_integration_instance();
+        $form       = $happyforms->expose_get_form( $this->form_id );
+        $this->assertEmpty( $form );
+    }
+
     public function test_get_validation_rules() {
         $happyforms = $this->get_integration_instance();
         $form       = $happyforms->expose_get_form( $this->form_id );

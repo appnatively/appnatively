@@ -22,6 +22,10 @@ class GutenaForms extends Form {
     }
 
     protected function get_form( int $id ) {
+        if ( 'publish' !== get_post_status( $id ) ) {
+            return [];
+        }
+
         $block_form_id = get_post_meta( $id, 'gutena_form_id', true );
 
         if ( ! $block_form_id ) {
@@ -37,7 +41,6 @@ class GutenaForms extends Form {
         $fields = [];
 
         foreach ( $schema['form_fields'] as $name_attr => $field ) {
-            error_log( 'field: ' . print_r( $field, true ), 0 );
             if ( empty( $field['nameAttr'] ) ) {
                 continue;
             }
@@ -103,17 +106,7 @@ class GutenaForms extends Form {
     }
 
     private function map_field_type( string $type ) {
-        $map = [
-            'text'     => 'text',
-            'email'    => 'email',
-            'number'   => 'number',
-            'checkbox' => 'checkbox',
-            'select'   => 'select',
-            'radio'    => 'radio',
-            'range'    => 'range',
-        ];
-
-        return $map[ $type ] ?? null;
+        return $this->get_standardized_type( $type );
     }
 
     private function get_text_rules( array $field ): array {
@@ -128,12 +121,16 @@ class GutenaForms extends Form {
         return [ 'array' ];
     }
 
-    private function get_select_rules( array $field ): array {
+    private function get_single_select_rules( array $field ): array {
         return [ 'string' ];
     }
 
     private function get_radio_rules( array $field ): array {
         return [ 'string' ];
+    }
+
+    private function get_url_rules( array $field ): array {
+        return [ 'string', 'url' ];
     }
 
     private function get_number_rules( array $field ): array {
@@ -181,11 +178,14 @@ class GutenaForms extends Form {
                 case 'checkbox':
                     $field_rules = $this->get_checkbox_rules( $field );
                     break;
-                case 'select':
-                    $field_rules = $this->get_select_rules( $field );
+                case 'single_select':
+                    $field_rules = $this->get_single_select_rules( $field );
                     break;
                 case 'radio':
                     $field_rules = $this->get_radio_rules( $field );
+                    break;
+                case 'url':
+                    $field_rules = $this->get_url_rules( $field );
                     break;
                 case 'range':
                 case 'number':
@@ -240,8 +240,6 @@ class GutenaForms extends Form {
             $type   = $field['type'];
             $mapped = $this->map_field_type( $type );
 
-            // error_log( 'field: ' . print_r( $mapped, true ), 0 );
-
             if ( ! $mapped || ! $name ) {
                 continue;
             }
@@ -249,7 +247,7 @@ class GutenaForms extends Form {
             if ( ! empty( $field['required'] ) ) {
                 if ( $mapped === 'checkbox' ) {
                     $messages[ "{$name}.required" ] = $effective_messages['required_msg_check'];
-                } elseif ( $type === 'select' ) {
+                } elseif ( $mapped === 'single_select' ) {
                     $messages[ "{$name}.required" ] = $effective_messages['required_msg_select'];
                 } else {
                     $messages[ "{$name}.required" ] = $effective_messages['required_msg'];
@@ -280,11 +278,9 @@ class GutenaForms extends Form {
         return $messages;
     }
 
-    public function form_submit( Request $request ) {
-        $form = $this->get_form( $request->get_param( 'form_id' ) );
-
-        if ( ! $form ) {
-            throw new \Exception( __( 'Form not found', 'appnatively' ) );
+    protected function prepare_request_for_validation( Request $request, array $form ): void {
+        if ( empty( $form['fields'] ) ) {
+            return;
         }
 
         foreach ( $form['fields'] as $field ) {
@@ -313,16 +309,6 @@ class GutenaForms extends Form {
                 $request->set_param( $field_name, isset( $value['max'] ) && $value['max'] !== '' ? (int) $value['max'] : 0 );
             }
         }
-
-        $validation = $request->make(
-            $request,
-            $this->get_validation_rules( $form ),
-            $this->get_validation_messages( $form )
-        );
-        $validation->throw_if_fails();
-        $request->errors = $validation->errors();
-
-        $this->submit( $request, $form );
     }
 
     protected function submit( Request $request, array $form ) {
@@ -554,18 +540,6 @@ class GutenaForms extends Form {
 
         if ( in_array( 'title', $fields, true ) ) {
             $dto->set_title( $raw_form['form_name'] ?? '' );
-        }
-
-        if ( in_array( 'status', $fields, true ) ) {
-            $dto->set_status( $raw_form['status'] ?? 'publish' );
-        }
-
-        if ( in_array( 'date_created', $fields, true ) ) {
-            $dto->set_date_created( $raw_form['date_created'] ?? '' );
-        }
-
-        if ( in_array( 'date_updated', $fields, true ) ) {
-            $dto->set_date_updated( $raw_form['date_updated'] ?? '' );
         }
 
         if ( in_array( 'fields', $fields, true ) && ! empty( $raw_form['fields'] ) ) {

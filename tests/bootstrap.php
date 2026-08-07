@@ -270,6 +270,38 @@ function _manually_load_plugin() {
     }
     unset( $_surecart_path );
 
+    // Load Bit Form
+    $_bitform_path = '';
+    if ( file_exists( $wp_plugins_dir . '/bit-form/bitforms.php' ) ) {
+        $_bitform_path = $wp_plugins_dir . '/bit-form/bitforms.php';
+    } elseif ( file_exists( dirname( __DIR__, 2 ) . '/bit-form/bitforms.php' ) ) {
+        $_bitform_path = dirname( __DIR__, 2 ) . '/bit-form/bitforms.php';
+    }
+
+    if ( $_bitform_path ) {
+        require_once $_bitform_path;
+        if ( class_exists( '\BitCode\BitForm\Core\Database\DB' ) ) {
+            \BitCode\BitForm\Core\Database\DB::migrate();
+        }
+    }
+    unset( $_bitform_path );
+
+    // Load Ninja Forms
+    $_ninjaforms_path = '';
+    if ( file_exists( $wp_plugins_dir . '/ninja-forms/ninja-forms.php' ) ) {
+        $_ninjaforms_path = $wp_plugins_dir . '/ninja-forms/ninja-forms.php';
+    } elseif ( file_exists( dirname( __DIR__, 2 ) . '/ninja-forms/ninja-forms.php' ) ) {
+        $_ninjaforms_path = dirname( __DIR__, 2 ) . '/ninja-forms/ninja-forms.php';
+    }
+
+    if ( $_ninjaforms_path ) {
+        require_once $_ninjaforms_path;
+        if ( class_exists( '\NF_Database_Migrations' ) ) {
+            ( new \NF_Database_Migrations() )->migrate();
+        }
+    }
+    unset( $_ninjaforms_path );
+
     $load_plugin( 'directorist/directorist-base.php' );
     $load_plugin( 'geodirectory/geodirectory.php' );
     if ( defined( 'GEODIRECTORY_PLUGIN_DIR' )

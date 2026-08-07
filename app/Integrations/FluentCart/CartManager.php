@@ -6,7 +6,7 @@ defined( "ABSPATH" ) || exit;
 
 use Crafium\AppNatively\App\DTO\Ecommerce\CartDTO;
 use Crafium\AppNatively\App\DTO\Ecommerce\CartItemDTO;
-use Crafium\AppNatively\App\DTO\Ecommerce\ProductImageDTO;
+use Crafium\AppNatively\App\Integrations\Concerns\EcommerceIntegrationHelpers;
 use Crafium\AppNatively\WpMVC\RequestValidator\Request;
 use Crafium\AppNatively\WpMVC\Exceptions\Exception;
 use FluentCart\Api\Cookie\Cookie;
@@ -16,44 +16,38 @@ use FluentCart\Api\StoreSettings;
 use FluentCart\App\Models\Cart;
 
 class CartManager {
+    use EcommerceIntegrationHelpers;
+
     /**
-     * Authenticate the mobile-app user from a Bearer token, if present, and bridge
-     * a guest cart id from the request into FluentCart's own cart cookie
-     * (`fct_cart_hash`), since FluentCart resolves the active cart from that cookie
-     * or the logged-in user — there is no header/param it reads directly.
+     * Bridge a guest cart id from the request into FluentCart's own cart cookie
+     * (`fct_cart_hash`), since FluentCart resolves the active cart from that
+     * cookie or the logged-in user — there is no header/param it reads directly.
+     * No-ops once a user is authenticated (own cart is resolved via user id instead).
+     *
+     * @param Request $request The REST request instance.
+     * @return void
+     */
+    private function bridge_guest_cart_id_cookie( Request $request ): void {
+        if ( get_current_user_id() ) {
+            return;
+        }
+
+        $cart_id = $this->resolve_cart_id_param( $request );
+        if ( $cart_id ) {
+            $_COOKIE[ Cookie::getCartHashKey() ] = $cart_id;
+        }
+    }
+
+    /**
+     * Establish request context: authenticate from Bearer token if present,
+     * then bridge a guest cart id into FluentCart's cookie if still a guest.
      *
      * @param Request $request The REST request instance.
      * @return void
      */
     private function ensure_context( Request $request ): void {
-        if ( ! get_current_user_id() ) {
-            $auth_header = $request->get_header( 'Authorization' );
-            if ( $auth_header && preg_match( '/Bearer\s+(.*)$/i', $auth_header, $matches ) ) {
-                $token        = $matches[1];
-                $hashed_token = hash( 'sha256', $token );
-                $users        = get_users(
-                    [
-                        //phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
-                        'meta_key'    => 'craf_appna_auth_token',
-                        //phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value
-                        'meta_value'  => $hashed_token,
-                        'number'      => 1,
-                        'count_total' => false,
-                    ]
-                );
-
-                if ( ! empty( $users ) ) {
-                    wp_set_current_user( $users[0]->ID );
-                }
-            }
-        }
-
-        if ( ! get_current_user_id() ) {
-            $cart_id = $request->get_header( 'X-Cart-Id' ) ?: $request->get_param( 'cartId' );
-            if ( $cart_id && is_string( $cart_id ) && $cart_id !== 'cart' ) {
-                $_COOKIE[ Cookie::getCartHashKey() ] = $cart_id;
-            }
-        }
+        $this->authenticate_from_bearer_token( $request );
+        $this->bridge_guest_cart_id_cookie( $request );
     }
 
     /**
@@ -173,9 +167,9 @@ class CartManager {
                 ->set_variation_id( (int) ( $line['object_id'] ?? 0 ) )
                 ->set_quantity( (int) ( $line['quantity'] ?? 0 ) )
                 ->set_name( (string) ( $line['post_title'] ?? $line['title'] ?? '' ) )
-                ->set_price( (string) ( $line['unit_price'] ?? $line['price'] ?? '0' ) )
-                ->set_subtotal( (string) ( $line['subtotal'] ?? $line['line_total'] ?? '0' ) )
-                ->set_total( (string) ( $line['total'] ?? $line['line_total'] ?? '0' ) );
+                ->set_price( $this->format_amount( $line['unit_price'] ?? $line['price'] ?? 0 ) )
+                ->set_subtotal( $this->format_amount( $line['subtotal'] ?? $line['line_total'] ?? 0 ) )
+                ->set_total( $this->format_amount( $line['total'] ?? $line['line_total'] ?? 0 ) );
 
             if ( ! empty( $line['featured_media'] ) ) {
                 $img = new ProductImageDTO();
@@ -193,8 +187,8 @@ class CartManager {
 
         $dto->set_id( (string) $cart->cart_hash )
             ->set_items( $items )
-            ->set_subtotal( (string) $cart->getItemsSubtotal() )
-            ->set_total( (string) $cart->getEstimatedTotal() )
+            ->set_subtotal( $this->format_amount( $cart->getItemsSubtotal() ) )
+            ->set_total( $this->format_amount( $cart->getEstimatedTotal() ) )
             ->set_currency( (string) CurrencySettings::get( "currency" ) )
             ->set_item_count( (int) array_sum( array_column( $cart_data, 'quantity' ) ) )
             ->set_checkout_url( (string) ( new StoreSettings() )->getCheckoutPage() );

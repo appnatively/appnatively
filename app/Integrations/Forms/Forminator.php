@@ -28,9 +28,7 @@ class Forminator extends Form {
 
         $form = \Forminator_API::get_form( $id );
 
-        error_log( 'Forminator form: ' . print_r( $form, true ), 0 );
-
-        if ( ! $form || is_wp_error( $form ) ) {
+        if ( ! $form || is_wp_error( $form ) || 'publish' !== $form->status ) {
             return [];
         }
 
@@ -53,22 +51,7 @@ class Forminator extends Form {
     }
 
     private function map_field_type( string $type ) {
-        $map = [
-            'text'     => 'text',
-            'email'    => 'email',
-            'url'      => 'url',
-            'number'   => 'number',
-            'radio'    => 'radio',
-            'checkbox' => 'checkbox',
-            'select'   => 'select',
-            'date'     => 'date',
-            'rating'   => 'rating',
-            'slider'   => 'slider',
-            'time'     => 'date',
-            'consent'  => 'gdpr',
-        ];
-
-        return $map[$type] ?? null;
+        return $this->get_standardized_type( $type );
     }
 
     private function get_text_rules( array $field ): array {
@@ -111,7 +94,11 @@ class Forminator extends Form {
         return [ 'array' ];
     }
 
-    private function get_select_rules( array $field ): array {
+    private function get_single_select_rules( array $field ): array {
+        return [ 'string' ];
+    }
+
+    private function get_password_rules( array $field ): array {
         return [ 'string' ];
     }
 
@@ -125,15 +112,17 @@ class Forminator extends Form {
         return $rules;
     }
 
-    private function get_date_rules( array $field ): array {
+    private function get_date_time_picker_rules( array $field ): array {
         return [ 'string' ];
     }
 
     private function get_gdpr_rules( array $field ): array {
-        return [ 'integer', 'in:0,1' ];
+        // GDPR consent must always be affirmatively given, regardless of whether the
+        // plugin author happened to mark the field "required" in the form builder.
+        return [ 'integer', 'in:1', 'required' ];
     }
 
-    private function get_slider_rules( array $field ): array {
+    private function get_range_rules( array $field ): array {
         $rules = [ 'numeric' ];
 
         if ( isset( $field['min'] ) && $field['min'] !== '' ) {
@@ -153,16 +142,17 @@ class Forminator extends Form {
         }
 
         $default_required = [
-            'text'     => 'This field is required. Please enter text.',
-            'email'    => 'This field is required. Please input a valid email.',
-            'url'      => 'This field is required. Please input a valid URL.',
-            'number'   => 'This field is required. Please enter number.',
-            'radio'    => 'This field is required. Please select a value.',
-            'checkbox' => 'This field is required. Please select a value.',
-            'select'   => 'This field is required. Please select a value.',
-            'date'     => 'This field is required.',
-            'rating'   => 'This field is required. Please select a rating.',
-            'slider'   => 'This field is required.',
+            'text'             => 'This field is required. Please enter text.',
+            'email'            => 'This field is required. Please input a valid email.',
+            'url'              => 'This field is required. Please input a valid URL.',
+            'number'           => 'This field is required. Please enter number.',
+            'radio'            => 'This field is required. Please select a value.',
+            'checkbox'         => 'This field is required. Please select a value.',
+            'single_select'    => 'This field is required. Please select a value.',
+            'date_time_picker' => 'This field is required.',
+            'rating'           => 'This field is required. Please select a rating.',
+            'range'            => 'This field is required.',
+            'password'         => 'This field is required.',
         ];
 
         $default_format = [
@@ -175,7 +165,6 @@ class Forminator extends Form {
         $messages = [];
 
         foreach ( $form['fields'] as $field ) {
-            error_log( 'Processing field for validation messages: ' . json_encode( $field ) );
             $name   = $field['id'] ?? '';
             $type   = $field['type'] ?? '';
             $mapped = $this->map_field_type( $type );
@@ -184,11 +173,13 @@ class Forminator extends Form {
                 continue;
             }
 
-            if ( isset( $field['required'] ) && filter_var( $field['required'], FILTER_VALIDATE_BOOLEAN ) ) {
+            $is_required = $mapped === 'gdpr' || ( isset( $field['required'] ) && filter_var( $field['required'], FILTER_VALIDATE_BOOLEAN ) );
+
+            if ( $is_required ) {
                 if ( ! empty( $field['required_message'] ) ) {
                     $messages[ "{$name}.required" ] = $field['required_message'];
-                } elseif ( isset( $default_required[ $type ] ) ) {
-                    $messages[ "{$name}.required" ] = $default_required[ $type ];
+                } elseif ( isset( $default_required[ $mapped ] ) ) {
+                    $messages[ "{$name}.required" ] = $default_required[ $mapped ];
                 }
             }
 
@@ -198,11 +189,11 @@ class Forminator extends Form {
                     : $default_format[ $mapped ];
             }
 
-            if ( in_array( $mapped, [ 'number', 'rating', 'slider' ], true ) ) {
+            if ( in_array( $mapped, [ 'number', 'rating', 'range' ], true ) ) {
                 $messages[ "{$name}.numeric" ] = $default_format['number'];
             }
 
-            if ( $mapped === 'date' ) {
+            if ( $mapped === 'date_time_picker' ) {
                 $messages[ "{$name}.date" ] = $default_format['date'];
             }
 
@@ -214,7 +205,7 @@ class Forminator extends Form {
                 $messages[ "{$name}.in" ]      = $gdpr_msg;
             }
 
-            if ( in_array( $mapped, [ 'number', 'slider' ], true ) ) {
+            if ( in_array( $mapped, [ 'number', 'range' ], true ) ) {
                 if ( ! empty( $field['limit_min_message'] ) ) {
                     $messages[ "{$name}.min" ] = str_replace( '{0}', ':min', $field['limit_min_message'] );
                 }
@@ -267,17 +258,20 @@ class Forminator extends Form {
                 case 'checkbox':
                     $field_rules = $this->get_checkbox_rules( $field );
                     break;
-                case 'select':
-                    $field_rules = $this->get_select_rules( $field );
+                case 'single_select':
+                    $field_rules = $this->get_single_select_rules( $field );
                     break;
                 case 'rating':
                     $field_rules = $this->get_rating_rules( $field );
                     break;
-                case 'date':
-                    $field_rules = $this->get_date_rules( $field );
+                case 'date_time_picker':
+                    $field_rules = $this->get_date_time_picker_rules( $field );
                     break;
-                case 'slider':
-                    $field_rules = $this->get_slider_rules( $field );
+                case 'range':
+                    $field_rules = $this->get_range_rules( $field );
+                    break;
+                case 'password':
+                    $field_rules = $this->get_password_rules( $field );
                     break;
                 case 'gdpr':
                     $field_rules = $this->get_gdpr_rules( $field );
@@ -298,11 +292,9 @@ class Forminator extends Form {
         return $rules;
     }
 
-    public function form_submit( Request $request ) {
-        $form = $this->get_form( $request->get_param( 'form_id' ) );
-
-        if ( ! $form ) {
-            throw new \Exception( __( 'Form not found', 'appnatively' ) );
+    protected function prepare_request_for_validation( Request $request, array $form ): void {
+        if ( empty( $form['fields'] ) ) {
+            return;
         }
 
         foreach ( $form['fields'] as $field ) {
@@ -327,7 +319,7 @@ class Forminator extends Form {
                 $request->set_param( $field_name, ! empty( $value ) ? array_combine( $value, $value ) : [] );
             }
 
-            if ( $mapped_type === 'slider' && is_array( $value ) ) {
+            if ( $mapped_type === 'range' && is_array( $value ) ) {
                 $request->set_param( $field_name, isset( $value['max'] ) && $value['max'] !== '' ? (int) $value['max'] : 0 );
             }
 
@@ -335,16 +327,6 @@ class Forminator extends Form {
                 $request->set_param( $field_name, (int) $value );
             }
         }
-
-        $validation = $request->make(
-            $request,
-            $this->get_validation_rules( $form ),
-            $this->get_validation_messages( $form )
-        );
-        $validation->throw_if_fails();
-        $request->errors = $validation->errors();
-
-        $this->submit( $request, $form );
     }
 
     protected function submit( Request $request, array $form ) {
@@ -449,18 +431,6 @@ class Forminator extends Form {
 
         if ( in_array( 'title', $fields, true ) ) {
             $dto->set_title( $raw_form['name'] ?? $raw_form['title'] ?? '' );
-        }
-
-        if ( in_array( 'status', $fields, true ) ) {
-            $dto->set_status( $raw_form['status'] ?? $raw_form['form_status'] ?? 'publish' );
-        }
-
-        if ( in_array( 'date_created', $fields, true ) ) {
-            $dto->set_date_created( $raw_form['created_at'] ?? $raw_form['date_created'] ?? '' );
-        }
-
-        if ( in_array( 'date_updated', $fields, true ) ) {
-            $dto->set_date_updated( $raw_form['updated_at'] ?? $raw_form['date_updated'] ?? '' );
         }
 
         if ( in_array( 'fields', $fields, true ) && ! empty( $raw_form['fields'] ) ) {

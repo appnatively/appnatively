@@ -10,12 +10,15 @@ use Crafium\AppNatively\App\DTO\Directory\ListingDTO;
 use Crafium\AppNatively\App\DTO\Directory\ListingPaginatorDTO;
 use Crafium\AppNatively\App\DTO\Directory\TermDTO;
 use Crafium\AppNatively\App\DTO\Directory\TermPaginatorDTO;
+use Crafium\AppNatively\App\Integrations\Concerns\ListingIntegrationHelpers;
 use Crafium\AppNatively\WpMVC\Contracts\Provider;
 use Crafium\AppNatively\WpMVC\RequestValidator\Request;
 use WP_Post;
 use WP_Query;
 
 class ClassifiedListing extends Provider {
+    use ListingIntegrationHelpers;
+
     public function register() {}
 
     public function boot(): void {
@@ -48,7 +51,7 @@ class ClassifiedListing extends Provider {
         $this->apply_sort_args( $args, (string) $request->get_param( "sort" ) );
         $this->apply_tax_filters( $args, $request );
 
-        if ( filter_var( $request->get_param( "isFeatured" ), FILTER_VALIDATE_BOOLEAN ) ) {
+        if ( filter_var( (string) $request->get_param( "isFeatured" ), FILTER_VALIDATE_BOOLEAN ) ) {
             $args["meta_query"][] = ["key" => "featured", "value" => "1"];
         }
 
@@ -375,7 +378,7 @@ class ClassifiedListing extends Provider {
             }
         }
         $src = $image_id ? wp_get_attachment_url( $image_id ) : "";
-        return $src ? ["id" => (int) $image_id, "src" => (string) $src, "alt" => (string) get_post_meta( $image_id, "_wp_attachment_image_alt", true ), "title" => (string) get_the_title( $image_id )] : [];
+        return $src ? ["id" => (int) $image_id, "src" => esc_url_raw( (string) $src ), "alt" => sanitize_text_field( (string) get_post_meta( $image_id, "_wp_attachment_image_alt", true ) ), "title" => (string) get_the_title( $image_id )] : [];
     }
 
     private function get_term_image( int $term_id ): array {
@@ -405,7 +408,7 @@ class ClassifiedListing extends Provider {
         foreach ( $keys as $key ) {
             $value = get_post_meta( $post_id, $key, true );
             if ( "" !== $value && null !== $value ) {
-                return is_scalar( $value ) ? (string) $value : "";
+                return is_scalar( $value ) ? sanitize_text_field( (string) $value ) : "";
             }
         }
         return "";
@@ -418,20 +421,38 @@ class ClassifiedListing extends Provider {
         $total    = (int) get_comments( array_merge( $base, ["count" => true] ) );
         $comments = get_comments( array_merge( $base, ["number" => $per_page, "offset" => ( $page - 1 ) * $per_page, "orderby" => "comment_date_gmt", "order" => "DESC"] ) );
         $items    = [];
-        $counts   = ["1" => 0, "2" => 0, "3" => 0, "4" => 0, "5" => 0];
-        $sum      = 0.0;
 
+        foreach ( $comments as $comment ) {
+            $rating  = $this->get_comment_rating( (int) $comment->comment_ID );
+            $items[] = ["id" => (int) $comment->comment_ID, "reviewer" => sanitize_text_field( (string) $comment->comment_author ), "review" => wp_kses_post( (string) $comment->comment_content ), "rating" => $rating, "date_created" => (string) get_comment_date( DATE_ATOM, $comment ), "avatar_url" => (string) get_avatar_url( $comment, ["size" => 96] )];
+        }
+
+        $rating_counts = $this->get_review_rating_counts( $listing_id );
+        $average       = $this->calculate_average_rating( $rating_counts );
+
+        return ["current_page" => $page, "per_page" => $per_page, "total" => $total, "last_page" => max( 1, (int) ceil( $total / $per_page ) ), "average_rating" => $average, "review_count" => $total, "rating_counts" => $rating_counts, "items" => $items];
+    }
+
+    private function get_review_rating_counts( int $listing_id ): array {
+        $rating_counts = ["1" => 0, "2" => 0, "3" => 0, "4" => 0, "5" => 0];
+        $comments      = get_comments( ["post_id" => $listing_id, "status" => "approve"] );
         foreach ( $comments as $comment ) {
             $rating = $this->get_comment_rating( (int) $comment->comment_ID );
             if ( $rating > 0 ) {
-                $counts[(string) max( 1, min( 5, (int) round( $rating ) ) )]++;
-                $sum += $rating;
+                $rating_counts[(string) max( 1, min( 5, (int) round( $rating ) ) )]++;
             }
-            $items[] = ["id" => (int) $comment->comment_ID, "reviewer" => (string) $comment->comment_author, "review" => (string) $comment->comment_content, "rating" => $rating, "date_created" => (string) get_comment_date( DATE_ATOM, $comment ), "avatar_url" => (string) get_avatar_url( $comment, ["size" => 96] )];
         }
+        return $rating_counts;
+    }
 
-        $average = $total > 0 ? round( $sum / max( 1, count( $comments ) ), 1 ) : 0.0;
-        return ["current_page" => $page, "per_page" => $per_page, "total" => $total, "last_page" => max( 1, (int) ceil( $total / $per_page ) ), "average_rating" => $average, "review_count" => $total, "rating_counts" => $counts, "items" => $items];
+    private function calculate_average_rating( array $rating_counts ): float {
+        $total = 0;
+        $sum   = 0;
+        foreach ( $rating_counts as $rating => $count ) {
+            $total += (int) $count;
+            $sum   += (int) $rating * (int) $count;
+        }
+        return $total > 0 ? round( $sum / $total, 1 ) : 0.0;
     }
 
     private function get_comment_rating( int $comment_id ): float {
@@ -444,48 +465,4 @@ class ClassifiedListing extends Provider {
         return 0.0;
     }
 
-    private function positive_ids( $value ): array {
-        if ( ! is_array( $value ) ) {
-            return [];
-        }
-        return array_values( array_filter( array_map( "intval", $value ), fn( int $id ): bool => $id > 0 ) );
-    }
-
-    private function normalize_coordinate( $value, float $min, float $max ): ?float {
-        if ( "" === $value || null === $value || ! is_numeric( $value ) ) {
-            return null;
-        }
-        $coordinate = (float) $value;
-        return ( $coordinate >= $min && $coordinate <= $max ) ? $coordinate : null;
-    }
-
-    private function apply_listing_content_filters( WP_Post $post ): string {
-        $previous_post   = $GLOBALS["post"] ?? null;
-        $GLOBALS["post"] = $post;
-
-        $content = (string) apply_filters( "the_content", $post->post_content );
-
-        if ( null === $previous_post ) {
-            unset( $GLOBALS["post"] );
-        } else {
-            $GLOBALS["post"] = $previous_post;
-        }
-
-        return $content;
-    }
-
-    private function get_listing_excerpt( WP_Post $post ): string {
-        $previous_post   = $GLOBALS["post"] ?? null;
-        $GLOBALS["post"] = $post;
-
-        $excerpt = (string) get_the_excerpt( $post );
-
-        if ( null === $previous_post ) {
-            unset( $GLOBALS["post"] );
-        } else {
-            $GLOBALS["post"] = $previous_post;
-        }
-
-        return $excerpt;
-    }
 }

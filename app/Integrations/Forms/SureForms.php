@@ -75,18 +75,7 @@ class SureForms extends Form
     }
 
     private function map_field_type( string $type ): ?string {
-        $map = [
-            'input'        => 'text',
-            'email'        => 'email',
-            'number'       => 'number',
-            'url'          => 'url',
-            'checkbox'     => 'checkbox',
-            'multi-choice' => 'checkbox',
-            'gdpr'         => 'gdpr',
-            'dropdown'     => 'select',
-        ];
-
-        return $map[$type] ?? null;
+        return $this->get_standardized_type( $type );
     }
 
     private function get_text_rules( array $field ): array {
@@ -121,11 +110,21 @@ class SureForms extends Form
     }
 
     private function get_gdpr_rules( array $field ): array {
+        // GDPR consent must always be affirmatively given, regardless of whether the
+        // plugin author happened to mark the field "required" in the form builder.
+        return ['string', 'required'];
+    }
+
+    private function get_single_select_rules( array $field ): array {
+        return ['string', 'max:255'];
+    }
+
+    private function get_radio_rules( array $field ): array {
         return ['string'];
     }
 
-    private function get_select_rules( array $field ): array {
-        return ['string', 'max:255'];
+    private function get_date_time_picker_rules( array $field ): array {
+        return ['string'];
     }
 
     private function build_sureforms_field_name( array $field, int &$dropdown_counter ): string {
@@ -186,8 +185,14 @@ class SureForms extends Form
                 case 'gdpr':
                     $field_rules = $this->get_gdpr_rules( $field );
                     break;
-                case 'select':
-                    $field_rules = $this->get_select_rules( $field );
+                case 'single_select':
+                    $field_rules = $this->get_single_select_rules( $field );
+                    break;
+                case 'radio':
+                    $field_rules = $this->get_radio_rules( $field );
+                    break;
+                case 'date_time_picker':
+                    $field_rules = $this->get_date_time_picker_rules( $field );
                     break;
                 default:
                     continue 2;
@@ -234,7 +239,9 @@ class SureForms extends Form
 
             $slug = (string) $field['slug'];
 
-            if ( ! empty( $field['required'] ) ) {
+            $is_required = $mapped_type === 'gdpr' || ! empty( $field['required'] );
+
+            if ( $is_required ) {
                 $required_key = $this->get_required_message_key( $mapped_type, $field['type'] ?? '' );
                 if ( ! empty( $required_key ) ) {
                     $messages["{$slug}.required"] = \SRFM\Inc\Helper::get_default_dynamic_block_option( $required_key );
@@ -280,23 +287,21 @@ class SureForms extends Form
         }
 
         $map = [
-            'text'     => 'srfm_input_block_required_text',
-            'email'    => 'srfm_email_block_required_text',
-            'number'   => 'srfm_number_block_required_text',
-            'url'      => 'srfm_url_block_required_text',
-            'checkbox' => 'srfm_checkbox_block_required_text',
-            'gdpr'     => 'srfm_gdpr_block_required_text',
-            'select'   => 'srfm_dropdown_block_required_text',
+            'text'          => 'srfm_input_block_required_text',
+            'email'         => 'srfm_email_block_required_text',
+            'number'        => 'srfm_number_block_required_text',
+            'url'           => 'srfm_url_block_required_text',
+            'checkbox'      => 'srfm_checkbox_block_required_text',
+            'gdpr'          => 'srfm_gdpr_block_required_text',
+            'single_select' => 'srfm_dropdown_block_required_text',
         ];
 
         return $map[$mapped_type] ?? null;
     }
 
-    public function form_submit( Request $request ) {
-        $form = $this->get_form( $request->get_param( 'form_id' ) );
-
-        if ( ! $form ) {
-            throw new \Exception( __( 'Form not found', 'appnatively' ) );
+    protected function prepare_request_for_validation( Request $request, array $form ): void {
+        if ( empty( $form['fields'] ) ) {
+            return;
         }
 
         foreach ( $form['fields'] as $field ) {
@@ -323,16 +328,6 @@ class SureForms extends Form
                 $request->set_param( $field['slug'], '' );
             }
         }
-
-        $validation = $request->make(
-            $request,
-            $this->get_validation_rules( $form ),
-            $this->get_validation_messages( $form )
-        );
-        $validation->throw_if_fails();
-        $request->errors = $validation->errors();
-
-        $this->submit( $request, $form );
     }
 
     protected function submit( Request $request, array $form ) {
@@ -384,7 +379,7 @@ class SureForms extends Form
             'email'        => 'email',
             'number'       => 'number',
             'url'          => 'url',
-            'checkbox'     => 'gdpr',
+            'checkbox'     => 'checkbox',
             'multi-choice' => 'checkbox',
             'gdpr'         => 'gdpr',
             'dropdown'     => 'single_select',
@@ -408,23 +403,10 @@ class SureForms extends Form
             $dto->set_title( $raw_form['title'] ?? '' );
         }
 
-        if ( in_array( 'status', $fields, true ) ) {
-            $dto->set_status( $raw_form['status'] ?? 'publish' );
-        }
-
-        if ( in_array( 'date_created', $fields, true ) ) {
-            $dto->set_date_created( $raw_form['date_created'] ?? '' );
-        }
-
-        if ( in_array( 'date_updated', $fields, true ) ) {
-            $dto->set_date_updated( $raw_form['date_updated'] ?? '' );
-        }
-
         if ( in_array( 'fields', $fields, true ) && ! empty( $raw_form['fields'] ) ) {
             $field_dtos = [];
 
             foreach ( $raw_form['fields'] as $field ) {
-                //error_log(print_r($field, true));
                 $std_type = $this->get_standardized_type( $field['type'] ?? '' );
 
                 if ( ! $std_type ) {

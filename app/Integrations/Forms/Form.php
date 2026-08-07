@@ -7,8 +7,9 @@ defined( "ABSPATH" ) || exit;
 use Crafium\AppNatively\App\DTO\Forms\FormsDTO;
 use Crafium\AppNatively\App\DTO\Forms\FormDTO;
 use Crafium\AppNatively\WpMVC\Contracts\Provider;
+use Crafium\AppNatively\WpMVC\Helpers\Helpers;
 use Crafium\AppNatively\WpMVC\RequestValidator\Request;
-use Exception;
+use Crafium\AppNatively\WpMVC\Exceptions\Exception;
 
 abstract class Form extends Provider {
     abstract public function get_key(): string;
@@ -25,6 +26,44 @@ abstract class Form extends Provider {
 
     abstract protected function submit( Request $request, array $form );
 
+    /**
+     * Per-field custom validation messages, keyed "{field}.{rule}". Optional hook —
+     * integrations that don't need custom copy can leave the default empty array.
+     */
+    protected function get_validation_messages( array $form ): array {
+        return [];
+    }
+
+    /**
+     * Optional hook to coerce/normalize request params (checkbox arrays, gdpr
+     * ints, range/slider payloads, ...) before validation rules are applied.
+     */
+    protected function prepare_request_for_validation( Request $request, array $form ): void {}
+
+    /**
+     * Throttle submissions per (IP, integration, form) so the public submit
+     * endpoint can't be flooded. Fails open if the caller's IP can't be determined
+     * rather than blocking legitimate traffic.
+     */
+    private function check_rate_limit( int $form_id ): void {
+        $ip = Helpers::get_user_ip_address();
+        if ( ! $ip ) {
+            return;
+        }
+
+        $max    = (int) apply_filters( 'craf_appna_form_rate_limit_max', 5 );
+        $window = (int) apply_filters( 'craf_appna_form_rate_limit_window', MINUTE_IN_SECONDS );
+
+        $key   = 'craf_appna_frl_' . md5( $ip . '|' . $this->get_key() . '|' . $form_id );
+        $count = (int) get_transient( $key );
+
+        if ( $count >= $max ) {
+            throw new Exception( __( 'Too many submissions. Please wait a moment and try again.', 'appnatively' ), 429 );
+        }
+
+        set_transient( $key, $count + 1, $window );
+    }
+
     public function boot(): void {
         add_filter( "craf_appna_form_{$this->get_key()}_submit", [$this, "form_submit"], 10, 1 );
         add_filter( "craf_appna_form_{$this->get_key()}_forms", [$this, "forms"] );
@@ -32,12 +71,18 @@ abstract class Form extends Provider {
     }
 
     public function form_submit( Request $request ) {
+        $this->check_rate_limit( (int) $request->get_param( "form_id" ) );
+
         $form = $this->get_form( $request->get_param( "form_id" ) );
         if ( ! $form ) {
             throw new Exception( __( 'Form not found', 'appnatively' ) );
         }
 
-        $request->validate( $this->get_validation_rules( $form ) );
+        $this->prepare_request_for_validation( $request, $form );
+
+        $validation = $request->make( $request, $this->get_validation_rules( $form ), $this->get_validation_messages( $form ) );
+        $validation->throw_if_fails();
+        $request->errors = $validation->errors();
 
         $this->submit( $request, $form );
     }

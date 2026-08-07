@@ -30,7 +30,7 @@ class CategoryController extends Controller {
                 "search"      => "nullable|string",
                 "sort"        => "nullable|string",
                 "fields"      => "nullable|string",
-                "integration" => "required|string",
+                "integration" => "required|string|in:" . implode( ",", craf_appna_get_directory_integrations() ),
             ]
         );
 
@@ -49,7 +49,7 @@ class CategoryController extends Controller {
         $request->validate(
             [
                 "id"          => "required|numeric",
-                "integration" => "required|string",
+                "integration" => "required|string|in:" . implode( ",", craf_appna_get_directory_integrations() ),
             ]
         );
 

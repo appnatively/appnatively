@@ -123,3 +123,22 @@ function craf_appna_get_verified_fields( ?string $fields, array $allowed_fields 
 
     return array_values( array_intersect( $fields, $allowed_fields ) );
 }
+
+/**
+ * Get the list of supported directory `integration` slugs.
+ *
+ * Single source of truth for the Directory REST controllers' `integration`
+ * validation rule, mirroring the slugs each Integrations/*.php provider
+ * registers its `craf_appna_directory_{$integration}_*` filters under.
+ *
+ * @return string[]
+ */
+function craf_appna_get_directory_integrations(): array {
+    return [
+        "directorist",
+        "geodirectory",
+        "business-directory-plugin",
+        "classified-listing",
+        "hivepress",
+    ];
+}

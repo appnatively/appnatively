@@ -73,65 +73,24 @@ class FormController extends Controller {
         return Response::send( ['message' => __( 'Form submitted successfully', 'appnatively' ), 'success' => true] );
     }
 
-    // form specific class e jabe
+    /**
+     * Some integrations don't throw on failure (e.g. a plugin's own spam filter
+     * silently rejects the entry), so give each integration a chance to report
+     * a post-submit error via its own {integration}_submit_errors filter.
+     */
     private function get_processing_errors( string $integration ): ?array {
-        if ( $integration !== 'wpforms' || ! function_exists( 'wpforms' ) ) {
+        $error_message = apply_filters( "craf_appna_form_{$integration}_submit_errors", null );
+
+        if ( empty( $error_message ) || ! is_string( $error_message ) ) {
             return null;
         }
 
-        $process = wpforms()->obj( 'process' );
-
-        if ( ! empty( $process->errors ) ) {
-            $messages = $this->collect_error_messages( $process->errors );
-
-            if ( ! empty( $messages ) ) {
-                return Response::send(
-                    [
-                        'message' => implode( ' ', $messages ),
-                        'success' => false,
-                    ],
-                    400
-                );
-            }
-        }
-
-        if ( ! empty( $process->spam_errors ) && empty( $process->entry_id ) ) {
-            return Response::send(
-                [
-                    'message' => __( 'Form submission was flagged as spam. Please try again.', 'appnatively' ),
-                    'success' => false,
-                ],
-                400
-            );
-        }
-
-        return null;
-    }
-
-    private function collect_error_messages( array $errors ): array {
-        $messages = [];
-
-        foreach ( $errors as $form_id => $error_data ) {
-            if ( ! empty( $error_data['header'] ) ) {
-                $messages[] = $error_data['header'];
-            }
-            if ( ! empty( $error_data['footer'] ) ) {
-                $messages[] = $error_data['footer'];
-            }
-            if ( ! empty( $error_data['recaptcha'] ) ) {
-                $messages[] = $error_data['recaptcha'];
-            }
-            if ( ! empty( $error_data['footer_styled'] ) ) {
-                $messages[] = $error_data['footer_styled'];
-            }
-
-            foreach ( $error_data as $field_id => $field_message ) {
-                if ( is_string( $field_message ) && ! in_array( $field_id, [ 'header', 'footer', 'recaptcha', 'footer_styled' ], true ) ) {
-                    $messages[] = $field_message;
-                }
-            }
-        }
-
-        return $messages;
+        return Response::send(
+            [
+                'message' => $error_message,
+                'success' => false,
+            ],
+            400
+        );
     }
 }

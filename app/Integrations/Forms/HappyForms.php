@@ -25,7 +25,7 @@ class HappyForms extends Form
     protected function get_form( int $id ) {
         $form = happyforms_get_form_controller()->get( $id );
 
-        if ( ! $form || empty( $form['parts'] ) ) {
+        if ( ! $form || empty( $form['parts'] ) || 'publish' !== ( $form['post_status'] ?? '' ) ) {
             return [];
         }
 
@@ -33,16 +33,7 @@ class HappyForms extends Form
     }
 
     private function map_field_type( string $type ) {
-        $map = [
-            'single_line_text' => 'text',
-            'email'            => 'email',
-            'radio'            => 'radio',
-            'checkbox'         => 'checkbox',
-            'select'           => 'select',
-            'number'           => 'number',
-        ];
-
-        return $map[$type] ?? null;
+        return $this->get_standardized_type( $type );
     }
 
     private function get_text_rules( array $part ): array {
@@ -61,7 +52,15 @@ class HappyForms extends Form
         return ['array'];
     }
 
-    private function get_select_rules( array $part ): array {
+    private function get_single_select_rules( array $part ): array {
+        return ['string'];
+    }
+
+    private function get_url_rules( array $part ): array {
+        return ['string', 'url'];
+    }
+
+    private function get_date_time_picker_rules( array $part ): array {
         return ['string'];
     }
 
@@ -113,11 +112,17 @@ class HappyForms extends Form
                 case 'checkbox':
                     $field_rules = $this->get_checkbox_rules( $part );
                     break;
-                case 'select':
-                    $field_rules = $this->get_select_rules( $part );
+                case 'single_select':
+                    $field_rules = $this->get_single_select_rules( $part );
                     break;
                 case 'number':
                     $field_rules = $this->get_number_rules( $part );
+                    break;
+                case 'url':
+                    $field_rules = $this->get_url_rules( $part );
+                    break;
+                case 'date_time_picker':
+                    $field_rules = $this->get_date_time_picker_rules( $part );
                     break;
                 default:
                     continue 2;
@@ -175,11 +180,9 @@ class HappyForms extends Form
         return $messages;
     }
 
-    public function form_submit( Request $request ) {
-        $form = $this->get_form( $request->get_param( 'form_id' ) );
-
-        if ( ! $form ) {
-            throw new \Exception( __( 'Form not found', 'appnatively' ) );
+    protected function prepare_request_for_validation( Request $request, array $form ): void {
+        if ( empty( $form['parts'] ) ) {
+            return;
         }
 
         foreach ( $form['parts'] as $part ) {
@@ -204,16 +207,6 @@ class HappyForms extends Form
                 $request->set_param( $field_name, ! empty( $value ) ? array_combine( $value, $value ) : [] );
             }
         }
-
-        $validation = $request->make(
-            $request,
-            $this->get_validation_rules( $form ),
-            $this->get_validation_messages( $form )
-        );
-        $validation->throw_if_fails();
-        $request->errors = $validation->errors();
-
-        $this->submit( $request, $form );
     }
 
     protected function submit( Request $request, array $form ) {
@@ -313,18 +306,6 @@ class HappyForms extends Form
 
         if ( in_array( 'title', $fields, true ) ) {
             $dto->set_title( $raw_form['name'] ?? '' );
-        }
-
-        if ( in_array( 'status', $fields, true ) ) {
-            $dto->set_status( $raw_form['status'] ?? 'publish' );
-        }
-
-        if ( in_array( 'date_created', $fields, true ) ) {
-            $dto->set_date_created( $raw_form['date_created'] ?? '' );
-        }
-
-        if ( in_array( 'date_updated', $fields, true ) ) {
-            $dto->set_date_updated( $raw_form['date_updated'] ?? '' );
         }
 
         if ( in_array( 'fields', $fields, true ) && ! empty( $raw_form['parts'] ) ) {

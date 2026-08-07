@@ -208,6 +208,14 @@ class GutenaFormTest extends \WP_UnitTestCase {
         $this->assertArrayHasKey( 'fields', $form );
     }
 
+    public function test_get_form_excludes_unpublished_form() {
+        wp_update_post( [ 'ID' => $this->form_id, 'post_status' => 'draft' ] );
+
+        $gutena = $this->get_integration_instance();
+        $form   = $gutena->expose_get_form( $this->form_id );
+        $this->assertEmpty( $form );
+    }
+
     public function test_get_validation_rules() {
         $gutena = $this->get_integration_instance();
         $form   = $gutena->expose_get_form( $this->form_id );
@@ -491,5 +499,32 @@ class GutenaFormTest extends \WP_UnitTestCase {
         $gutena->expose_form_submit( $request );
 
         $this->assertNull( $captured_email, 'Email should NOT be sent when emailNotifyAdmin is false.' );
+    }
+
+    public function test_form_submit_is_rate_limited_per_ip_and_form() {
+        $_SERVER['REMOTE_ADDR'] = '203.0.113.5';
+
+        add_filter( 'craf_appna_form_rate_limit_max', function () {
+            return 2;
+        } );
+
+        $gutena = $this->get_integration_instance();
+
+        $wp_request = new \WP_REST_Request();
+        $wp_request->set_param( 'form_id', $this->form_id );
+        $wp_request->set_param( 'integration', 'gutena-forms' );
+        $request = new Request( $wp_request );
+
+        for ( $i = 0; $i < 2; $i++ ) {
+            try {
+                $gutena->expose_form_submit( $request );
+            } catch ( \Throwable $e ) {
+                // Validation failures are expected here since required fields
+                // aren't filled in; only the rate-limit exception matters below.
+            }
+        }
+
+        $this->expectExceptionCode( 429 );
+        $gutena->expose_form_submit( $request );
     }
 }

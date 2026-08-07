@@ -11,11 +11,14 @@ use Crafium\AppNatively\App\DTO\Ecommerce\ProductFiltersDTO;
 use Crafium\AppNatively\App\DTO\Ecommerce\ProductImageDTO;
 use Crafium\AppNatively\App\DTO\Ecommerce\ProductPaginatorDTO;
 use Crafium\AppNatively\App\DTO\Ecommerce\ProductVariantDTO;
+use Crafium\AppNatively\App\Integrations\Concerns\EcommerceIntegrationHelpers;
 use Crafium\AppNatively\WpMVC\Exceptions\Exception;
 use Crafium\AppNatively\WpMVC\RequestValidator\Request;
 use SureCart\Models\Product;
 
 class ProductRepository {
+    use EcommerceIntegrationHelpers;
+
     /**
      * The taxonomy SureCart syncs its product collections to.
      *
@@ -29,52 +32,6 @@ class ProductRepository {
      * @var string[]
      */
     private const PRODUCT_EXPAND = [ 'prices', 'variants', 'variant_options', 'product_medias', 'product_media.media' ];
-
-    /**
-     * Normalize a relation value that may come back as a plain array, a
-     * SureCart\Models\Collection (->data), a single object, or empty.
-     *
-     * @param mixed $value The relation value.
-     * @return array
-     */
-    private function to_list( $value ): array {
-        if ( empty( $value ) ) {
-            return [];
-        }
-        if ( is_array( $value ) ) {
-            return $value;
-        }
-        if ( isset( $value->data ) && is_array( $value->data ) ) {
-            return $value->data;
-        }
-        return [ $value ];
-    }
-
-    /**
-     * Format a raw minor-unit (cents) amount as a plain decimal string.
-     *
-     * @param mixed $cents Raw amount in the currency's minor unit.
-     * @return string
-     */
-    private function format_amount( $cents ): string {
-        return number_format( ( (int) $cents ) / 100, 2, '.', '' );
-    }
-
-    /**
-     * Format a model date attribute (Carbon-like object or plain string) as ISO 8601.
-     *
-     * @param mixed $date
-     * @return string
-     */
-    private function format_date( $date ): string {
-        if ( empty( $date ) ) {
-            return '';
-        }
-        if ( is_object( $date ) && method_exists( $date, 'format' ) ) {
-            return $date->format( 'c' );
-        }
-        return (string) $date;
-    }
 
     /**
      * Get products paginator.

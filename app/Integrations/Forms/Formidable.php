@@ -23,7 +23,7 @@ class Formidable extends Form {
 
     protected function get_form( int $id ) {
         $form = \FrmForm::getOne( $id );
-        if ( ! $form ) {
+        if ( ! $form || 'published' !== $form->status ) {
             return [];
         }
 
@@ -31,7 +31,6 @@ class Formidable extends Form {
         $fields_array = [];
 
         foreach ( $fields as $field ) {
-            error_log( 'field: ' . print_r( $field, true ), 0 );
             $fields_array[] = [
                 'id'            => (int) $field->id,
                 'type'          => $field->type,
@@ -52,19 +51,7 @@ class Formidable extends Form {
     }
 
     private function map_field_type( string $type ) {
-        $map = [
-            'text'     => 'text',
-            'email'    => 'email',
-            'url'      => 'url',
-            'number'   => 'number',
-            'checkbox' => 'checkbox',
-            'radio'    => 'radio',
-            'select'   => 'select',
-            'gdpr'     => 'gdpr',
-        ];
-
-        $mapped = array_search( $type, $map, true );
-        return false !== $mapped ? $mapped : null;
+        return $this->get_standardized_type( $type );
     }
 
     private function get_text_rules( array $field ): array {
@@ -102,12 +89,30 @@ class Formidable extends Form {
         return [ 'array' ];
     }
 
-    private function get_select_rules( array $field ): array {
+    private function get_single_select_rules( array $field ): array {
         return [ 'string', 'max:255' ];
     }
 
+    private function get_password_rules( array $field ): array {
+        return [ 'string' ];
+    }
+
+    private function get_date_time_picker_rules( array $field ): array {
+        return [ 'string' ];
+    }
+
+    private function get_range_rules( array $field ): array {
+        return $this->get_number_rules( $field );
+    }
+
+    private function get_rating_rules( array $field ): array {
+        return [ 'integer' ];
+    }
+
     private function get_gdpr_rules( array $field ): array {
-        return [ 'integer', 'in:0,1' ];
+        // GDPR consent must always be affirmatively given, regardless of whether the
+        // plugin author happened to mark the field "required" in the form builder.
+        return [ 'integer', 'in:1', 'required' ];
     }
 
     protected function get_validation_rules( array $form ): array {
@@ -149,8 +154,20 @@ class Formidable extends Form {
                 case 'checkbox':
                     $field_rules = $this->get_checkbox_rules( $field );
                     break;
-                case 'select':
-                    $field_rules = $this->get_select_rules( $field );
+                case 'single_select':
+                    $field_rules = $this->get_single_select_rules( $field );
+                    break;
+                case 'password':
+                    $field_rules = $this->get_password_rules( $field );
+                    break;
+                case 'date_time_picker':
+                    $field_rules = $this->get_date_time_picker_rules( $field );
+                    break;
+                case 'range':
+                    $field_rules = $this->get_range_rules( $field );
+                    break;
+                case 'rating':
+                    $field_rules = $this->get_rating_rules( $field );
                     break;
                 case 'gdpr':
                     $field_rules = $this->get_gdpr_rules( $field );
@@ -177,14 +194,18 @@ class Formidable extends Form {
         }
 
         $default_required = [
-            'text'     => 'This field cannot be blank.',
-            'email'    => 'This field cannot be blank.',
-            'url'      => 'This field cannot be blank.',
-            'number'   => 'This field cannot be blank.',
-            'radio'    => 'Please select a value.',
-            'checkbox' => 'Please select a value.',
-            'select'   => 'Please select a value.',
-            'gdpr'     => 'You must agree to proceed.',
+            'text'             => 'This field cannot be blank.',
+            'email'            => 'This field cannot be blank.',
+            'url'              => 'This field cannot be blank.',
+            'number'           => 'This field cannot be blank.',
+            'radio'            => 'Please select a value.',
+            'checkbox'         => 'Please select a value.',
+            'single_select'    => 'Please select a value.',
+            'gdpr'             => 'You must agree to proceed.',
+            'password'         => 'This field cannot be blank.',
+            'date_time_picker' => 'This field cannot be blank.',
+            'range'            => 'This field cannot be blank.',
+            'rating'           => 'Please select a value.',
         ];
 
         $messages = [];
@@ -200,10 +221,12 @@ class Formidable extends Form {
 
             $field_options = $field['field_options'] ?? [];
 
-            if ( ! empty( $field['required'] ) ) {
+            $is_required = $mapped === 'gdpr' || ! empty( $field['required'] );
+
+            if ( $is_required ) {
                 $msg = ! empty( $field_options['blank'] )
                     ? str_replace( '[field_name]', $field['name'], $field_options['blank'] )
-                    : ( $default_required[ $type ] ?? 'This field cannot be blank.' );
+                    : ( $default_required[ $mapped ] ?? 'This field cannot be blank.' );
 
                 $messages[ "{$name}.required" ] = $msg;
             }
@@ -257,11 +280,9 @@ class Formidable extends Form {
         return $messages;
     }
 
-    public function form_submit( Request $request ) {
-        $form = $this->get_form( $request->get_param( 'form_id' ) );
-
-        if ( ! $form ) {
-            throw new \Exception( __( 'Form not found', 'appnatively' ) );
+    protected function prepare_request_for_validation( Request $request, array $form ): void {
+        if ( empty( $form['fields'] ) ) {
+            return;
         }
 
         foreach ( $form['fields'] as $field ) {
@@ -289,16 +310,6 @@ class Formidable extends Form {
                 $request->set_param( $field_name, (int) $value );
             }
         }
-
-        $validation = $request->make(
-            $request,
-            $this->get_validation_rules( $form ),
-            $this->get_validation_messages( $form )
-        );
-        $validation->throw_if_fails();
-        $request->errors = $validation->errors();
-
-        $this->submit( $request, $form );
     }
 
     protected function submit( Request $request, array $form ) {
@@ -392,18 +403,6 @@ class Formidable extends Form {
 
         if ( in_array( 'title', $fields, true ) ) {
             $dto->set_title( $raw_form['name'] ?? '' );
-        }
-
-        if ( in_array( 'status', $fields, true ) ) {
-            $dto->set_status( $raw_form['status'] ?? 'publish' );
-        }
-
-        if ( in_array( 'date_created', $fields, true ) ) {
-            $dto->set_date_created( $raw_form['date_created'] ?? '' );
-        }
-
-        if ( in_array( 'date_updated', $fields, true ) ) {
-            $dto->set_date_updated( $raw_form['date_updated'] ?? '' );
         }
 
         if ( in_array( 'fields', $fields, true ) && ! empty( $raw_form['fields'] ) ) {

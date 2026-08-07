@@ -199,6 +199,14 @@ class WeFormsTest extends \WP_UnitTestCase {
         $this->assertNotEmpty( $form['fields'] );
     }
 
+    public function test_get_form_excludes_unpublished_form() {
+        wp_update_post( [ 'ID' => $this->form_id, 'post_status' => 'draft' ] );
+
+        $weforms = $this->get_integration_instance();
+        $form    = $weforms->expose_get_form( $this->form_id );
+        $this->assertEmpty( $form );
+    }
+
     public function test_get_validation_rules() {
         $weforms = $this->get_integration_instance();
         $form    = $weforms->expose_get_form( $this->form_id );

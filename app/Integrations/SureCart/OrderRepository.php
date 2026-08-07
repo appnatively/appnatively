@@ -7,11 +7,14 @@ defined( "ABSPATH" ) || exit;
 use Crafium\AppNatively\App\DTO\Ecommerce\OrderDTO;
 use Crafium\AppNatively\App\DTO\Ecommerce\OrderItemDTO;
 use Crafium\AppNatively\App\DTO\Ecommerce\OrderPaginatorDTO;
+use Crafium\AppNatively\App\Integrations\Concerns\EcommerceIntegrationHelpers;
 use Crafium\AppNatively\WpMVC\RequestValidator\Request;
 use SureCart\Models\Order;
 use SureCart\Models\User as SureCartUser;
 
 class OrderRepository {
+    use EcommerceIntegrationHelpers;
+
     /**
      * Relations to expand when fetching orders. Order itself carries no
      * monetary fields or customer reference — both live on its Checkout.
@@ -19,79 +22,6 @@ class OrderRepository {
      * @var string[]
      */
     private const ORDER_EXPAND = [ 'checkout', 'checkout.line_items', 'checkout.line_items.price', 'checkout.line_items.product', 'checkout.line_items.variant' ];
-
-    /**
-     * Normalize a relation value that may come back as a plain array, a
-     * SureCart\Models\Collection (->data), a single object, or empty.
-     *
-     * @param mixed $value The relation value.
-     * @return array
-     */
-    private function to_list( $value ): array {
-        if ( empty( $value ) ) {
-            return [];
-        }
-        if ( is_array( $value ) ) {
-            return $value;
-        }
-        if ( isset( $value->data ) && is_array( $value->data ) ) {
-            return $value->data;
-        }
-        return [ $value ];
-    }
-
-    /**
-     * Format a raw minor-unit (cents) amount as a plain decimal string.
-     *
-     * @param mixed $cents Raw amount in the currency's minor unit.
-     * @return string
-     */
-    private function format_amount( $cents ): string {
-        return number_format( ( (int) $cents ) / 100, 2, '.', '' );
-    }
-
-    /**
-     * Format a model date attribute (Carbon-like object or plain string) as ISO 8601.
-     *
-     * @param mixed $date
-     * @return string
-     */
-    private function format_date( $date ): string {
-        if ( empty( $date ) ) {
-            return '';
-        }
-        if ( is_object( $date ) && method_exists( $date, 'format' ) ) {
-            return $date->format( 'c' );
-        }
-        return (string) $date;
-    }
-
-    /**
-     * Reverse-lookup the WP-mirrored sc_product post id for a real SureCart
-     * product id, so OrderItemDTO.product_id is a usable local reference.
-     *
-     * @param string $sc_id The SureCart product id.
-     * @return int
-     */
-    private function resolve_post_id_for_sc_id( string $sc_id ): int {
-        if ( ! $sc_id ) {
-            return 0;
-        }
-
-        $posts = get_posts(
-            [
-                'post_type'      => 'sc_product',
-                'posts_per_page' => 1,
-                'fields'         => 'ids',
-                //phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
-                'meta_key'       => 'sc_id',
-                //phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value
-                'meta_value'     => $sc_id,
-            ]
-        );
-
-        return (int) ( $posts[0] ?? 0 );
-    }
 
     /**
      * The current user's SureCart customer id, if any.
@@ -110,6 +40,8 @@ class OrderRepository {
      * Get orders list for the current logged-in user.
      */
     public function orders_get( ?OrderPaginatorDTO $order_paginator, Request $request ): OrderPaginatorDTO {
+        $this->authenticate_from_bearer_token( $request );
+
         $page     = (int) $request->get_param( 'page' ) ?: 1;
         $per_page = (int) $request->get_param( 'per_page' ) ?: 20;
 
@@ -144,6 +76,8 @@ class OrderRepository {
      * Get order details, scoped to the current logged-in user.
      */
     public function order_get( ?OrderDTO $order_dto, $id, Request $request ): ?OrderDTO {
+        $this->authenticate_from_bearer_token( $request );
+
         $customer_id = $this->current_customer_id();
         if ( ! $customer_id ) {
             return null;

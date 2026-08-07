@@ -271,13 +271,7 @@ class FormGent extends Form {
         return $messages;
     }
 
-    public function form_submit( Request $request ) {
-        $form = $this->get_form( $request->get_param( "form_id" ) );
-
-        if ( ! $form ) {
-            throw new \Exception( __( 'Form not found', 'appnatively' ) );
-        }
-
+    protected function prepare_request_for_validation( Request $request, array $form ): void {
         $form_object = (object) $form;
         $fields      = formgent_get_form_fields( $form_object );
 
@@ -311,16 +305,6 @@ class FormGent extends Form {
                 $request->set_param( $field_name, (int) $value );
             }
         }
-
-        $validation = $request->make(
-            $request,
-            $this->get_validation_rules( $form ),
-            $this->get_validation_messages( $form )
-        );
-        $validation->throw_if_fails();
-        $request->errors = $validation->errors();
-
-        $this->submit( $request, $form );
     }
 
     protected function submit( Request $request, array $form ) {

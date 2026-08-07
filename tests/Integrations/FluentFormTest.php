@@ -278,6 +278,15 @@ class FluentFormTest extends \WP_UnitTestCase
         $this->assertEquals( $this->form_id, $form['id'] );
     }
 
+    public function test_get_form_excludes_unpublished_form() {
+        global $wpdb;
+        $wpdb->update( $wpdb->prefix . 'fluentform_forms', [ 'status' => 'draft' ], [ 'id' => $this->form_id ] );
+
+        $fluent_form = $this->get_integration_instance();
+        $form        = $fluent_form->expose_get_form( $this->form_id );
+        $this->assertEmpty( $form );
+    }
+
     public function test_get_validation_rules() {
         $fluent_form = $this->get_integration_instance();
         $form        = $fluent_form->expose_get_form( $this->form_id );

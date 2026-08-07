@@ -57,10 +57,10 @@ class ListingController extends Controller {
                 "search"      => "nullable|string",
                 "sort"        => "nullable|string",
                 "fields"      => "nullable|string",
-                "integration" => "required|string",
-                "categories"  => "nullable|array",
-                "tags"        => "nullable|array",
-                "locations"   => "nullable|array",
+                "integration" => "required|string|in:" . implode( ",", craf_appna_get_directory_integrations() ),
+                "categories"  => "nullable|array|max:100",
+                "tags"        => "nullable|array|max:100",
+                "locations"   => "nullable|array|max:100",
                 "isFeatured"  => "nullable|boolean",
             ]
         );
@@ -87,7 +87,7 @@ class ListingController extends Controller {
         $request->validate(
             [
                 "id"          => "required|numeric",
-                "integration" => "required|string",
+                "integration" => "required|string|in:" . implode( ",", craf_appna_get_directory_integrations() ),
             ]
         );
 
@@ -125,7 +125,7 @@ class ListingController extends Controller {
                 "page"        => "nullable|integer|min:1",
                 "per_page"    => "nullable|integer|min:1|max:100",
                 "fields"      => "nullable|string",
-                "integration" => "required|string",
+                "integration" => "required|string|in:" . implode( ",", craf_appna_get_directory_integrations() ),
             ]
         );
 
@@ -153,7 +153,7 @@ class ListingController extends Controller {
                 "id"          => "required|numeric",
                 "page"        => "nullable|integer|min:1",
                 "per_page"    => "nullable|integer|min:1|max:100",
-                "integration" => "required|string",
+                "integration" => "required|string|in:" . implode( ",", craf_appna_get_directory_integrations() ),
             ]
         );
 

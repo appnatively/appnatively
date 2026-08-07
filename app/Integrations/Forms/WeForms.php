@@ -23,7 +23,7 @@ class WeForms extends Form {
     protected function get_form( int $id ) {
         $form = weforms()->form->get( $id );
 
-        if ( ! $form || ! $form->id ) {
+        if ( ! $form || ! $form->id || 'publish' !== ( $form->data->post_status ?? '' ) ) {
             return [];
         }
 
@@ -36,17 +36,7 @@ class WeForms extends Form {
     }
 
     private function map_field_type( string $type ) {
-        $map = [
-            'text_field'     => 'text',
-            'email_address'  => 'email',
-            'dropdown_field' => 'select',
-            'radio_field'    => 'radio',
-            'checkbox_field' => 'checkbox',
-            'website_url'    => 'url',
-            'date_field'     => 'date_time_picker',
-        ];
-
-        return $map[$type] ?? null;
+        return $this->get_standardized_type( $type );
     }
 
     private function get_text_rules( array $field ): array {
@@ -61,7 +51,7 @@ class WeForms extends Form {
         return [ 'string', 'email' ];
     }
 
-    private function get_select_rules( array $field ): array {
+    private function get_single_select_rules( array $field ): array {
         return [ 'string' ];
     }
 
@@ -75,6 +65,10 @@ class WeForms extends Form {
 
     private function get_url_rules( array $field ): array {
         return [ 'string', 'url' ];
+    }
+
+    private function get_number_rules( array $field ): array {
+        return [ 'numeric' ];
     }
 
     private function get_date_time_picker_rules( array $field ): array {
@@ -108,8 +102,8 @@ class WeForms extends Form {
                 case 'email':
                     $field_rules = $this->get_email_rules( $field );
                     break;
-                case 'select':
-                    $field_rules = $this->get_select_rules( $field );
+                case 'single_select':
+                    $field_rules = $this->get_single_select_rules( $field );
                     break;
                 case 'radio':
                     $field_rules = $this->get_radio_rules( $field );
@@ -119,6 +113,9 @@ class WeForms extends Form {
                     break;
                 case 'url':
                     $field_rules = $this->get_url_rules( $field );
+                    break;
+                case 'number':
+                    $field_rules = $this->get_number_rules( $field );
                     break;
                 case 'date_time_picker':
                     $field_rules = $this->get_date_time_picker_rules( $field );
@@ -147,10 +144,11 @@ class WeForms extends Form {
         $default_required = [
             'text'             => 'This field cannot be blank.',
             'email'            => 'This field cannot be blank.',
-            'select'           => 'Please select a value.',
+            'single_select'    => 'Please select a value.',
             'radio'            => 'Please select a value.',
             'checkbox'         => 'Please select a value.',
             'url'              => 'This field cannot be blank.',
+            'number'           => 'This field cannot be blank.',
             'date_time_picker' => 'This field cannot be blank.',
         ];
 
@@ -188,11 +186,9 @@ class WeForms extends Form {
         return $messages;
     }
 
-    public function form_submit( Request $request ) {
-        $form = $this->get_form( $request->get_param( 'form_id' ) );
-
-        if ( ! $form ) {
-            throw new \Exception( __( 'Form not found', 'appnatively' ) );
+    protected function prepare_request_for_validation( Request $request, array $form ): void {
+        if ( empty( $form['fields'] ) ) {
+            return;
         }
 
         foreach ( $form['fields'] as $field ) {
@@ -216,16 +212,6 @@ class WeForms extends Form {
                 $request->set_param( $field_name, ! empty( $value ) ? array_combine( $value, $value ) : [] );
             }
         }
-
-        $validation = $request->make(
-            $request,
-            $this->get_validation_rules( $form ),
-            $this->get_validation_messages( $form )
-        );
-        $validation->throw_if_fails();
-        $request->errors = $validation->errors();
-
-        $this->submit( $request, $form );
     }
 
     protected function submit( Request $request, array $form ) {
@@ -337,18 +323,6 @@ class WeForms extends Form {
 
         if ( in_array( 'title', $fields, true ) ) {
             $dto->set_title( $raw_form['name'] ?? '' );
-        }
-
-        if ( in_array( 'status', $fields, true ) ) {
-            $dto->set_status( $raw_form['status'] ?? 'publish' );
-        }
-
-        if ( in_array( 'date_created', $fields, true ) ) {
-            $dto->set_date_created( $raw_form['date_created'] ?? '' );
-        }
-
-        if ( in_array( 'date_updated', $fields, true ) ) {
-            $dto->set_date_updated( $raw_form['date_updated'] ?? '' );
         }
 
         if ( in_array( 'fields', $fields, true ) && ! empty( $raw_form['fields'] ) ) {

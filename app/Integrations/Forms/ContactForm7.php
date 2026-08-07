@@ -25,8 +25,11 @@ class ContactForm7 extends Form {
     }
 
     protected function get_form( int $id ) {
+        if ( 'publish' !== get_post_status( $id ) ) {
+            return [];
+        }
+
         $form = wpcf7_contact_form( $id );
-        error_log( print_r( $form, true ) );
         if ( $form ) {
             $this->cf7_form = $form;
             return [
@@ -38,29 +41,7 @@ class ContactForm7 extends Form {
     }
 
     private function map_field_type( string $type ) {
-        $map = [
-            'text'          => 'text',
-            'email'         => 'email',
-            'url'           => 'url',
-            'number'        => 'number',
-            'date'          => 'date',
-            'checkbox'      => 'checkbox',
-            'radio'         => 'radio',
-            'single_select' => 'select',
-            'gdpr'          => 'acceptance',
-        ];
-
-        $mapped = array_search( $type, $map, true );
-
-        if ( false !== $mapped ) {
-            return $mapped;
-        }
-
-        $extra = [
-            'range' => 'number',
-        ];
-
-        return $extra[$type] ?? null;
+        return $this->get_standardized_type( $type );
     }
 
     private function get_text_rules( \WPCF7_FormTag $tag ): array {
@@ -115,11 +96,11 @@ class ContactForm7 extends Form {
         return $rules;
     }
 
-    private function get_select_rules( \WPCF7_FormTag $tag ): array {
+    private function get_single_select_rules( \WPCF7_FormTag $tag ): array {
         return [ 'string', 'max:255' ];
     }
 
-    private function get_date_rules( \WPCF7_FormTag $tag ): array {
+    private function get_date_time_picker_rules( \WPCF7_FormTag $tag ): array {
         return [ 'string' ];
     }
 
@@ -133,6 +114,14 @@ class ContactForm7 extends Form {
 
     private function get_gdpr_rules( \WPCF7_FormTag $tag ): array {
         return [ 'string', 'in:1' ];
+    }
+
+    private function get_password_rules( \WPCF7_FormTag $tag ): array {
+        return [ 'string' ];
+    }
+
+    private function get_range_rules( \WPCF7_FormTag $tag ): array {
+        return $this->get_number_rules( $tag );
     }
 
     protected function get_validation_rules( array $form ): array {
@@ -169,16 +158,22 @@ class ContactForm7 extends Form {
                     $field_rules = $this->get_number_rules( $tag );
                     break;
                 case 'single_select':
-                    $field_rules = $this->get_select_rules( $tag );
+                    $field_rules = $this->get_single_select_rules( $tag );
                     break;
-                case 'date':
-                    $field_rules = $this->get_date_rules( $tag );
+                case 'date_time_picker':
+                    $field_rules = $this->get_date_time_picker_rules( $tag );
                     break;
                 case 'checkbox':
                     $field_rules = $this->get_checkbox_rules( $tag );
                     break;
                 case 'radio':
                     $field_rules = $this->get_radio_rules( $tag );
+                    break;
+                case 'password':
+                    $field_rules = $this->get_password_rules( $tag );
+                    break;
+                case 'range':
+                    $field_rules = $this->get_range_rules( $tag );
                     break;
                 case 'gdpr':
                     $field_rules = $this->get_gdpr_rules( $tag );
@@ -241,6 +236,7 @@ class ContactForm7 extends Form {
                     $messages[ "{$name}.url" ] = $msg ?: 'The URL is invalid.';
                     break;
                 case 'number':
+                case 'range':
                     $msg                           = $this->cf7_form->message( 'invalid_number' );
                     $messages[ "{$name}.numeric" ] = $msg ?: 'The number format is invalid.';
                     break;
@@ -248,7 +244,7 @@ class ContactForm7 extends Form {
                     $msg                      = $this->cf7_form->message( 'accept_terms' );
                     $messages[ "{$name}.in" ] = $msg ?: 'You must accept the terms and conditions before sending your message.';
                     break;
-                case 'date':
+                case 'date_time_picker':
                     $maxlength = $tag->get_maxlength_option();
                     if ( $maxlength ) {
                         $msg                       = $this->cf7_form->message( 'invalid_too_long' );
@@ -266,10 +262,9 @@ class ContactForm7 extends Form {
         return $messages;
     }
 
-    public function form_submit( Request $request ) {
-        $form = $this->get_form( $request->get_param( 'form_id' ) );
-        if ( ! $form ) {
-            throw new \Exception( __( 'Form not found', 'appnatively' ) );
+    protected function prepare_request_for_validation( Request $request, array $form ): void {
+        if ( ! $this->cf7_form ) {
+            return;
         }
 
         $tags = $this->cf7_form->scan_form_tags();
@@ -281,16 +276,6 @@ class ContactForm7 extends Form {
                 }
             }
         }
-
-        $validation = $request->make(
-            $request,
-            $this->get_validation_rules( $form ),
-            $this->get_validation_messages( $form )
-        );
-        $validation->throw_if_fails();
-        $request->errors = $validation->errors();
-
-        $this->submit( $request, $form );
     }
 
     protected function submit( Request $request, array $form ) {
@@ -502,18 +487,6 @@ class ContactForm7 extends Form {
 
         if ( in_array( 'title', $fields, true ) ) {
             $dto->set_title( $raw_form['title'] ?? '' );
-        }
-
-        if ( in_array( 'status', $fields, true ) ) {
-            $dto->set_status( $raw_form['status'] ?? 'publish' );
-        }
-
-        if ( in_array( 'date_created', $fields, true ) ) {
-            $dto->set_date_created( $raw_form['date_created'] ?? '' );
-        }
-
-        if ( in_array( 'date_updated', $fields, true ) ) {
-            $dto->set_date_updated( $raw_form['date_updated'] ?? '' );
         }
 
         if ( in_array( 'fields', $fields, true ) && ! empty( $raw_form['id'] ) ) {

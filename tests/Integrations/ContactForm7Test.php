@@ -73,6 +73,14 @@ class ContactForm7Test extends \WP_UnitTestCase {
         $this->assertEquals( 'Test CF7 Form', $form['title'] );
     }
 
+    public function test_get_form_excludes_unpublished_form() {
+        wp_update_post( [ 'ID' => $this->form_id, 'post_status' => 'draft' ] );
+
+        $cf7  = $this->get_integration_instance();
+        $form = $cf7->expose_get_form( $this->form_id );
+        $this->assertEmpty( $form );
+    }
+
     public function test_get_validation_rules() {
         $cf7   = $this->get_integration_instance();
         $form  = $cf7->expose_get_form( $this->form_id );

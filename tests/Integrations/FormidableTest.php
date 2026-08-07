@@ -121,17 +121,19 @@ class FormidableTest extends \WP_UnitTestCase {
         $expected_fields = [
             'full_name', 'company', 'email', 'secondary_email', 'website',
             'age', 'score', 'gender', 'hobbies', 'country', 'city',
-            'gdpr_consent',
+            'bio', 'gdpr_consent',
         ];
         foreach ( $expected_fields as $field ) {
             $this->assertArrayHasKey( $field, $rules );
         }
 
-        $this->assertArrayNotHasKey( 'bio', $rules );
-
         // full_name: text, no required → string
         $full_name_rules = explode( '|', $rules['full_name'] );
         $this->assertEquals( [ 'string' ], $full_name_rules );
+
+        // bio: textarea standardizes to text, no required → string
+        $bio_rules = explode( '|', $rules['bio'] );
+        $this->assertEquals( [ 'string' ], $bio_rules );
 
         // company: text, required → string|required
         $company_rules = explode( '|', $rules['company'] );
@@ -171,10 +173,10 @@ class FormidableTest extends \WP_UnitTestCase {
         $this->assertContains( 'required', $hobbies_rules );
         $this->assertCount( 2, $hobbies_rules );
 
-        // gdpr_consent: gdpr, required → integer|in:0,1|required
+        // gdpr_consent: gdpr consent must always be affirmatively given → integer|in:1|required
         $gdpr_rules = explode( '|', $rules['gdpr_consent'] );
         $this->assertContains( 'integer', $gdpr_rules );
-        $this->assertContains( 'in:0,1', $gdpr_rules );
+        $this->assertContains( 'in:1', $gdpr_rules );
         $this->assertContains( 'required', $gdpr_rules );
         $this->assertCount( 3, $gdpr_rules );
     }

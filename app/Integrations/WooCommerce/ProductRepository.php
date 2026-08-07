@@ -17,11 +17,14 @@ use Crafium\AppNatively\App\DTO\Ecommerce\CategoryPaginatorDTO;
 use Crafium\AppNatively\App\DTO\Ecommerce\AttributeFacetDTO;
 use Crafium\AppNatively\App\DTO\Ecommerce\AttributeFacetOptionDTO;
 use Crafium\AppNatively\App\DTO\Ecommerce\ProductFiltersDTO;
+use Crafium\AppNatively\App\Integrations\Concerns\EcommerceIntegrationHelpers;
 use Crafium\AppNatively\WpMVC\Database\Query\Builder;
 use Crafium\AppNatively\WpMVC\RequestValidator\Request;
 use Crafium\AppNatively\WpMVC\Exceptions\Exception;
 
 class ProductRepository {
+    use EcommerceIntegrationHelpers;
+
     /**
      * Memoized result of `wc_get_attribute_taxonomy_names()` — a single filters
      * request can otherwise trigger this call a dozen+ times (once per
@@ -405,22 +408,17 @@ class ProductRepository {
     }
 
     /**
-     * Get SQL columns from fields.
+     * Resolve a field-map into a list of SQL columns to select, always including
+     * a base identifier column. Shared shape for both the product and category
+     * field->column maps.
      *
-     * @param array $fields
+     * @param array  $fields         The requested fields.
+     * @param array  $map            Field name => SQL column map.
+     * @param string $always_include The column to always include (the id column).
      * @return array
      */
-    private function get_columns_from_fields( array $fields ): array {
-        $map = [
-            "id"                => "ID",
-            "name"              => "post_title",
-            "slug"              => "post_name",
-            "description"       => "post_content",
-            "short_description" => "post_excerpt",
-            "status"            => "post_status",
-        ];
-
-        $columns = ["ID"]; // Always include ID
+    private function columns_from_fields( array $fields, array $map, string $always_include ): array {
+        $columns = [ $always_include ];
         foreach ( $fields as $field ) {
             if ( isset( $map[$field] ) ) {
                 $columns[] = $map[$field];
@@ -428,6 +426,27 @@ class ProductRepository {
         }
 
         return array_unique( $columns );
+    }
+
+    /**
+     * Get SQL columns from product fields.
+     *
+     * @param array $fields
+     * @return array
+     */
+    private function get_columns_from_fields( array $fields ): array {
+        return $this->columns_from_fields(
+            $fields,
+            [
+                "id"                => "ID",
+                "name"              => "post_title",
+                "slug"              => "post_name",
+                "description"       => "post_content",
+                "short_description" => "post_excerpt",
+                "status"            => "post_status",
+            ],
+            "ID"
+        );
     }
 
     /**
@@ -444,8 +463,6 @@ class ProductRepository {
         if ( ! $product ) {
             return $dto; // Should not happen for valid products
         }
-
-        $dto->set_url( "https://google.com" );
 
         if ( in_array( "id", $fields ) ) {
             $dto->set_id( $post->ID );
@@ -511,11 +528,11 @@ class ProductRepository {
 
         // Audit
         if ( in_array( "date_created", $fields ) ) {
-            $dto->set_date_created( $product->get_date_created() ? $product->get_date_created()->format( "c" ) : "" );
+            $dto->set_date_created( $this->format_date( $product->get_date_created() ) );
         }
 
         if ( in_array( "date_updated", $fields ) ) {
-            $dto->set_date_updated( $product->get_date_modified() ? $product->get_date_modified()->format( "c" ) : "" );
+            $dto->set_date_updated( $this->format_date( $product->get_date_modified() ) );
         }
 
         // Images
@@ -737,23 +754,18 @@ class ProductRepository {
      * SQL columns map.
      */
     private function get_category_columns_from_fields( array $fields ): array {
-        $map = [
-            "id"          => "terms.term_id",
-            "name"        => "terms.name",
-            "slug"        => "terms.slug",
-            "description" => "term_taxonomy.description",
-            "parent"      => "term_taxonomy.parent",
-            "count"       => "term_taxonomy.count",
-        ];
-
-        $columns = ["terms.term_id"]; // Always include ID
-        foreach ( $fields as $field ) {
-            if ( isset( $map[$field] ) ) {
-                $columns[] = $map[$field];
-            }
-        }
-
-        return array_unique( $columns );
+        return $this->columns_from_fields(
+            $fields,
+            [
+                "id"          => "terms.term_id",
+                "name"        => "terms.name",
+                "slug"        => "terms.slug",
+                "description" => "term_taxonomy.description",
+                "parent"      => "term_taxonomy.parent",
+                "count"       => "term_taxonomy.count",
+            ],
+            "terms.term_id"
+        );
     }
 
     /**

@@ -22,6 +22,10 @@ class EverestForms extends Form {
     }
 
     protected function get_form( int $id ) {
+        if ( 'publish' !== get_post_status( $id ) ) {
+            return [];
+        }
+
         $form_data = evf()->form->get( $id, [ 'content_only' => true ] );
 
         if ( ! $form_data || empty( $form_data['form_fields'] ) ) {
@@ -109,19 +113,7 @@ class EverestForms extends Form {
     }
 
     private function map_field_type( string $type ) {
-        $map = [
-            'text'      => 'text',
-            'email'     => 'email',
-            'url'       => 'url',
-            'number'    => 'number',
-            'radio'     => 'radio',
-            'checkbox'  => 'checkbox',
-            'select'    => 'select',
-            'date-time' => 'date',
-            'rating'    => 'rating',
-        ];
-
-        return $map[ $type ] ?? null;
+        return $this->get_standardized_type( $type );
     }
 
     private function get_text_rules( array $field ): array {
@@ -158,11 +150,15 @@ class EverestForms extends Form {
         return [ 'array' ];
     }
 
-    private function get_select_rules( array $field ): array {
+    private function get_single_select_rules( array $field ): array {
         return [ 'string' ];
     }
 
-    private function get_date_rules( array $field ): array {
+    private function get_date_time_picker_rules( array $field ): array {
+        return [ 'string' ];
+    }
+
+    private function get_password_rules( array $field ): array {
         return [ 'string' ];
     }
 
@@ -216,14 +212,17 @@ class EverestForms extends Form {
                 case 'checkbox':
                     $field_rules = $this->get_checkbox_rules( $field );
                     break;
-                case 'select':
-                    $field_rules = $this->get_select_rules( $field );
+                case 'single_select':
+                    $field_rules = $this->get_single_select_rules( $field );
                     break;
-                case 'date':
-                    $field_rules = $this->get_date_rules( $field );
+                case 'date_time_picker':
+                    $field_rules = $this->get_date_time_picker_rules( $field );
                     break;
                 case 'rating':
                     $field_rules = $this->get_rating_rules( $field );
+                    break;
+                case 'password':
+                    $field_rules = $this->get_password_rules( $field );
                     break;
                 default:
                     continue 2;
@@ -305,13 +304,7 @@ class EverestForms extends Form {
         return $messages;
     }
 
-    public function form_submit( Request $request ) {
-        $form = $this->get_form( $request->get_param( 'form_id' ) );
-
-        if ( ! $form ) {
-            throw new \Exception( __( 'Form not found', 'appnatively' ) );
-        }
-
+    protected function prepare_request_for_validation( Request $request, array $form ): void {
         foreach ( $form['fields'] as $field ) {
             if ( empty( $field['type'] ) || empty( $field['id'] ) ) {
                 continue;
@@ -334,16 +327,6 @@ class EverestForms extends Form {
                 $request->set_param( $field_name, ! empty( $value ) ? array_combine( $value, $value ) : [] );
             }
         }
-
-        $validation = $request->make(
-            $request,
-            $this->get_validation_rules( $form ),
-            $this->get_validation_messages( $form )
-        );
-        $validation->throw_if_fails();
-        $request->errors = $validation->errors();
-
-        $this->submit( $request, $form );
     }
 
     protected function submit( Request $request, array $form ) {
@@ -461,18 +444,6 @@ class EverestForms extends Form {
 
         if ( in_array( 'title', $fields, true ) ) {
             $dto->set_title( $raw_form['name'] ?? '' );
-        }
-
-        if ( in_array( 'status', $fields, true ) ) {
-            $dto->set_status( $raw_form['status'] ?? 'publish' );
-        }
-
-        if ( in_array( 'date_created', $fields, true ) ) {
-            $dto->set_date_created( $raw_form['date_created'] ?? '' );
-        }
-
-        if ( in_array( 'date_updated', $fields, true ) ) {
-            $dto->set_date_updated( $raw_form['date_updated'] ?? '' );
         }
 
         if ( in_array( 'fields', $fields, true ) && ! empty( $raw_form['fields'] ) ) {

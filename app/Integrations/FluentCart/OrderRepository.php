@@ -7,15 +7,20 @@ defined( "ABSPATH" ) || exit;
 use Crafium\AppNatively\App\DTO\Ecommerce\OrderDTO;
 use Crafium\AppNatively\App\DTO\Ecommerce\OrderItemDTO;
 use Crafium\AppNatively\App\DTO\Ecommerce\OrderPaginatorDTO;
+use Crafium\AppNatively\App\Integrations\Concerns\EcommerceIntegrationHelpers;
 use Crafium\AppNatively\WpMVC\RequestValidator\Request;
 use FluentCart\App\Models\Customer;
 use FluentCart\App\Models\Order;
 
 class OrderRepository {
+    use EcommerceIntegrationHelpers;
+
     /**
      * Get orders list for the current logged-in user.
      */
     public function orders_get( ?OrderPaginatorDTO $order_paginator, Request $request ): OrderPaginatorDTO {
+        $this->authenticate_from_bearer_token( $request );
+
         $page     = (int) $request->get_param( "page" ) ?: 1;
         $per_page = (int) $request->get_param( "per_page" ) ?: 20;
 
@@ -49,6 +54,8 @@ class OrderRepository {
      * Get order details, scoped to the current logged-in user.
      */
     public function order_get( ?OrderDTO $order_dto, $id, Request $request ): ?OrderDTO {
+        $this->authenticate_from_bearer_token( $request );
+
         $customer = $this->get_current_customer();
 
         if ( ! $customer ) {
@@ -100,7 +107,7 @@ class OrderRepository {
                     'title'        => (string) ( $item->post_title ?: $item->title ),
                     'quantity'     => (int) $item->quantity,
                     'price'        => [
-                        'amount'       => (string) $item->unit_price,
+                        'amount'       => $this->format_amount( $item->unit_price ),
                         'currencyCode' => (string) $order->currency,
                     ],
                     'variantTitle' => (string) $item->title,
@@ -117,23 +124,23 @@ class OrderRepository {
                 'financialStatus'    => (string) $order->payment_status,
                 'fulfillmentStatus'  => (string) $order->status,
                 'totalPrice'         => [
-                    'amount'       => (string) $order->total_amount,
+                    'amount'       => $this->format_amount( $order->total_amount ),
                     'currencyCode' => (string) $order->currency,
                 ],
                 'subtotalPrice'      => [
-                    'amount'       => (string) $order->subtotal,
+                    'amount'       => $this->format_amount( $order->subtotal ),
                     'currencyCode' => (string) $order->currency,
                 ],
                 'totalTax'           => [
-                    'amount'       => (string) $order->tax_total,
+                    'amount'       => $this->format_amount( $order->tax_total ),
                     'currencyCode' => (string) $order->currency,
                 ],
                 'totalShippingPrice' => [
-                    'amount'       => (string) $order->shipping_total,
+                    'amount'       => $this->format_amount( $order->shipping_total ),
                     'currencyCode' => (string) $order->currency,
                 ],
                 'totalDiscount'      => [
-                    'amount'       => (string) ( (float) $order->coupon_discount_total + (float) $order->manual_discount_total ),
+                    'amount'       => $this->format_amount( (int) $order->coupon_discount_total + (int) $order->manual_discount_total ),
                     'currencyCode' => (string) $order->currency,
                 ],
                 'paymentMethod'      => (string) $order->payment_method_title,
@@ -141,23 +148,5 @@ class OrderRepository {
                 'lineItems'          => $line_items,
             ]
         );
-    }
-
-    /**
-     * Format a model date attribute (Carbon-like object or plain string) as ISO 8601.
-     *
-     * @param mixed $date
-     * @return string
-     */
-    private function format_date( $date ): string {
-        if ( empty( $date ) ) {
-            return '';
-        }
-
-        if ( is_object( $date ) && method_exists( $date, 'format' ) ) {
-            return $date->format( 'c' );
-        }
-
-        return (string) $date;
     }
 }

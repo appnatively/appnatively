@@ -198,6 +198,8 @@ install_wp() {
 	install_wp_plugin hivepress "${HIVEPRESS_VERSION-1.7.26}"
 	install_wp_plugin business-directory-plugin "${BUSINESS_DIRECTORY_PLUGIN_VERSION-6.4.25}"
 	install_wp_plugin classified-listing "${CLASSIFIED_LISTING_VERSION-5.5.0}"
+	install_wp_plugin bit-form "${BIT_FORM_VERSION-}"
+	install_wp_plugin ninja-forms "${NINJA_FORMS_VERSION-}"
 }
 
 install_test_suite() {

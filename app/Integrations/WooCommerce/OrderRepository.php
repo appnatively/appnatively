@@ -7,29 +7,57 @@ defined( "ABSPATH" ) || exit;
 use Crafium\AppNatively\App\DTO\Ecommerce\OrderDTO;
 use Crafium\AppNatively\App\DTO\Ecommerce\OrderItemDTO;
 use Crafium\AppNatively\App\DTO\Ecommerce\OrderPaginatorDTO;
+use Crafium\AppNatively\App\Integrations\Concerns\EcommerceIntegrationHelpers;
 use Crafium\AppNatively\WpMVC\RequestValidator\Request;
 use Crafium\AppNatively\WpMVC\Exceptions\Exception;
 
 class OrderRepository {
-    /**
-     * @var CartManager
-     */
-    private $cart_manager;
+    use EcommerceIntegrationHelpers;
 
     /**
-     * Constructor.
+     * Resolve a line item's product/variant id split: variations report their
+     * parent as the "product" and themselves as the "variant".
      *
-     * @param CartManager $cart_manager
+     * @param \WC_Product|null $product The line item's resolved product.
+     * @return array{0: ?int, 1: ?int} [product_id, variant_id]
      */
-    public function __construct( CartManager $cart_manager ) {
-        $this->cart_manager = $cart_manager;
+    private function resolve_item_product_and_variant_id( ?\WC_Product $product ): array {
+        if ( ! $product ) {
+            return [ null, null ];
+        }
+        if ( $product->is_type( 'variation' ) ) {
+            return [ $product->get_parent_id(), $product->get_id() ];
+        }
+        return [ $product->get_id(), null ];
+    }
+
+    /**
+     * Resolve a line item's thumbnail URL, if any.
+     *
+     * @param \WC_Product|null $product The line item's resolved product.
+     * @return string|null
+     */
+    private function resolve_item_image_url( ?\WC_Product $product ): ?string {
+        $image_id = $product ? $product->get_image_id() : null;
+        return $image_id ? wp_get_attachment_image_url( $image_id, 'woocommerce_thumbnail' ) : null;
+    }
+
+    /**
+     * Build the {amount, currencyCode} shape used throughout OrderDTO/OrderItemDTO.
+     *
+     * @param string $amount   The decimal amount.
+     * @param string $currency The currency code.
+     * @return array
+     */
+    private function money( string $amount, string $currency ): array {
+        return [ 'amount' => $amount, 'currencyCode' => $currency ];
     }
 
     /**
      * Get orders list.
      */
     public function orders_get( ?OrderPaginatorDTO $order_paginator, Request $request ): OrderPaginatorDTO {
-        $this->cart_manager->ensure_cart_loaded( $request );
+        $this->authenticate_from_bearer_token( $request );
         $user_id = get_current_user_id();
 
         $page     = (int) $request->get_param( "page" ) ?: 1;
@@ -56,19 +84,9 @@ class OrderRepository {
         foreach ( $paginator->orders as $wc_order ) {
             $line_items = [];
             foreach ( $wc_order->get_items() as $item_id => $item ) {
-                $product         = $item->get_product();
-                $image_id        = $product ? $product->get_image_id() : null;
-                $image_url       = $image_id ? wp_get_attachment_image_url( $image_id, 'woocommerce_thumbnail' ) : null;
-                $item_product_id = null;
-                $item_variant_id = null;
-                if ( $product ) {
-                    if ( $product->is_type( 'variation' ) ) {
-                        $item_product_id = $product->get_parent_id();
-                        $item_variant_id = $product->get_id();
-                    } else {
-                        $item_product_id = $product->get_id();
-                    }
-                }
+                $product = $item->get_product();
+                [ $item_product_id, $item_variant_id ] = $this->resolve_item_product_and_variant_id( $product );
+                $image_url = $this->resolve_item_image_url( $product );
 
                 $line_items[] = new OrderItemDTO(
                     [
@@ -77,13 +95,10 @@ class OrderRepository {
                         'variantId'    => $item_variant_id,
                         'title'        => $item->get_name(),
                         'quantity'     => $item->get_quantity(),
-                        'price'        => [
-                            'amount'       => (string) $wc_order->get_item_total( $item, false, true ),
-                            'currencyCode' => $wc_order->get_currency(),
-                        ],
+                        'price'        => $this->money( (string) $wc_order->get_item_total( $item, false, true ), $wc_order->get_currency() ),
                         'variantTitle' => $product && $product->is_type( 'variation' ) ? $product->get_name() : null,
                         'image'        => $image_url ? [ 'url' => $image_url ] : null,
-                    ] 
+                    ]
                 );
             }
 
@@ -91,15 +106,12 @@ class OrderRepository {
                 [
                     'id'                => (string) $wc_order->get_id(),
                     'name'              => '#' . $wc_order->get_order_number(),
-                    'processedAt'       => $wc_order->get_date_created() ? $wc_order->get_date_created()->format( 'c' ) : '',
+                    'processedAt'       => $this->format_date( $wc_order->get_date_created() ),
                     'financialStatus'   => $wc_order->get_status(),
                     'fulfillmentStatus' => $wc_order->get_status(), // @TODO: Map to more granular status
-                    'totalPrice'        => [
-                        'amount'       => (string) $wc_order->get_total(),
-                        'currencyCode' => $wc_order->get_currency(),
-                    ],
+                    'totalPrice'        => $this->money( (string) $wc_order->get_total(), $wc_order->get_currency() ),
                     'lineItems'         => $line_items,
-                ] 
+                ]
             );
         }
 
@@ -116,7 +128,7 @@ class OrderRepository {
      * Get order details.
      */
     public function order_get( ?OrderDTO $order_dto, $id, Request $request ): ?OrderDTO {
-        $this->cart_manager->ensure_cart_loaded( $request );
+        $this->authenticate_from_bearer_token( $request );
         $user_id = get_current_user_id();
 
         if ( ! $user_id ) {
@@ -136,8 +148,7 @@ class OrderRepository {
              * @var \WC_Order_Item_Product $item
              */
             $product   = $item->get_product();
-            $image_id  = $product ? $product->get_image_id() : null;
-            $image_url = $image_id ? wp_get_attachment_image_url( $image_id, 'woocommerce_thumbnail' ) : null;
+            $image_url = $this->resolve_item_image_url( $product );
 
             $variant_title = null;
             $title         = $item->get_name();
@@ -145,7 +156,7 @@ class OrderRepository {
             if ( $product && $product->is_type( 'variation' ) ) {
                 $variant_title = wc_get_formatted_variation( $product, true );
                 $variant_title = trim( str_replace( [ '(', ')' ], '', $variant_title ) );
-                
+
                 // Fallback to item meta if standard variation formatter is empty
                 if ( empty( $variant_title ) ) {
                     $formatted_meta = [];
@@ -161,16 +172,7 @@ class OrderRepository {
                 }
             }
 
-            $item_product_id = null;
-            $item_variant_id = null;
-            if ( $product ) {
-                if ( $product->is_type( 'variation' ) ) {
-                    $item_product_id = $product->get_parent_id();
-                    $item_variant_id = $product->get_id();
-                } else {
-                    $item_product_id = $product->get_id();
-                }
-            }
+            [ $item_product_id, $item_variant_id ] = $this->resolve_item_product_and_variant_id( $product );
 
             $line_items[] = new OrderItemDTO(
                 [
@@ -179,13 +181,10 @@ class OrderRepository {
                     'variantId'    => $item_variant_id,
                     'title'        => $title,
                     'quantity'     => $item->get_quantity(),
-                    'price'        => [
-                        'amount'       => (string) $wc_order->get_item_total( $item, false, true ),
-                        'currencyCode' => $wc_order->get_currency(),
-                    ],
+                    'price'        => $this->money( (string) $wc_order->get_item_total( $item, false, true ), $wc_order->get_currency() ),
                     'variantTitle' => $variant_title,
                     'image'        => $image_url ? [ 'url' => $image_url ] : null,
-                ] 
+                ]
             );
         }
 
@@ -195,29 +194,14 @@ class OrderRepository {
             [
                 'id'                 => (string) $wc_order->get_id(),
                 'name'               => (string) '#' . $wc_order->get_order_number(),
-                'processedAt'        => $wc_order->get_date_created() ? $wc_order->get_date_created()->format( 'c' ) : '',
+                'processedAt'        => $this->format_date( $wc_order->get_date_created() ),
                 'financialStatus'    => $wc_order->get_status(),
                 'fulfillmentStatus'  => $wc_order->get_status(),
-                'totalPrice'         => [
-                    'amount'       => (string) $wc_order->get_total(),
-                    'currencyCode' => $wc_order->get_currency(),
-                ],
-                'subtotalPrice'      => [
-                    'amount'       => (string) $wc_order->get_subtotal(),
-                    'currencyCode' => $wc_order->get_currency(),
-                ],
-                'totalTax'           => [
-                    'amount'       => (string) $wc_order->get_total_tax(),
-                    'currencyCode' => $wc_order->get_currency(),
-                ],
-                'totalShippingPrice' => [
-                    'amount'       => (string) $wc_order->get_shipping_total(),
-                    'currencyCode' => $wc_order->get_currency(),
-                ],
-                'totalDiscount'      => [
-                    'amount'       => (string) $wc_order->get_total_discount(),
-                    'currencyCode' => $wc_order->get_currency(),
-                ],
+                'totalPrice'         => $this->money( (string) $wc_order->get_total(), $wc_order->get_currency() ),
+                'subtotalPrice'      => $this->money( (string) $wc_order->get_subtotal(), $wc_order->get_currency() ),
+                'totalTax'           => $this->money( (string) $wc_order->get_total_tax(), $wc_order->get_currency() ),
+                'totalShippingPrice' => $this->money( (string) $wc_order->get_shipping_total(), $wc_order->get_currency() ),
+                'totalDiscount'      => $this->money( (string) $wc_order->get_total_discount(), $wc_order->get_currency() ),
                 'paymentMethod'      => $wc_order->get_payment_method_title(),
                 'discountCode'       => implode( ', ', $wc_order->get_coupon_codes() ),
                 'shipping'           => [

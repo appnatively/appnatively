@@ -7,10 +7,13 @@ defined( "ABSPATH" ) || exit;
 use Crafium\AppNatively\App\DTO\Ecommerce\CartDTO;
 use Crafium\AppNatively\App\DTO\Ecommerce\CartItemDTO;
 use Crafium\AppNatively\App\DTO\Ecommerce\ProductImageDTO;
+use Crafium\AppNatively\App\Integrations\Concerns\EcommerceIntegrationHelpers;
 use Crafium\AppNatively\WpMVC\RequestValidator\Request;
 use Crafium\AppNatively\WpMVC\Exceptions\Exception;
 
 class CartManager {
+    use EcommerceIntegrationHelpers;
+
     /**
      * Ensure WooCommerce cart and session are loaded.
      * Also authenticates the user from the Bearer token if present.
@@ -23,25 +26,9 @@ class CartManager {
 
         // 1. Authenticate user from Bearer token if present
         if ( $request && ! get_current_user_id() ) {
-            $auth_header = $request->get_header( 'Authorization' );
-            if ( $auth_header && preg_match( '/Bearer\s+(.*)$/i', $auth_header, $matches ) ) {
-                $token        = $matches[1];
-                $hashed_token = hash( 'sha256', $token );
-                $users        = get_users(
-                    [
-                        //phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
-                        'meta_key'    => 'craf_appna_auth_token',
-                        //phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value
-                        'meta_value'  => $hashed_token,
-                        'number'      => 1,
-                        'count_total' => false,
-                    ] 
-                );
-
-                if ( ! empty( $users ) ) {
-                    wp_set_current_user( $users[0]->ID );
-                    $session_needs_reload = true;
-                }
+            $this->authenticate_from_bearer_token( $request );
+            if ( get_current_user_id() ) {
+                $session_needs_reload = true;
             }
         }
 
@@ -113,32 +100,6 @@ class CartManager {
 
         $dto          = new CartDTO();
         $checkout_url = wc_get_checkout_url();
-        $auth_header  = $request->get_header( 'Authorization' );
-        if ( $auth_header && preg_match( '/Bearer\s+(.*)$/i', $auth_header, $matches ) ) {
-            $token        = $matches[1];
-            $hashed_token = hash( 'sha256', $token );
-            $users        = get_users(
-                [
-                    //phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
-                    'meta_key'    => 'craf_appna_auth_token',
-                    //phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value
-                    'meta_value'  => $hashed_token,
-                    'number'      => 1,
-                    'count_total' => false,
-                ] 
-            );
-
-            if ( ! empty( $users ) ) {
-                $user_id = $users[0]->ID;
-                // Generate a one-time-use autologin token
-                $autologin_token  = bin2hex( random_bytes( 32 ) );
-                $hashed_autologin = hash( 'sha256', $autologin_token );
-                // Store as a transient — auto-expires in 5 minutes, one-time use
-                set_transient( 'craf_appna_autologin_' . $hashed_autologin, $user_id, 5 * MINUTE_IN_SECONDS );
-                
-                $checkout_url = add_query_arg( 'craf_appna_token', $autologin_token, $checkout_url );
-            }
-        }
 
         $dto->set_subtotal( (string) WC()->cart->get_subtotal() )
             ->set_total( (string) WC()->cart->get_total( 'edit' ) )
@@ -256,11 +217,6 @@ class CartManager {
                     }
                     $variations = $raw_attributes;
                 }
-            } elseif ( $product_id && $variation_id && empty( $variations ) ) {
-                $variation = wc_get_product( $variation_id );
-                if ( $variation instanceof \WC_Product_Variation ) {
-                    $variations = $variation->get_variation_attributes();
-                }
             }
 
             if ( $product_id ) {
@@ -285,7 +241,6 @@ class CartManager {
                     }
                     throw new Exception( $message, 400 );
                 }
-                error_log( "add_to_cart product_id={$product_id}, quantity={$quantity}, variation_id={$variation_id}: SUCCESS key={$cart_item_key}" );
             }
         }
 

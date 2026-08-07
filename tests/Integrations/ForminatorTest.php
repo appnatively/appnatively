@@ -337,6 +337,14 @@ class ForminatorTest extends \WP_UnitTestCase {
         $this->assertEquals( $this->form_id, $form['id'] );
     }
 
+    public function test_get_form_excludes_unpublished_form() {
+        wp_update_post( [ 'ID' => $this->form_id, 'post_status' => 'draft' ] );
+
+        $forminator = $this->get_integration_instance();
+        $form       = $forminator->expose_get_form( $this->form_id );
+        $this->assertEmpty( $form );
+    }
+
     public function test_get_validation_rules() {
         $forminator = $this->get_integration_instance();
         $form       = $forminator->expose_get_form( $this->form_id );
@@ -362,13 +370,13 @@ class ForminatorTest extends \WP_UnitTestCase {
             'rating-1',
             'rating-2',
             'slider-1',
+            'textarea-1',
         ];
 
         foreach ( $expected_fields as $field ) {
             $this->assertArrayHasKey( $field, $rules );
         }
 
-        $this->assertArrayNotHasKey( 'textarea-1', $rules );
         $this->assertArrayNotHasKey( 'unsupported', $rules );
 
         // text-1: text, required → string|required
@@ -380,6 +388,10 @@ class ForminatorTest extends \WP_UnitTestCase {
         // text-2: text, not required → string
         $text_2_rules = explode( '|', $rules['text-2'] );
         $this->assertEquals( [ 'string' ], $text_2_rules );
+
+        // textarea-1: textarea standardizes to text, not required → string
+        $textarea_1_rules = explode( '|', $rules['textarea-1'] );
+        $this->assertEquals( [ 'string' ], $textarea_1_rules );
 
         // email-1: email, required → string|email|required
         $email_1_rules = explode( '|', $rules['email-1'] );
@@ -522,7 +534,7 @@ class ForminatorTest extends \WP_UnitTestCase {
         $this->assertArrayHasKey( 'slider-1.max', $messages );
         $this->assertEquals( 'Budget must not exceed :max.', $messages['slider-1.max'] );
 
-        // textarea is not a supported type — no messages.
+        // textarea-1 is not required, so no required message is generated.
         $this->assertArrayNotHasKey( 'textarea-1.required', $messages );
     }
 

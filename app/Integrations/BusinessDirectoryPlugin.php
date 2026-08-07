@@ -10,12 +10,15 @@ use Crafium\AppNatively\App\DTO\Directory\ListingDTO;
 use Crafium\AppNatively\App\DTO\Directory\ListingPaginatorDTO;
 use Crafium\AppNatively\App\DTO\Directory\TermDTO;
 use Crafium\AppNatively\App\DTO\Directory\TermPaginatorDTO;
+use Crafium\AppNatively\App\Integrations\Concerns\ListingIntegrationHelpers;
 use Crafium\AppNatively\WpMVC\Contracts\Provider;
 use Crafium\AppNatively\WpMVC\RequestValidator\Request;
 use WP_Post;
 use WP_Query;
 
 class BusinessDirectoryPlugin extends Provider {
+    use ListingIntegrationHelpers;
+
     public function register() {}
 
     public function boot(): void {
@@ -48,7 +51,7 @@ class BusinessDirectoryPlugin extends Provider {
         $this->apply_sort_args( $args, (string) $request->get_param( "sort" ) );
         $this->apply_tax_filters( $args, $request );
 
-        if ( filter_var( $request->get_param( "isFeatured" ), FILTER_VALIDATE_BOOLEAN ) ) {
+        if ( filter_var( (string) $request->get_param( "isFeatured" ), FILTER_VALIDATE_BOOLEAN ) ) {
             $args["meta_query"][] = [
                 "key"   => "_wpbdp[sticky]",
                 "value" => "1",
@@ -377,7 +380,7 @@ class BusinessDirectoryPlugin extends Provider {
     private function get_listing_image( int $post_id ): array {
         $image_id = get_post_thumbnail_id( $post_id );
         $src      = $image_id ? wp_get_attachment_url( $image_id ) : "";
-        return $src ? ["id" => (int) $image_id, "src" => (string) $src, "alt" => (string) get_post_meta( $image_id, "_wp_attachment_image_alt", true ), "title" => (string) get_the_title( $image_id )] : [];
+        return $src ? ["id" => (int) $image_id, "src" => esc_url_raw( (string) $src ), "alt" => sanitize_text_field( (string) get_post_meta( $image_id, "_wp_attachment_image_alt", true ) ), "title" => (string) get_the_title( $image_id )] : [];
     }
 
     private function get_term_image( int $term_id ): array {
@@ -407,7 +410,7 @@ class BusinessDirectoryPlugin extends Provider {
         foreach ( $keys as $key ) {
             $value = get_post_meta( $post_id, $key, true );
             if ( "" !== $value && null !== $value ) {
-                return is_scalar( $value ) ? (string) $value : "";
+                return is_scalar( $value ) ? sanitize_text_field( (string) $value ) : "";
             }
         }
         return "";
@@ -419,54 +422,4 @@ class BusinessDirectoryPlugin extends Provider {
         return ["current_page" => $page, "per_page" => $per_page, "total" => 0, "last_page" => 1, "average_rating" => 0.0, "review_count" => 0, "rating_counts" => ["1" => 0, "2" => 0, "3" => 0, "4" => 0, "5" => 0], "items" => []];
     }
 
-    private function empty_term_paginator( Request $request ): TermPaginatorDTO {
-        $page     = (int) $request->get_param( "page" ) ?: 1;
-        $per_page = (int) $request->get_param( "per_page" ) ?: 10;
-        return new TermPaginatorDTO( $page, $per_page, 0, 1, [] );
-    }
-
-    private function positive_ids( $value ): array {
-        if ( ! is_array( $value ) ) {
-            return [];
-        }
-        return array_values( array_filter( array_map( "intval", $value ), fn( int $id ): bool => $id > 0 ) );
-    }
-
-    private function normalize_coordinate( $value, float $min, float $max ): ?float {
-        if ( "" === $value || null === $value || ! is_numeric( $value ) ) {
-            return null;
-        }
-        $coordinate = (float) $value;
-        return ( $coordinate >= $min && $coordinate <= $max ) ? $coordinate : null;
-    }
-
-    private function apply_listing_content_filters( WP_Post $post ): string {
-        $previous_post   = $GLOBALS["post"] ?? null;
-        $GLOBALS["post"] = $post;
-
-        $content = (string) apply_filters( "the_content", $post->post_content );
-
-        if ( null === $previous_post ) {
-            unset( $GLOBALS["post"] );
-        } else {
-            $GLOBALS["post"] = $previous_post;
-        }
-
-        return $content;
-    }
-
-    private function get_listing_excerpt( WP_Post $post ): string {
-        $previous_post   = $GLOBALS["post"] ?? null;
-        $GLOBALS["post"] = $post;
-
-        $excerpt = (string) get_the_excerpt( $post );
-
-        if ( null === $previous_post ) {
-            unset( $GLOBALS["post"] );
-        } else {
-            $GLOBALS["post"] = $previous_post;
-        }
-
-        return $excerpt;
-    }
 }

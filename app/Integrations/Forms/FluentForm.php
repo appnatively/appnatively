@@ -24,10 +24,17 @@ class FluentForm extends Form
 
     protected function get_form( int $id ) {
         $form = fluentFormApi( 'forms' )->find( $id );
-        if ( $form ) {
-            return is_array( $form ) ? $form : ( method_exists( $form, 'toArray' ) ? $form->toArray() : (array) $form );
+        if ( ! $form ) {
+            return [];
         }
-        return [];
+
+        $form_array = is_array( $form ) ? $form : ( method_exists( $form, 'toArray' ) ? $form->toArray() : (array) $form );
+
+        if ( 'published' !== ( $form_array['status'] ?? '' ) ) {
+            return [];
+        }
+
+        return $form_array;
     }
 
     private function map_field_type( string $type ) {
@@ -142,10 +149,9 @@ class FluentForm extends Form
     }
 
     private function get_gdpr_rules( array $field ): array {
-        $rules   = $this->get_base_rules( $field );
-        $rules[] = 'integer';
-        $rules[] = 'in:0,1';
-        return $rules;
+        // GDPR consent must always be affirmatively given, regardless of whether the
+        // plugin author happened to mark the field "required" in the form builder.
+        return [ 'integer', 'in:1', 'required' ];
     }
 
     protected function get_validation_rules( array $form ): array {
@@ -257,9 +263,9 @@ class FluentForm extends Form
 
             $validation_rules = $field['settings']['validation_rules'] ?? [];
 
-            $is_required = ! empty( $validation_rules['required']['value'] );
+            $is_required = $mapped_type === 'gdpr' || ! empty( $validation_rules['required']['value'] );
             if ( $is_required ) {
-                $messages["{$field_name}.required"] = $resolve_message( $validation_rules['required'], 'required', 'This field is required' );
+                $messages["{$field_name}.required"] = $resolve_message( $validation_rules['required'] ?? [], 'required', 'This field is required' );
             }
 
             switch ( $mapped_type ) {
@@ -319,22 +325,30 @@ class FluentForm extends Form
         return $fields;
     }
 
-    public function form_submit( Request $request ) {
-        $form = $this->get_form( $request->get_param( "form_id" ) );
-
-        if ( ! $form ) {
-            throw new \Exception( __( 'Form not found', 'appnatively' ) );
+    protected function prepare_request_for_validation( Request $request, array $form ): void {
+        $form_fields = $this->get_form_fields_array( $form );
+        if ( empty( $form_fields['fields'] ) ) {
+            return;
         }
 
-        $validation = $request->make(
-            $request,
-            $this->get_validation_rules( $form ),
-            $this->get_validation_messages( $form )
-        );
-        $validation->throw_if_fails();
-        $request->errors = $validation->errors();
+        $flattened_fields = $this->extract_fluentform_fields( $form_fields['fields'] );
 
-        $this->submit( $request, $form );
+        foreach ( $flattened_fields as $field ) {
+            $element_type = $field['element'] ?? '';
+            if ( $element_type !== 'gdpr_agreement' ) {
+                continue;
+            }
+
+            $field_name = $field['attributes']['name'] ?? $field['name'] ?? '';
+            if ( ! $field_name ) {
+                continue;
+            }
+
+            $value = $request->get_param( $field_name );
+            if ( $value !== null ) {
+                $request->set_param( $field_name, (int) $value );
+            }
+        }
     }
 
     protected function submit( Request $request, array $form ) {
@@ -451,18 +465,6 @@ class FluentForm extends Form
 
         if ( in_array( 'title', $fields, true ) ) {
             $dto->set_title( $raw_form['title'] ?? '' );
-        }
-
-        if ( in_array( 'status', $fields, true ) ) {
-            $dto->set_status( $raw_form['status'] ?? 'publish' );
-        }
-
-        if ( in_array( 'date_created', $fields, true ) ) {
-            $dto->set_date_created( $raw_form['created_at'] ?? '' );
-        }
-
-        if ( in_array( 'date_updated', $fields, true ) ) {
-            $dto->set_date_updated( $raw_form['updated_at'] ?? '' );
         }
 
         if ( in_array( 'fields', $fields, true ) ) {
