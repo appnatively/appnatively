@@ -1,6 +1,6 @@
 <?php
 
-namespace Crafium\AppNatively\App\Integrations;
+namespace Crafium\AppNatively\App\Integrations\Ecommerce;
 
 defined( "ABSPATH" ) || exit;
 
@@ -14,11 +14,11 @@ use Crafium\AppNatively\App\DTO\Ecommerce\OrderDTO;
 use Crafium\AppNatively\App\DTO\Ecommerce\OrderPaginatorDTO;
 use Crafium\AppNatively\WpMVC\Contracts\Provider;
 use Crafium\AppNatively\WpMVC\RequestValidator\Request;
-use Crafium\AppNatively\App\Integrations\SureCart\CartManager;
-use Crafium\AppNatively\App\Integrations\SureCart\ProductRepository;
-use Crafium\AppNatively\App\Integrations\SureCart\OrderRepository;
+use Crafium\AppNatively\App\Integrations\Ecommerce\WooCommerce\CartManager;
+use Crafium\AppNatively\App\Integrations\Ecommerce\WooCommerce\ProductRepository;
+use Crafium\AppNatively\App\Integrations\Ecommerce\WooCommerce\OrderRepository;
 
-class SureCart extends Provider {
+class Woocommerce extends Provider {
     /**
      * @var CartManager
      */
@@ -56,27 +56,27 @@ class SureCart extends Provider {
      * @return void
      */
     public function boot() {
-        add_filter( "craf_appna_ecommerce_surecart_products", [$this, "products"], 10, 3 );
-        add_filter( "craf_appna_ecommerce_surecart_wishlist", [$this, "wishlist"], 10, 3 );
-        add_filter( "craf_appna_ecommerce_surecart_products_filters", [$this, "products_filters"], 10, 2 );
-        add_filter( "craf_appna_ecommerce_surecart_product", [$this, "product"], 10, 3 );
-        add_filter( "craf_appna_ecommerce_surecart_categories", [$this, "categories"], 10, 3 );
-        add_filter( "craf_appna_ecommerce_surecart_category", [$this, "category"], 10, 3 );
+        add_filter( "craf_appna_ecommerce_woocommerce_products", [$this, "products"], 10, 3 );
+        add_filter( "craf_appna_ecommerce_woocommerce_wishlist", [$this, "wishlist"], 10, 3 );
+        add_filter( "craf_appna_ecommerce_woocommerce_products_filters", [$this, "products_filters"], 10, 2 );
+        add_filter( "craf_appna_ecommerce_woocommerce_product", [$this, "product"], 10, 3 );
+        add_filter( "craf_appna_ecommerce_woocommerce_categories", [$this, "categories"], 10, 3 );
+        add_filter( "craf_appna_ecommerce_woocommerce_category", [$this, "category"], 10, 3 );
 
         // Cart filters
-        add_filter( "craf_appna_ecommerce_surecart_cart_get", [$this, "cart_get"], 10, 2 );
-        add_filter( "craf_appna_ecommerce_surecart_cart_add", [$this, "cart_add"], 10, 2 );
-        add_filter( "craf_appna_ecommerce_surecart_cart_update", [$this, "cart_update"], 10, 2 );
-        add_filter( "craf_appna_ecommerce_surecart_cart_remove", [$this, "cart_remove"], 10, 2 );
-        add_filter( "craf_appna_ecommerce_surecart_cart_clear", [$this, "cart_clear"], 10, 2 );
-        add_filter( "craf_appna_ecommerce_surecart_orders_get", [$this, "orders_get"], 10, 2 );
-        add_filter( "craf_appna_ecommerce_surecart_order_get", [$this, "order_get"], 10, 3 );
-        add_filter( "craf_appna_shop_data", [$this, "shop_data"] );
+        add_filter( "craf_appna_ecommerce_woocommerce_cart_get", [$this, "cart_get"], 10, 2 );
+        add_filter( "craf_appna_ecommerce_woocommerce_cart_add", [$this, "cart_add"], 10, 2 );
+        add_filter( "craf_appna_ecommerce_woocommerce_cart_update", [$this, "cart_update"], 10, 2 );
+        add_filter( "craf_appna_ecommerce_woocommerce_cart_remove", [$this, "cart_remove"], 10, 2 );
+        add_filter( "craf_appna_ecommerce_woocommerce_cart_clear", [$this, "cart_clear"], 10, 2 );
+        add_filter( "craf_appna_ecommerce_woocommerce_orders_get", [$this, "orders_get"], 10, 2 );
+        add_filter( "craf_appna_ecommerce_woocommerce_order_get", [$this, "order_get"], 10, 3 );  
+        add_filter( "craf_appna_shop_data", [$this, "shop_data"] );      
     }
 
     public function shop_data() {
         return [
-            "currency" => (string) ( \SureCart::account()->currency ?? "USD" )
+            "currency" => get_woocommerce_currency()
         ];
     }
 
@@ -130,17 +130,17 @@ class SureCart extends Provider {
     }
 
     /**
-     * Available product filters for the current context.
-     */
-    public function products_filters( ?ProductFiltersDTO $product_filters, Request $request ): ProductFiltersDTO {
-        return $this->product_repository->filters( $product_filters, $request );
-    }
-
-    /**
      * Resolve wishlist product IDs into full product records.
      */
     public function wishlist( ?ProductPaginatorDTO $product_paginator, Request $request, array $fields = [] ): ProductPaginatorDTO {
         return $this->product_repository->wishlist( $product_paginator, $request, $fields );
+    }
+
+    /**
+     * Available product filters for the current context.
+     */
+    public function products_filters( ?ProductFiltersDTO $product_filters, Request $request ): ProductFiltersDTO {
+        return $this->product_repository->filters( $product_filters, $request );
     }
 
     /**

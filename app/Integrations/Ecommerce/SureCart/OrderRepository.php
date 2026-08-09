@@ -1,13 +1,13 @@
 <?php
 
-namespace Crafium\AppNatively\App\Integrations\SureCart;
+namespace Crafium\AppNatively\App\Integrations\Ecommerce\SureCart;
 
 defined( "ABSPATH" ) || exit;
 
 use Crafium\AppNatively\App\DTO\Ecommerce\OrderDTO;
 use Crafium\AppNatively\App\DTO\Ecommerce\OrderItemDTO;
 use Crafium\AppNatively\App\DTO\Ecommerce\OrderPaginatorDTO;
-use Crafium\AppNatively\App\Integrations\Concerns\EcommerceIntegrationHelpers;
+use Crafium\AppNatively\App\Integrations\Ecommerce\Concerns\EcommerceIntegrationHelpers;
 use Crafium\AppNatively\WpMVC\RequestValidator\Request;
 use SureCart\Models\Order;
 use SureCart\Models\User as SureCartUser;

@@ -1,13 +1,13 @@
 <?php
 
-namespace Crafium\AppNatively\App\Integrations\WooCommerce;
+namespace Crafium\AppNatively\App\Integrations\Ecommerce\WooCommerce;
 
 defined( "ABSPATH" ) || exit;
 
 use Crafium\AppNatively\App\DTO\Ecommerce\CartDTO;
 use Crafium\AppNatively\App\DTO\Ecommerce\CartItemDTO;
 use Crafium\AppNatively\App\DTO\Ecommerce\ProductImageDTO;
-use Crafium\AppNatively\App\Integrations\Concerns\EcommerceIntegrationHelpers;
+use Crafium\AppNatively\App\Integrations\Ecommerce\Concerns\EcommerceIntegrationHelpers;
 use Crafium\AppNatively\WpMVC\RequestValidator\Request;
 use Crafium\AppNatively\WpMVC\Exceptions\Exception;
 

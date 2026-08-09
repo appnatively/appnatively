@@ -2,7 +2,7 @@
 
 namespace Crafium\AppNatively\Tests\Integrations;
 
-use Crafium\AppNatively\App\Integrations\FluentCart;
+use Crafium\AppNatively\App\Integrations\Ecommerce\FluentCart;
 use Crafium\AppNatively\WpMVC\Exceptions\Exception;
 use Crafium\AppNatively\WpMVC\RequestValidator\Request;
 use FluentCart\App\Models\Customer;

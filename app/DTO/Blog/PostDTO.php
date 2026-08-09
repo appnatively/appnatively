@@ -19,7 +19,7 @@ class PostDTO extends DTO {
 
     private string $status;
 
-    private string $permalink;
+    private string $url;
 
     private array $thumbnail = [];
 
@@ -84,12 +84,12 @@ class PostDTO extends DTO {
         return $this;
     }
 
-    public function get_permalink(): string {
-        return $this->permalink;
+    public function get_url(): string {
+        return $this->url;
     }
 
-    public function set_permalink( string $permalink ): self {
-        $this->permalink = $permalink;
+    public function set_url( string $url ): self {
+        $this->url = $url;
         return $this;
     }
 

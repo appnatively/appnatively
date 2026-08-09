@@ -43,8 +43,6 @@ class ProductDTO extends DTO {
 
     private ?ProductDimensionDTO $dimensions = null;
 
-    private string $permalink;
-
     private string $brand = "";
 
     private array $tags = [];
@@ -325,21 +323,6 @@ class ProductDTO extends DTO {
      */
     public function set_dimensions( ?ProductDimensionDTO $dimensions ): self {
         $this->dimensions = $dimensions;
-        return $this;
-    }
-
-    /**
-     * Get the value of permalink.
-     */
-    public function get_permalink(): string {
-        return $this->permalink;
-    }
-
-    /**
-     * Set the value of permalink.
-     */
-    public function set_permalink( string $permalink ): self {
-        $this->permalink = $permalink;
         return $this;
     }
 

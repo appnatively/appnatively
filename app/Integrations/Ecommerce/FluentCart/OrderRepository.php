@@ -1,13 +1,13 @@
 <?php
 
-namespace Crafium\AppNatively\App\Integrations\FluentCart;
+namespace Crafium\AppNatively\App\Integrations\Ecommerce\FluentCart;
 
 defined( "ABSPATH" ) || exit;
 
 use Crafium\AppNatively\App\DTO\Ecommerce\OrderDTO;
 use Crafium\AppNatively\App\DTO\Ecommerce\OrderItemDTO;
 use Crafium\AppNatively\App\DTO\Ecommerce\OrderPaginatorDTO;
-use Crafium\AppNatively\App\Integrations\Concerns\EcommerceIntegrationHelpers;
+use Crafium\AppNatively\App\Integrations\Ecommerce\Concerns\EcommerceIntegrationHelpers;
 use Crafium\AppNatively\WpMVC\RequestValidator\Request;
 use FluentCart\App\Models\Customer;
 use FluentCart\App\Models\Order;

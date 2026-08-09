@@ -1,6 +1,6 @@
 <?php
 
-namespace Crafium\AppNatively\App\Integrations;
+namespace Crafium\AppNatively\App\Integrations\Ecommerce;
 
 defined( "ABSPATH" ) || exit;
 
@@ -14,9 +14,9 @@ use Crafium\AppNatively\App\DTO\Ecommerce\ProductDTO;
 use Crafium\AppNatively\App\DTO\Ecommerce\ProductPaginatorDTO;
 use Crafium\AppNatively\App\DTO\Ecommerce\OrderDTO;
 use Crafium\AppNatively\App\DTO\Ecommerce\OrderPaginatorDTO;
-use Crafium\AppNatively\App\Integrations\FluentCart\CartManager;
-use Crafium\AppNatively\App\Integrations\FluentCart\OrderRepository;
-use Crafium\AppNatively\App\Integrations\FluentCart\ProductRepository;
+use Crafium\AppNatively\App\Integrations\Ecommerce\FluentCart\CartManager;
+use Crafium\AppNatively\App\Integrations\Ecommerce\FluentCart\OrderRepository;
+use Crafium\AppNatively\App\Integrations\Ecommerce\FluentCart\ProductRepository;
 use FluentCart\Api\CurrencySettings;
 
 class FluentCart extends Provider {

@@ -1,6 +1,6 @@
 <?php
 
-namespace Crafium\AppNatively\App\Integrations;
+namespace Crafium\AppNatively\App\Integrations\Directory;
 
 defined( "ABSPATH" ) || exit;
 
@@ -10,7 +10,7 @@ use Crafium\AppNatively\App\DTO\Directory\ListingDTO;
 use Crafium\AppNatively\App\DTO\Directory\ListingPaginatorDTO;
 use Crafium\AppNatively\App\DTO\Directory\TermDTO;
 use Crafium\AppNatively\App\DTO\Directory\TermPaginatorDTO;
-use Crafium\AppNatively\App\Integrations\Concerns\ListingIntegrationHelpers;
+use Crafium\AppNatively\App\Integrations\Directory\Concerns\ListingIntegrationHelpers;
 use Crafium\AppNatively\App\Models\Term;
 use Crafium\AppNatively\WpMVC\Contracts\Provider;
 use Crafium\AppNatively\WpMVC\RequestValidator\Request;
@@ -358,6 +358,7 @@ class Directorist extends Provider {
             "items"          => array_map( [$this, "map_review_comment"], $comments ),
         ];
     }
+
      /**
      * Resolve device-local wishlist listing IDs into full listing records.
      *
@@ -779,6 +780,9 @@ class Directorist extends Provider {
         if ( in_array( "id", $fields, true ) ) {
             $dto->set_id( (int) $listing->ID );
         }
+        if ( in_array( "url", $fields, true ) ) {
+            $dto->set_url( (string) get_permalink( $listing ) );
+        }
         if ( in_array( "title", $fields, true ) ) {
             $dto->set_title( get_the_title( $listing ) );
         }
@@ -1098,5 +1102,4 @@ class Directorist extends Provider {
 
         return $total > 0 ? round( $sum / $total, 1 ) : 0.0;
     }
-
 }

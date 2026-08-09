@@ -1,6 +1,6 @@
 <?php
 
-namespace Crafium\AppNatively\App\Integrations\WooCommerce;
+namespace Crafium\AppNatively\App\Integrations\Ecommerce\WooCommerce;
 
 defined( "ABSPATH" ) || exit;
 
@@ -17,7 +17,7 @@ use Crafium\AppNatively\App\DTO\Ecommerce\CategoryPaginatorDTO;
 use Crafium\AppNatively\App\DTO\Ecommerce\AttributeFacetDTO;
 use Crafium\AppNatively\App\DTO\Ecommerce\AttributeFacetOptionDTO;
 use Crafium\AppNatively\App\DTO\Ecommerce\ProductFiltersDTO;
-use Crafium\AppNatively\App\Integrations\Concerns\EcommerceIntegrationHelpers;
+use Crafium\AppNatively\App\Integrations\Ecommerce\Concerns\EcommerceIntegrationHelpers;
 use Crafium\AppNatively\WpMVC\Database\Query\Builder;
 use Crafium\AppNatively\WpMVC\RequestValidator\Request;
 use Crafium\AppNatively\WpMVC\Exceptions\Exception;
@@ -485,8 +485,8 @@ class ProductRepository {
         if ( in_array( "short_description", $fields ) ) {
             $dto->set_short_description( $this->parse_content( (string) $product->get_short_description() ) );
         }
-        if ( in_array( "permalink", $fields ) ) {
-            $dto->set_permalink( get_permalink( $post->ID ) );
+        if ( in_array( "url", $fields ) ) {
+            $dto->set_url( get_permalink( $post->ID ) );
         }
 
         // Financials

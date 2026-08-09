@@ -1,13 +1,13 @@
 <?php
 
-namespace Crafium\AppNatively\App\Integrations\WooCommerce;
+namespace Crafium\AppNatively\App\Integrations\Ecommerce\WooCommerce;
 
 defined( "ABSPATH" ) || exit;
 
 use Crafium\AppNatively\App\DTO\Ecommerce\OrderDTO;
 use Crafium\AppNatively\App\DTO\Ecommerce\OrderItemDTO;
 use Crafium\AppNatively\App\DTO\Ecommerce\OrderPaginatorDTO;
-use Crafium\AppNatively\App\Integrations\Concerns\EcommerceIntegrationHelpers;
+use Crafium\AppNatively\App\Integrations\Ecommerce\Concerns\EcommerceIntegrationHelpers;
 use Crafium\AppNatively\WpMVC\RequestValidator\Request;
 use Crafium\AppNatively\WpMVC\Exceptions\Exception;
 
@@ -84,9 +84,9 @@ class OrderRepository {
         foreach ( $paginator->orders as $wc_order ) {
             $line_items = [];
             foreach ( $wc_order->get_items() as $item_id => $item ) {
-                $product = $item->get_product();
+                $product                               = $item->get_product();
                 [ $item_product_id, $item_variant_id ] = $this->resolve_item_product_and_variant_id( $product );
-                $image_url = $this->resolve_item_image_url( $product );
+                $image_url                             = $this->resolve_item_image_url( $product );
 
                 $line_items[] = new OrderItemDTO(
                     [

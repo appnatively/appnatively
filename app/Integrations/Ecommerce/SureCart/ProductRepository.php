@@ -1,6 +1,6 @@
 <?php
 
-namespace Crafium\AppNatively\App\Integrations\SureCart;
+namespace Crafium\AppNatively\App\Integrations\Ecommerce\SureCart;
 
 defined( "ABSPATH" ) || exit;
 
@@ -11,7 +11,7 @@ use Crafium\AppNatively\App\DTO\Ecommerce\ProductFiltersDTO;
 use Crafium\AppNatively\App\DTO\Ecommerce\ProductImageDTO;
 use Crafium\AppNatively\App\DTO\Ecommerce\ProductPaginatorDTO;
 use Crafium\AppNatively\App\DTO\Ecommerce\ProductVariantDTO;
-use Crafium\AppNatively\App\Integrations\Concerns\EcommerceIntegrationHelpers;
+use Crafium\AppNatively\App\Integrations\Ecommerce\Concerns\EcommerceIntegrationHelpers;
 use Crafium\AppNatively\WpMVC\Exceptions\Exception;
 use Crafium\AppNatively\WpMVC\RequestValidator\Request;
 use SureCart\Models\Product;
@@ -243,8 +243,8 @@ class ProductRepository {
             $dto->set_status( (string) ( get_post_status( $post_id ) ?: 'publish' ) );
         }
 
-        if ( in_array( 'permalink', $fields, true ) ) {
-            $dto->set_permalink( (string) ( $product->permalink ?? get_permalink( $post_id ) ?: '' ) );
+        if ( in_array( 'url', $fields, true ) ) {
+            $dto->set_url( (string) ( $product->permalink ?? get_permalink( $post_id ) ?: '' ) );
         }
 
         $currency = (string) ( \SureCart::account()->currency ?? 'USD' );

@@ -109,8 +109,8 @@ class NinjaForms extends Form {
             case 'date_time_picker':
                 return ['string'];
             case 'rating':
-                $rules      = ['integer'];
-                $max_stars  = $field->get_setting( 'number_of_stars' );
+                $rules     = ['integer'];
+                $max_stars = $field->get_setting( 'number_of_stars' );
                 if ( is_numeric( $max_stars ) && $max_stars > 0 ) {
                     $rules[] = 'max:' . absint( $max_stars );
                 }
@@ -188,7 +188,7 @@ class NinjaForms extends Form {
         $items = [];
 
         foreach ( $options as $key => $option ) {
-            $option    = (array) $option;
+            $option  = (array) $option;
             $items[] = [
                 'id'    => isset( $option['value'] ) ? (string) $option['value'] : (string) $key,
                 'label' => $option['label'] ?? '',

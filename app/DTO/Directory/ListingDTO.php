@@ -11,6 +11,8 @@ class ListingDTO extends DTO {
 
     private string $title;
 
+    private string $url;
+
     private string $slug;
 
     private string $description;
@@ -261,6 +263,15 @@ class ListingDTO extends DTO {
 
     public function set_rating( float $rating ): self {
         $this->rating = $rating;
+        return $this;
+    }
+
+    public function get_url(): string {
+        return $this->url;
+    }
+
+    public function set_url( string $url ): self {
+        $this->url = $url;
         return $this;
     }
 }

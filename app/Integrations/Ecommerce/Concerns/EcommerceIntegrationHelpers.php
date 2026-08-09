@@ -1,6 +1,6 @@
 <?php
 
-namespace Crafium\AppNatively\App\Integrations\Concerns;
+namespace Crafium\AppNatively\App\Integrations\Ecommerce\Concerns;
 
 defined( "ABSPATH" ) || exit;
 

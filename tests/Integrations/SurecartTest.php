@@ -2,7 +2,7 @@
 
 namespace Crafium\AppNatively\Tests\Integrations;
 
-use Crafium\AppNatively\App\Integrations\SureCart;
+use Crafium\AppNatively\App\Integrations\Ecommerce\SureCart;
 use Crafium\AppNatively\WpMVC\Exceptions\Exception;
 use Crafium\AppNatively\WpMVC\RequestValidator\Request;
 

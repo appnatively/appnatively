@@ -19,6 +19,7 @@ class ListingController extends Controller {
      */
     protected array $allowed_fields = [
         "id",
+        "url",
         "title",
         "slug",
         "description",

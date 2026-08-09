@@ -504,9 +504,11 @@ class GutenaFormTest extends \WP_UnitTestCase {
     public function test_form_submit_is_rate_limited_per_ip_and_form() {
         $_SERVER['REMOTE_ADDR'] = '203.0.113.5';
 
-        add_filter( 'craf_appna_form_rate_limit_max', function () {
-            return 2;
-        } );
+        add_filter(
+            'craf_appna_form_rate_limit_max', function () {
+                return 2;
+            } 
+        );
 
         $gutena = $this->get_integration_instance();
 

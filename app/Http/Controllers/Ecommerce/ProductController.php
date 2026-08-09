@@ -44,7 +44,8 @@ class ProductController extends Controller {
     protected array $detail_only_fields = [
         "type",
         "variants",
-        "options"
+        "options",
+        "url"
     ];
 
     /**

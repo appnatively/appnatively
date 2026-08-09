@@ -34,7 +34,7 @@ class BitFormTest extends \WP_UnitTestCase {
         $form_content = wp_json_encode(
             [
                 'fields' => [
-                    'fld_full_name' => [
+                    'fld_full_name'     => [
                         'typ'       => 'text',
                         'lbl'       => 'Full Name',
                         'fieldName' => 'full_name',
@@ -46,13 +46,13 @@ class BitFormTest extends \WP_UnitTestCase {
                         'fieldName' => 'full_name_req',
                         'valid'     => [ 'req' => true, 'maxlength' => 50 ],
                     ],
-                    'fld_email' => [
+                    'fld_email'         => [
                         'typ'       => 'email',
                         'lbl'       => 'Email',
                         'fieldName' => 'email',
                         'valid'     => [ 'req' => true ],
                     ],
-                    'fld_gender' => [
+                    'fld_gender'        => [
                         'typ'       => 'radio',
                         'lbl'       => 'Gender',
                         'fieldName' => 'gender',
@@ -62,11 +62,11 @@ class BitFormTest extends \WP_UnitTestCase {
                             [ 'lbl' => 'Female', 'val' => 'female' ],
                         ],
                     ],
-                    'fld_gdpr' => [
+                    'fld_gdpr'          => [
                         'typ' => 'gdpr',
                         'lbl' => 'I agree to the terms',
                     ],
-                    'fld_html' => [
+                    'fld_html'          => [
                         'typ' => 'html',
                     ],
                 ],

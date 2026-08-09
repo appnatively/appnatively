@@ -2,7 +2,7 @@
 
 namespace Crafium\AppNatively\Tests\Integrations;
 
-use Crafium\AppNatively\App\Integrations\Woocommerce;
+use Crafium\AppNatively\App\Integrations\Ecommerce\Woocommerce;
 use Crafium\AppNatively\WpMVC\Exceptions\Exception;
 use Crafium\AppNatively\WpMVC\RequestValidator\Request;
 

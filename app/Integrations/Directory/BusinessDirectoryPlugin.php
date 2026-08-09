@@ -1,6 +1,6 @@
 <?php
 
-namespace Crafium\AppNatively\App\Integrations;
+namespace Crafium\AppNatively\App\Integrations\Directory;
 
 defined( "ABSPATH" ) || exit;
 
@@ -10,7 +10,7 @@ use Crafium\AppNatively\App\DTO\Directory\ListingDTO;
 use Crafium\AppNatively\App\DTO\Directory\ListingPaginatorDTO;
 use Crafium\AppNatively\App\DTO\Directory\TermDTO;
 use Crafium\AppNatively\App\DTO\Directory\TermPaginatorDTO;
-use Crafium\AppNatively\App\Integrations\Concerns\ListingIntegrationHelpers;
+use Crafium\AppNatively\App\Integrations\Directory\Concerns\ListingIntegrationHelpers;
 use Crafium\AppNatively\WpMVC\Contracts\Provider;
 use Crafium\AppNatively\WpMVC\RequestValidator\Request;
 use WP_Post;
@@ -212,6 +212,9 @@ class BusinessDirectoryPlugin extends Provider {
 
         if ( in_array( "id", $fields, true ) ) {
             $dto->set_id( (int) $post->ID );
+        }
+        if ( in_array( "url", $fields, true ) ) {
+            $dto->set_url( (string) get_permalink( $post ) );
         }
         if ( in_array( "title", $fields, true ) ) {
             $dto->set_title( get_the_title( $post ) );
@@ -421,5 +424,4 @@ class BusinessDirectoryPlugin extends Provider {
         $per_page = (int) $request->get_param( "per_page" ) ?: 10;
         return ["current_page" => $page, "per_page" => $per_page, "total" => 0, "last_page" => 1, "average_rating" => 0.0, "review_count" => 0, "rating_counts" => ["1" => 0, "2" => 0, "3" => 0, "4" => 0, "5" => 0], "items" => []];
     }
-
 }

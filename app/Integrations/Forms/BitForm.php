@@ -126,7 +126,7 @@ class BitForm extends Form {
     private function get_type_rules( string $std_type, $field ): array {
         switch ( $std_type ) {
             case 'text':
-                $rules = ['string'];
+                $rules     = ['string'];
                 $maxlength = $this->field_prop( $field, 'valid.maxlength' );
                 if ( is_numeric( $maxlength ) ) {
                     $rules[] = 'max:' . absint( $maxlength );
@@ -151,7 +151,7 @@ class BitForm extends Form {
             case 'url':
                 return ['string', 'url'];
             case 'password':
-                $rules = ['string'];
+                $rules     = ['string'];
                 $minlength = $this->field_prop( $field, 'valid.minlength' );
                 if ( is_numeric( $minlength ) ) {
                     $rules[] = 'min:' . absint( $minlength );

@@ -1,6 +1,6 @@
 <?php
 
-namespace Crafium\AppNatively\App\Integrations\FluentCart;
+namespace Crafium\AppNatively\App\Integrations\Ecommerce\FluentCart;
 
 defined( "ABSPATH" ) || exit;
 
@@ -12,7 +12,7 @@ use Crafium\AppNatively\App\DTO\Ecommerce\ProductDimensionDTO;
 use Crafium\AppNatively\App\DTO\Ecommerce\ProductImageDTO;
 use Crafium\AppNatively\App\DTO\Ecommerce\ProductPaginatorDTO;
 use Crafium\AppNatively\App\DTO\Ecommerce\ProductVariantDTO;
-use Crafium\AppNatively\App\Integrations\Concerns\EcommerceIntegrationHelpers;
+use Crafium\AppNatively\App\Integrations\Ecommerce\Concerns\EcommerceIntegrationHelpers;
 use Crafium\AppNatively\WpMVC\Exceptions\Exception;
 use FluentCart\App\Helpers\Helper;
 
@@ -239,8 +239,8 @@ class ProductRepository {
             $dto->set_status( $product->post_status );
         }
 
-        if ( in_array( "permalink", $fields ) ) {
-            $dto->set_permalink( (string) $product->view_url );
+        if ( in_array( "url", $fields ) ) {
+            $dto->set_url( (string) $product->view_url );
         }
 
         // Financials

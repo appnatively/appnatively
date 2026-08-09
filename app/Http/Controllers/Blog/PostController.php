@@ -26,7 +26,7 @@ class PostController extends Controller {
         "excerpt",
         "content",
         "status",
-        "permalink",
+        "url",
         "thumbnail",
         "categories",
         "date",
@@ -150,7 +150,7 @@ class PostController extends Controller {
             "order"          => "DESC",
         ];
 
-        if ( !empty( $category_ids ) ) {
+        if ( ! empty( $category_ids ) ) {
             $query_args["category__in"] = $category_ids;
         }
 
@@ -230,8 +230,8 @@ class PostController extends Controller {
         if ( in_array( "status", $fields, true ) ) {
             $dto->set_status( (string) $post->post_status );
         }
-        if ( in_array( "permalink", $fields, true ) ) {
-            $dto->set_permalink( (string) get_permalink( $post ) );
+        if ( in_array( "url", $fields, true ) ) {
+            $dto->set_url( (string) get_permalink( $post ) );
         }
         if ( in_array( "thumbnail", $fields, true ) ) {
             $dto->set_thumbnail( $this->get_post_thumbnail( $post->ID ) );

@@ -1,6 +1,6 @@
 <?php
 
-namespace Crafium\AppNatively\App\Integrations;
+namespace Crafium\AppNatively\App\Integrations\Directory;
 
 defined( "ABSPATH" ) || exit;
 
@@ -10,7 +10,7 @@ use Crafium\AppNatively\App\DTO\Directory\ListingDTO;
 use Crafium\AppNatively\App\DTO\Directory\ListingPaginatorDTO;
 use Crafium\AppNatively\App\DTO\Directory\TermDTO;
 use Crafium\AppNatively\App\DTO\Directory\TermPaginatorDTO;
-use Crafium\AppNatively\App\Integrations\Concerns\ListingIntegrationHelpers;
+use Crafium\AppNatively\App\Integrations\Directory\Concerns\ListingIntegrationHelpers;
 use Crafium\AppNatively\WpMVC\Contracts\Provider;
 use Crafium\AppNatively\WpMVC\RequestValidator\Request;
 use WP_Post;
@@ -262,6 +262,9 @@ class GeoDirectory extends Provider {
 
         if ( in_array( "id", $fields, true ) ) {
             $dto->set_id( (int) $post->ID );
+        }
+        if ( in_array( "url", $fields, true ) ) {
+            $dto->set_url( (string) get_permalink( $post ) );
         }
         if ( in_array( "title", $fields, true ) ) {
             $dto->set_title( get_the_title( $post ) );
@@ -668,7 +671,7 @@ class GeoDirectory extends Provider {
             $counts = \GeoDir_Comments::get_post_review_rating_counts( $listing_id, 1 );
             if ( is_array( $counts ) ) {
                 foreach ( $counts as $rating => $count ) {
-                    $bucket = (string) max( 1, min( 5, (int) round( (float) $rating ) ) );
+                    $bucket                  = (string) max( 1, min( 5, (int) round( (float) $rating ) ) );
                     $rating_counts[$bucket] += (int) $count;
                 }
 
@@ -688,5 +691,4 @@ class GeoDirectory extends Provider {
             "5" => 0,
         ];
     }
-
 }
