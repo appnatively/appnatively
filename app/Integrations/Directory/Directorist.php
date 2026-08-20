@@ -758,7 +758,7 @@ class Directorist extends Provider {
             $dto->set_count( (int) $term->count );
         }
         if ( in_array( "image", $fields, true ) ) {
-            $image = $this->get_term_image( (int) $term->term_id, ["category_img"] );
+            $image = $this->get_term_image( (int) $term->term_id, ["image"] );
             if ( ! empty( $image ) ) {
                 $dto->set_image( $image );
             }
