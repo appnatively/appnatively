@@ -1,6 +1,6 @@
 === AppNatively ===
 Contributors: crafium, mdalaminbey
-Tags: mobile app, app builder, native app, rest api, headless
+Tags: mobile app, app builder, native app, woocommerce mobile app, headless
 Requires at least: 6.5
 Tested up to: 7.1
 Requires PHP: 7.4
