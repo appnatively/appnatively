@@ -1,0 +1,70 @@
+name: Build Pre Release
+
+on:
+  release:
+    types:
+      - prereleased
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '7.4'
+
+      - name: Setup composer
+        run: composer setup
+
+      - name: Setup Node.js 24.11.1
+        uses: actions/setup-node@v2
+        with:
+          node-version: "24.11.1"
+
+      # Cache node_modules
+      - name: Cache Node.js dependencies
+        if: always()
+        uses: actions/cache@v3
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-node-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+
+      - name: Install pnpm globally
+        run: npm install -g pnpm@latest-10
+
+      - name: Install pnpm dependencies
+        run: pnpm install
+
+      - name: Compile Scripts
+        run: pnpm minify
+
+      - name: Fix Text Domain
+        run: pnpm fixtextdomain
+
+      - name: Generate Text Domain POT file
+        run: composer make-production-pot
+
+      - name: Remove Composer Dev Dependencies
+        run: composer build
+
+      - name: Build plugin
+        run: pnpm git-compress
+
+      - name: Create zip file
+        run: |
+          tag_name=$(git describe --tags --abbrev=0)
+          zip -r "appnatively.${tag_name}.zip" appnatively
+
+      - name: Upload zip file as a release asset
+        uses: softprops/action-gh-release@v1
+        with:
+          files: appnatively*.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

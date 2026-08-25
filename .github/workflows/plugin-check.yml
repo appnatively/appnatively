@@ -1,0 +1,78 @@
+name: Plugin Check (PCP)
+
+on:
+  pull_request_target:
+    branches:
+      - master
+      - development
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  pcp:
+    name: Plugin Check (PCP)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '7.4'
+
+      - name: Setup composer
+        run: composer setup
+
+      - name: Setup Node.js 24.11.1
+        uses: actions/setup-node@v2
+        with:
+          node-version: "24.11.1"
+
+      # Restore node_modules cache
+      - name: Restore Node.js dependencies cache
+        uses: actions/cache/restore@v3
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-node-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+
+      - name: Install pnpm globally
+        run: npm install -g pnpm@latest-10
+
+      - name: Install pnpm dependencies
+        run: pnpm install
+
+      - name: Compile Scripts
+        run: pnpm minify
+
+      - name: Remove Composer Dev Dependencies
+        run: composer build
+
+      - name: Build plugin
+        run: pnpm git-compress
+
+      - name: Run plugin check
+        uses: wordpress/plugin-check-action@v1
+        with:
+          build-dir: './appnatively'
+
+      # Save caches (always run, even if above fails)
+      - name: Save Node.js dependencies cache
+        if: always()
+        uses: actions/cache/save@v3
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-node-${{ hashFiles('pnpm-lock.yaml') }}
+
+      - name: Save Composer dependencies cache
+        if: always()
+        uses: actions/cache/save@v3
+        with:
+          path: |
+            vendor
+            vendor-src
+          key: ${{ runner.os }}-php-composer-${{ hashFiles('composer.lock') }}

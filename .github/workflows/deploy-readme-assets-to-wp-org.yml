@@ -1,0 +1,16 @@
+name: Plugin asset/readme update
+on:
+  push:
+    branches:
+    - deploy-assets-readme
+jobs:
+  trunk:
+    name: Update Assets
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@master
+    - name: WordPress.org plugin asset/readme update
+      uses: wpmvc/action-wordpress-plugin-asset-update@develop
+      env:
+        SVN_PASSWORD: ${{ secrets.SVN_PASSWORD }}
+        SVN_USERNAME: ${{ secrets.SVN_USERNAME }}

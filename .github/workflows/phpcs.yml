@@ -1,0 +1,45 @@
+name: PHPCS Check
+
+on:
+  pull_request_target:
+      branches:
+        - master
+        - development
+      paths:
+      - '**/*.php'  # Run only when PHP files change
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  phpcs:
+    name: PHPCS Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ github.event.pull_request.base.ref }}
+
+      - name: Setup Node.js 24.11.1
+        uses: actions/setup-node@v2
+        with:
+          node-version: "24.11.1"
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '7.4'
+          ini-values: 'memory_limit=1G'
+          coverage: none
+          tools: cs2pr
+
+      - name: Setup composer
+        run: composer setup
+
+      - name: PHPCS Permission
+        run: composer permission
+
+      - name: Run PHPCS checks
+        run: composer phpcs
