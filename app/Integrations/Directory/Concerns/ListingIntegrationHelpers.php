@@ -19,6 +19,7 @@ trait ListingIntegrationHelpers {
         $previous_post   = $GLOBALS["post"] ?? null;
         $GLOBALS["post"] = $post;
 
+        //phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- invoking WordPress core's own "the_content" filter to render the listing the same way a theme would, not defining a hook of our own.
         $content = (string) apply_filters( "the_content", $post->post_content );
 
         if ( null === $previous_post ) {

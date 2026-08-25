@@ -21,7 +21,7 @@ class CartController extends Controller {
     public function index( Request $request ): array {
         $request->validate(
             [
-                "integration" => "required|string",
+                "integration" => "required|string|" . craf_appna_in_rule( craf_appna_get_ecommerce_integrations() ),
             ]
         );
 
@@ -46,7 +46,7 @@ class CartController extends Controller {
         $request->validate(
             [
                 "items"       => "required|array",
-                "integration" => "required|string",
+                "integration" => "required|string|" . craf_appna_in_rule( craf_appna_get_ecommerce_integrations() ),
             ]
         );
 
@@ -71,7 +71,7 @@ class CartController extends Controller {
         $request->validate(
             [
                 "items"       => "required|array",
-                "integration" => "required|string",
+                "integration" => "required|string|" . craf_appna_in_rule( craf_appna_get_ecommerce_integrations() ),
             ]
         );
 
@@ -96,7 +96,7 @@ class CartController extends Controller {
         $request->validate(
             [
                 "itemIds"     => "required|array",
-                "integration" => "required|string",
+                "integration" => "required|string|" . craf_appna_in_rule( craf_appna_get_ecommerce_integrations() ),
             ]
         );
 
@@ -120,7 +120,7 @@ class CartController extends Controller {
     public function clear( Request $request ): array {
         $request->validate(
             [
-                "integration" => "required|string",
+                "integration" => "required|string|" . craf_appna_in_rule( craf_appna_get_ecommerce_integrations() ),
             ]
         );
 

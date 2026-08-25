@@ -165,6 +165,7 @@ class ListingController extends Controller {
             throw new Exception( esc_html__( "Reviews integration not found", "appnatively" ) );
         }
 
+        //phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.DynamicHooknameFound -- $hook is built from the "craf_appna_directory_" literal above; the sniff just can't see through the interpolation.
         $reviews = apply_filters( $hook, null, $request );
 
         if ( null === $reviews ) {

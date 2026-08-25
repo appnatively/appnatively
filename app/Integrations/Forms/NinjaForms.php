@@ -169,13 +169,17 @@ class NinjaForms extends Form {
         }
 
         // Mirrors NF_Actions_Save::process() so notification add-ons hooked to these events still fire.
+        //phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- firing Ninja Forms' own hooks, not defining hooks of our own.
         do_action( 'nf_before_save_sub', $sub->get_id() );
 
         $sub->save();
 
         $sub_id = $sub->get_id();
+        //phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- firing Ninja Forms' own hooks, not defining hooks of our own.
         do_action( 'nf_save_sub', $sub_id );
+        //phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound
         do_action( 'nf_create_sub', $sub_id );
+        //phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound
         do_action( 'ninja_forms_save_sub', $sub_id );
     }
 

@@ -6,6 +6,7 @@ defined( "ABSPATH" ) || exit;
 
 use Crafium\AppNatively\App\DTO\Forms\FormDTO;
 use Crafium\AppNatively\App\DTO\Forms\FormFieldDTO;
+use Crafium\AppNatively\App\Support\Auth;
 use Crafium\AppNatively\WpMVC\RequestValidator\Request;
 
 class WPForms extends Form {
@@ -274,28 +275,28 @@ class WPForms extends Form {
             if ( $is_required ) {
                 $messages["{$field_id}.required"] = wpforms_setting(
                     'validation-required',
-                    __( 'This field is required.', 'wpforms-lite' )
+                    __( 'This field is required.', 'appnatively' )
                 );
             }
 
             if ( $mapped_type === 'email' ) {
                 $messages["{$field_id}.email"] = wpforms_setting(
                     'validation-email',
-                    __( 'Please enter a valid email address.', 'wpforms-lite' )
+                    __( 'Please enter a valid email address.', 'appnatively' )
                 );
             }
 
             if ( $mapped_type === 'number' || $mapped_type === 'range' ) {
                 $messages["{$field_id}.numeric"] = wpforms_setting(
                     'validation-number',
-                    __( 'Please enter a valid number.', 'wpforms-lite' )
+                    __( 'Please enter a valid number.', 'appnatively' )
                 );
             }
 
             if ( $mapped_type === 'gdpr' ) {
                 $gdpr_msg                        = wpforms_setting(
                     'validation-required',
-                    __( 'This field is required.', 'wpforms-lite' )
+                    __( 'This field is required.', 'appnatively' )
                 );
                 $messages["{$field_id}.integer"] = $gdpr_msg;
                 $messages["{$field_id}.in"]      = $gdpr_msg;
@@ -315,7 +316,7 @@ class WPForms extends Form {
                 if ( $this->field_has_min_rule( $field, $mapped_type ) ) {
                     $msg                         = wpforms_setting(
                         'validation-min',
-                        __( 'Please enter a value greater than or equal to {value}.', 'wpforms-lite' )
+                        __( 'Please enter a value greater than or equal to {value}.', 'appnatively' )
                     );
                     $messages["{$field_id}.min"] = str_replace( '{value}', ':min', $msg );
                 }
@@ -323,7 +324,7 @@ class WPForms extends Form {
                 if ( $this->field_has_max_rule( $field, $mapped_type ) ) {
                     $msg                         = wpforms_setting(
                         'validation-max',
-                        __( 'Please enter a value less than or equal to {value}.', 'wpforms-lite' )
+                        __( 'Please enter a value less than or equal to {value}.', 'appnatively' )
                     );
                     $messages["{$field_id}.max"] = str_replace( '{value}', ':max', $msg );
                 }
@@ -385,7 +386,12 @@ class WPForms extends Form {
             'fields' => [],
         ];
 
-        if ( is_user_logged_in() ) {
+        // WPForms' nonce guards against a browser being made to submit using
+        // its owner's cookies. A Bearer-token request cannot be produced that
+        // way, so supplying the nonce restores parity with a real submission.
+        // A cookie-authenticated request is the case the nonce exists for and
+        // is left to present a real one.
+        if ( is_user_logged_in() && Auth::is_token_authenticated() ) {
             $entry['nonce'] = wp_create_nonce( "wpforms::form_{$form['id']}" );
         }
 
@@ -404,33 +410,151 @@ class WPForms extends Form {
             if ( $value !== null ) {
                 if ( $mapped_type === 'gdpr' ) {
                     if ( (int) $value ) {
-                        $entry['fields'][ $field['id'] ] = $field['choices'][1]['label'] ?? '1';
+                        $consent = isset( $field['choices'][1] )
+                            ? $this->expected_choice_token( $field, (array) $field['choices'][1], 1 )
+                            : '1';
+
+                        $entry['fields'][ $field['id'] ] = $consent;
                     }
                 } else {
-                    $entry['fields'][ $field['id'] ] = $value;
+                    // Translate a label back to the token WPForms declared, so
+                    // its choice-allowlist check passes for a real choice and
+                    // still rejects anything off-list.
+                    $entry['fields'][ $field['id'] ] = $this->resolve_choice_submission( $field, $value );
                 }
             }
         }
 
-        // WPForms checks $_POST['action'] === 'wpforms_submit' when AJAX submission is enabled.
-        // REST API requests don't set this, so we set it manually to bypass the check.
+        // WPForms identifies its own submissions by $_POST['action'] when AJAX
+        // submission is enabled. A REST request has no such field, so it is set
+        // for the duration of the call and restored afterwards.
+        // Stashed only to be written back verbatim in the finally block below.
+        //phpcs:ignore WordPress.Security.NonceVerification.Missing
+        $had_action = array_key_exists( 'action', $_POST );
+        //phpcs:ignore WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized, WordPress.Security.ValidatedSanitizedInput.MissingUnslash
+        $original_action = $had_action ? $_POST['action'] : null;
         $_POST['action'] = 'wpforms_submit';
 
-        // Bypass the direct POST request check that blocks non-AJAX POST requests
-        // when AJAX submission + anti-spam v3 are enabled.
+        // wpforms_process_anti_spam_direct_post_bypass is WPForms' own public
+        // filter for integrations that submit outside the browser: its v3
+        // anti-spam token is minted by JavaScript when the form is rendered,
+        // which a native app never does. WPForms' remaining spam checks still
+        // run and are surfaced to the caller via get_submit_errors(), and this
+        // endpoint is throttled per client address before it is ever reached.
         add_filter( 'wpforms_process_anti_spam_direct_post_bypass', '__return_true' );
-
-        add_filter( 'wpforms_field_choices_allow_unknown_value', '__return_true' );
 
         try {
             wpforms()->obj( 'process' )->process( $entry );
         } finally {
-            // Restore the original action to avoid side effects.
-            unset( $_POST['action'] ); // phpcs:ignore WordPress.Security.NonceVerification.Missing
+            if ( $had_action ) {
+                $_POST['action'] = $original_action;
+            } else {
+                unset( $_POST['action'] ); // phpcs:ignore WordPress.Security.NonceVerification.Missing
+            }
 
             remove_filter( 'wpforms_process_anti_spam_direct_post_bypass', '__return_true' );
-            remove_filter( 'wpforms_field_choices_allow_unknown_value', '__return_true' );
         }
+    }
+
+    /**
+     * The token WPForms expects a given choice to be submitted as.
+     *
+     * Mirrors WPForms' own build_choices_allowlist(): a field with
+     * `show_values` enabled is submitted by value, every other choice field is
+     * submitted by label, and a choice carrying neither falls back to
+     * "Choice {key}". Sending anything else is what made WPForms' allowlist
+     * look like a check to switch off rather than a payload to match.
+     *
+     * @param array      $field  The field configuration.
+     * @param array      $choice The choice configuration.
+     * @param int|string $key    The choice key as stored in form_data.
+     * @return string
+     */
+    private function expected_choice_token( array $field, array $choice, $key ): string {
+        if ( ! empty( $field['show_values'] ) && isset( $choice['value'] ) && '' !== $choice['value'] ) {
+            return (string) $choice['value'];
+        }
+
+        if ( isset( $choice['label'] ) && '' !== $choice['label'] ) {
+            return (string) $choice['label'];
+        }
+
+        // Must match the string WPForms builds, translation included, or the
+        // allowlist comparison fails on a non-English site.
+        /* translators: %s - choice number. */
+        return sprintf( __( 'Choice %s', 'appnatively' ), $key ); //phpcs:ignore WordPress.WP.I18n.TextDomainMismatch
+    }
+
+    /**
+     * Translate a submitted choice into the token WPForms declared for it.
+     *
+     * Anything matching no configured choice is returned untouched, so WPForms
+     * still sees it and still refuses it.
+     *
+     * @param array $field The field configuration.
+     * @param mixed $value The submitted value, or array of values.
+     * @return mixed
+     */
+    private function resolve_choice_submission( array $field, $value ) {
+        if ( empty( $field['choices'] ) || ! is_array( $field['choices'] ) ) {
+            return $value;
+        }
+
+        if ( is_array( $value ) ) {
+            return array_map(
+                function ( $single ) use ( $field ) {
+                    return $this->resolve_single_choice( $field, $single );
+                },
+                $value
+            );
+        }
+
+        return $this->resolve_single_choice( $field, $value );
+    }
+
+    /**
+     * Resolve one submitted item against a field's configured choices.
+     *
+     * @param array $field  The field configuration.
+     * @param mixed $single The submitted item.
+     * @return mixed
+     */
+    private function resolve_single_choice( array $field, $single ) {
+        if ( ! is_string( $single ) && ! is_numeric( $single ) ) {
+            return $single;
+        }
+
+        $single   = (string) $single;
+        $expected = [];
+
+        foreach ( $field['choices'] as $key => $choice ) {
+            $expected[ $key ] = $this->expected_choice_token( $field, (array) $choice, $key );
+        }
+
+        // Already the declared token — nothing to translate.
+        if ( in_array( $single, $expected, true ) ) {
+            return $single;
+        }
+
+        // Label or value next, then the choice key. Ordered so a label can
+        // never be shadowed by another choice whose key happens to match it.
+        foreach ( [ 'label', 'value' ] as $property ) {
+            foreach ( $field['choices'] as $key => $choice ) {
+                $choice = (array) $choice;
+
+                if ( isset( $choice[ $property ] ) && '' !== $choice[ $property ] && (string) $choice[ $property ] === $single ) {
+                    return $expected[ $key ];
+                }
+            }
+        }
+
+        foreach ( $field['choices'] as $key => $choice ) {
+            if ( (string) $key === $single ) {
+                return $expected[ $key ];
+            }
+        }
+
+        return $single;
     }
 
     public function get_forms(): array {
@@ -516,7 +640,11 @@ class WPForms extends Form {
                         $items[] = [
                             'id'    => (string) $key,
                             'label' => $choice['label'] ?? '',
-                            'value' => $choice['value'] ?? $choice['label'] ?? '',
+                            // Hand the app the token WPForms will actually
+                            // accept back. Reading $choice['value'] blindly
+                            // yields an empty string on any field that doesn't
+                            // use explicit values, which is most of them.
+                            'value' => $this->expected_choice_token( $field, (array) $choice, $key ),
                         ];
                     }
 

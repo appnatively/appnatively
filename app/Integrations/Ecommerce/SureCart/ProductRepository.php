@@ -49,6 +49,7 @@ class ProductRepository {
         $args = [
             'post_type'      => 'sc_product',
             'post_status'    => 'publish',
+            'has_password'    => false,
             'posts_per_page' => $per_page,
             'paged'          => $page,
         ];
@@ -58,6 +59,7 @@ class ProductRepository {
         }
 
         if ( $category ) {
+            //phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_tax_query -- filtering products by category is the point of this query.
             $args['tax_query'] = [
                 [
                     'taxonomy' => self::COLLECTION_TAXONOMY,
@@ -85,10 +87,10 @@ class ProductRepository {
      * pricing/variant/stock, falling back to the mirrored snapshot.
      */
     public function product( ?ProductDTO $product_dto, Request $request, array $fields = [] ): ?ProductDTO {
-        $post_id = (int) $request->get_param( 'id' );
+        $post_id = (int) craf_appna_route_param( $request, 'id' );
         $post    = $post_id ? get_post( $post_id ) : null;
 
-        if ( ! $post || $post->post_type !== 'sc_product' || $post->post_status !== 'publish' ) {
+        if ( ! $post || $post->post_type !== 'sc_product' || $post->post_status !== 'publish' || craf_appna_is_post_password_protected( $post ) ) {
             throw new Exception( esc_html__( 'Product not found.', 'appnatively' ), 404 );
         }
 
@@ -129,6 +131,7 @@ class ProductRepository {
             [
                 'post_type'      => 'sc_product',
                 'post_status'    => 'publish',
+                'has_password'    => false,
                 'post__in'       => $ids,
                 'posts_per_page' => count( $ids ),
                 'orderby'        => 'post__in',
@@ -202,7 +205,7 @@ class ProductRepository {
      * Single category.
      */
     public function category( ?CategoryDTO $category_dto, Request $request, array $fields = [] ): ?CategoryDTO {
-        $id   = (int) $request->get_param( 'id' );
+        $id   = (int) craf_appna_route_param( $request, 'id' );
         $term = $id ? get_term( $id, self::COLLECTION_TAXONOMY ) : null;
 
         if ( ! $term || is_wp_error( $term ) ) {

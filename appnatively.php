@@ -6,16 +6,15 @@ use Crafium\AppNatively\WpMVC\App;
 use Crafium\AppNatively\Database\Setup;
 
 /**
- * Plugin Name:       App Natively
+ * Plugin Name:       AppNatively
  * Description:       Turn your WordPress site into a native iOS and Android mobile app. Seamlessly sync WooCommerce, FluentCart.
- * Version:           0.0.3
+ * Version:           0.0.1
  * Requires at least: 6.5
  * Requires PHP:      7.4
- * Tested up to:      7.0
  * Author:            Crafium
  * Author URI:        https://crafium.com
- * License:           GPL v3 or later
- * License URI:       http://www.gnu.org/licenses/gpl-3.0.html
+ * License:           GPLv2 or later
+ * License URI:       https://www.gnu.org/licenses/gpl-2.0.html
  * Text Domain:       appnatively
  * Domain Path:       /languages
  */
@@ -31,11 +30,11 @@ if ( ! defined( 'CRAF_APPNA_VENDOR_LOADED' ) ) {
 
 require_once __DIR__ . '/app/Helpers/helper.php';
 
-final class Appnatively
+final class AppNatively
 {
-    public static Appnatively $instance;
+    public static AppNatively $instance;
 
-    public static function instance(): Appnatively {
+    public static function instance(): AppNatively {
         if ( empty( self::$instance ) ) {
             self::$instance = new self;
         }
@@ -71,4 +70,4 @@ final class Appnatively
     }
 }
 
-Appnatively::instance()->load();
+AppNatively::instance()->load();

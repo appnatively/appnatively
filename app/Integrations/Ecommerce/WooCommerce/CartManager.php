@@ -37,13 +37,13 @@ class CartManager {
             $cart_id = null;
             if ( $request ) {
                 $cart_id = $request->get_header( 'X-WC-Session' ) ?: $request->get_header( 'X-Cart-Id' ) ?: $request->get_param( 'cartId' );
-                //phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotValidated
-                if ( ! $cart_id && $_SERVER['REQUEST_METHOD'] === 'POST' ) {
-                    $raw_body = file_get_contents( 'php://input' );
-                    if ( $raw_body ) {
-                        $body_data = json_decode( $raw_body, true );
-                        $cart_id   = $body_data['cartId'] ?? null;
-                    }
+
+                if ( ! $cart_id ) {
+                    // WordPress has already parsed the JSON body; re-reading
+                    // php://input duplicates that and can come back empty
+                    // depending on the request.
+                    $body    = $request->get_json_params();
+                    $cart_id = is_array( $body ) ? ( $body['cartId'] ?? null ) : null;
                 }
             }
 
@@ -73,6 +73,63 @@ class CartManager {
             // Fallback load if cart is empty in memory (first time load in REST context)
             WC()->cart->get_cart_from_session();
         }
+    }
+
+    /**
+     * Mint a guest session cookie value the app can send back as its cart id.
+     *
+     * WooCommerce has signed this cookie two different ways — hash_hmac with
+     * md5, and wp_fast_hash from WordPress 6.8 — and which one a given install
+     * verifies with depends on the WooCommerce version, not on what WordPress
+     * makes available. Guessing wrong produces a cookie WooCommerce silently
+     * rejects, and the guest's cart resets on every request with no error.
+     *
+     * So rather than reimplementing the choice, each candidate is offered to
+     * WooCommerce's own public validator and the one it accepts is returned.
+     *
+     * @param string $customer_id The WooCommerce session customer id.
+     * @return string|null The cookie value, or null if none validated.
+     */
+    private function build_guest_session_cookie( string $customer_id ): ?string {
+        $expiration = time() + ( 3600 * 48 ); // 48 hours
+        $expiring   = time() + ( 3600 * 47 ); // 47 hours
+        $to_hash    = $customer_id . '|' . $expiration;
+
+        $hashes = [];
+
+        if ( function_exists( 'wp_fast_hash' ) ) {
+            $hashes[] = wp_fast_hash( $to_hash );
+        }
+
+        $hashes[] = hash_hmac( 'md5', $to_hash, wp_hash( $to_hash ) );
+
+        $cookie_name = 'wp_woocommerce_session_' . COOKIEHASH;
+        $had_cookie  = isset( $_COOKIE[ $cookie_name ] );
+
+        // Stashed only to be written back verbatim below. Sanitising or
+        // unslashing here would corrupt the value we are restoring.
+        //phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized, WordPress.Security.ValidatedSanitizedInput.MissingUnslash
+        $original = $had_cookie ? $_COOKIE[ $cookie_name ] : null;
+
+        try {
+            foreach ( $hashes as $hash ) {
+                $value = $customer_id . '|' . $expiration . '|' . $expiring . '|' . $hash;
+
+                $_COOKIE[ $cookie_name ] = $value;
+
+                if ( false !== WC()->session->get_session_cookie() ) {
+                    return $value;
+                }
+            }
+        } finally {
+            if ( $had_cookie ) {
+                $_COOKIE[ $cookie_name ] = $original;
+            } else {
+                unset( $_COOKIE[ $cookie_name ] );
+            }
+        }
+
+        return null;
     }
 
     /**
@@ -112,18 +169,7 @@ class CartManager {
         if ( isset( WC()->session ) ) {
             $customer_id = WC()->session->get_customer_id();
             if ( $customer_id && ! is_user_logged_in() ) {
-                // Generate a signed cookie value for guests
-                $session_expiration = time() + ( 3600 * 48 ); // 48 hours
-                $session_expiring   = time() + ( 3600 * 47 ); // 47 hours
-                $to_hash            = $customer_id . '|' . $session_expiration;
-                
-                if ( function_exists( 'wp_fast_hash' ) ) {
-                    $cookie_hash = wp_fast_hash( $to_hash );
-                } else {
-                    $cookie_hash = hash_hmac( 'md5', $to_hash, wp_hash( $to_hash ) );
-                }
-                
-                $session_cookie = $customer_id . '|' . $session_expiration . '|' . $session_expiring . '|' . $cookie_hash;
+                $session_cookie = $this->build_guest_session_cookie( (string) $customer_id );
             }
         }
         $dto->set_id( $session_cookie ?: 'cart' );
@@ -232,14 +278,14 @@ class CartManager {
                     if ( ! empty( $errors ) ) {
                         $messages = [];
                         foreach ( $errors as $error ) {
-                            $messages[] = strip_tags( $error['notice'] );
+                            $messages[] = wp_strip_all_tags( $error['notice'] );
                         }
                         $message = implode( ' ', $messages );
                     }
                     if ( empty( $message ) ) {
                         $message = esc_html__( "Could not add product to cart.", "appnatively" );
                     }
-                    throw new Exception( $message, 400 );
+                    throw new Exception( esc_html( $message ), 400 );
                 }
             }
         }
@@ -266,7 +312,7 @@ class CartManager {
                 
                 // set_quantity returns false or a WP_Error on failure, or does nothing if quantity is the same
                 if ( is_wp_error( $status ) ) {
-                    throw new Exception( strip_tags( $status->get_error_message() ), 400 );
+                    throw new Exception( esc_html( wp_strip_all_tags( $status->get_error_message() ) ), 400 );
                 }
 
                 $errors = wc_get_notices( 'error' );
@@ -274,9 +320,9 @@ class CartManager {
                     wc_clear_notices();
                     $messages = [];
                     foreach ( $errors as $error ) {
-                        $messages[] = strip_tags( $error['notice'] );
+                        $messages[] = wp_strip_all_tags( $error['notice'] );
                     }
-                    throw new Exception( implode( ' ', $messages ), 400 );
+                    throw new Exception( esc_html( implode( ' ', $messages ) ), 400 );
                 }
             }
         }

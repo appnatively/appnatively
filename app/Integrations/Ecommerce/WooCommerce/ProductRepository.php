@@ -166,7 +166,13 @@ class ProductRepository {
      * @return Builder
      */
     private function base_product_query(): Builder {
-        return Post::where( "post_type", "product" )->where( "post_status", "publish" );
+        // post_password is excluded here rather than at each call site because
+        // this is the one gate every product read passes through, single
+        // fetches included. A protected product keeps the `publish` status, and
+        // its description is served straight from post_content.
+        return Post::where( "post_type", "product" )
+            ->where( "post_status", "publish" )
+            ->where( "post_password", "" );
     }
 
     /**
@@ -389,7 +395,7 @@ class ProductRepository {
      * @return ProductDTO|null
      */
     public function product( ?ProductDTO $product_dto, Request $request, array $fields = [] ): ?ProductDTO {
-        $id = (int) $request->get_param( "id" );
+        $id = (int) craf_appna_route_param( $request, "id" );
 
         if ( empty( $id ) ) {
             return $product_dto;
@@ -730,7 +736,7 @@ class ProductRepository {
      * Single category.
      */
     public function category( ?CategoryDTO $category_dto, Request $request, array $fields = [] ): ?CategoryDTO {
-        $id = (int) $request->get_param( "id" );
+        $id = (int) craf_appna_route_param( $request, "id" );
 
         if ( empty( $id ) ) {
             return $category_dto;

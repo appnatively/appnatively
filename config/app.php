@@ -4,7 +4,12 @@ defined( 'ABSPATH' ) || exit;
 
 use Crafium\AppNatively\App\Integrations\Forms\GutenaForms;
 use Crafium\AppNatively\App\Providers\AuthServiceProvider;
+use Crafium\AppNatively\App\Providers\ApiGateServiceProvider;
+use Crafium\AppNatively\App\Providers\Admin\MenuServiceProvider;
 use Crafium\AppNatively\App\Http\Middleware\EnsureIsUserAdmin;
+use Crafium\AppNatively\App\Http\Middleware\EnsureIsAuthenticated;
+use Crafium\AppNatively\App\Http\Middleware\EnsureIsConnectedApp;
+use Crafium\AppNatively\App\Http\Middleware\ResolveAppUser;
 use Crafium\AppNatively\App\Integrations\Ecommerce\FluentCart;
 use Crafium\AppNatively\App\Integrations\Directory\Directorist;
 use Crafium\AppNatively\App\Integrations\Directory\GeoDirectory;
@@ -74,6 +79,7 @@ return [
     'providers'                   => [
         //Core
         AuthServiceProvider::class,
+        ApiGateServiceProvider::class,
 
         // Ecommerce Integrations
         Woocommerce::class,
@@ -107,7 +113,7 @@ return [
      * Service providers for the admin area of the plugin.
      */
     'admin_providers'             => [
-        // MenuServiceProvider::class,
+        MenuServiceProvider::class,
     ],
 
     /**
@@ -115,9 +121,25 @@ return [
      */
     'middleware'                  => [
         /**
-         * Middleware for admin routes.
+         * Requires a site administrator.
          */
-        'admin' => EnsureIsUserAdmin::class
+        'admin' => EnsureIsUserAdmin::class,
+
+        /**
+         * Requires a valid app Bearer token, and establishes the current user.
+         */
+        'auth'  => EnsureIsAuthenticated::class,
+
+        /**
+         * Requires the site connection key issued to AppNatively Studio.
+         */
+        'app'   => EnsureIsConnectedApp::class,
+
+        /**
+         * Establishes the app user when a token is presented, but lets guests
+         * through. For endpoints that serve both.
+         */
+        'user'  => ResolveAppUser::class,
     ],
 
     /**

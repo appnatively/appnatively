@@ -124,7 +124,7 @@ class CategoryController extends Controller {
             ]
         );
 
-        $id   = (int) $request->get_param( "id" );
+        $id   = (int) craf_appna_route_param( $request, "id" );
         $term = get_term( $id, "category" );
 
         if ( ! $term instanceof WP_Term ) {

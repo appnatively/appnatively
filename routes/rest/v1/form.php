@@ -12,4 +12,7 @@ Route::group(
     }
 );
 
-Route::post( 'form', [FormController::class, 'store'] );
+// Anyone may submit a form, but a signed-in caller must be recognised so the
+// entry is attributed to them and the form plugin's own logged-in handling
+// (nonces, user meta mapping) behaves as it would in a browser.
+Route::post( 'form', [FormController::class, 'store'] )->middleware( 'user' );

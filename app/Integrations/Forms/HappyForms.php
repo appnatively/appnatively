@@ -241,6 +241,7 @@ class HappyForms extends Form
             return;
         }
 
+        //phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- firing HappyForms' own hook so its native post-submit behavior runs, not defining a hook of our own.
         do_action( 'happyforms_submission_success', $submission, $form, [] );
 
         $message_controller = happyforms_get_message_controller();

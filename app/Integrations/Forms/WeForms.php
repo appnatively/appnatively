@@ -257,6 +257,7 @@ class WeForms extends Form {
             );
 
             if ( $entry_id && ! is_wp_error( $entry_id ) ) {
+                //phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- firing weForms' own hook so its native post-entry behavior runs, not defining a hook of our own.
                 do_action( 'weforms_entry_submission', $entry_id, $form_id, 0, $form['settings'] ?? [] );
 
                 $notification = new \WeForms_Notification(

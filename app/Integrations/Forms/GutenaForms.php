@@ -213,13 +213,13 @@ class GutenaForms extends Form {
         }
 
         $base_messages = [
-            'required_msg'        => __( 'Please fill in this field', 'gutena-forms' ),
-            'required_msg_optin'  => __( 'Please check this checkbox', 'gutena-forms' ),
-            'required_msg_select' => __( 'Please select an option', 'gutena-forms' ),
-            'required_msg_check'  => __( 'Please check an option', 'gutena-forms' ),
-            'invalid_email_msg'   => __( 'Please enter a valid email address', 'gutena-forms' ),
-            'min_value_msg'       => __( 'Input value should be greater than', 'gutena-forms' ),
-            'max_value_msg'       => __( 'Input value should be less than', 'gutena-forms' ),
+            'required_msg'        => __( 'Please fill in this field', 'appnatively' ),
+            'required_msg_optin'  => __( 'Please check this checkbox', 'appnatively' ),
+            'required_msg_select' => __( 'Please select an option', 'appnatively' ),
+            'required_msg_check'  => __( 'Please check an option', 'appnatively' ),
+            'invalid_email_msg'   => __( 'Please enter a valid email address', 'appnatively' ),
+            'min_value_msg'       => __( 'Input value should be greater than', 'appnatively' ),
+            'max_value_msg'       => __( 'Input value should be less than', 'appnatively' ),
         ];
 
         $global_messages = get_option( 'gutena_forms__form_validation_messages', [] );
@@ -263,7 +263,7 @@ class GutenaForms extends Form {
             }
 
             if ( $mapped === 'number' || $mapped === 'range' ) {
-                $messages[ "{$name}.numeric" ] = __( 'Please enter a valid number', 'gutena-forms' );
+                $messages[ "{$name}.numeric" ] = __( 'Please enter a valid number', 'appnatively' );
 
                 if ( isset( $field['min'] ) && $field['min'] !== '' ) {
                     $messages[ "{$name}.min" ] = $effective_messages['min_value_msg'] . ' :min';
@@ -373,9 +373,12 @@ class GutenaForms extends Form {
             ];
         }
 
+        //phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- firing Gutena Forms' own hooks so its native post-submit behavior runs, not defining hooks of our own.
         do_action( 'gutena_forms_submitted_data', $raw_data, $form['form_id'], $schema_fields );
+        // Firing Gutena Forms' own hook so its native post-submit behavior runs, not defining a hook of our own.
         do_action(
-            'gutena_forms_submission', [
+            'gutena_forms_submission', //phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound
+            [
                 'formName'    => $form['form_name'],
                 'formID'      => $form['form_id'],
                 'submit_data' => $submission,
@@ -410,7 +413,7 @@ class GutenaForms extends Form {
 
         $subject = sanitize_text_field(
             empty( $form_attrs['adminEmailSubject'] )
-                ? __( 'Form received', 'gutena-forms' ) . ' - ' . $blog_title
+                ? __( 'Form received', 'appnatively' ) . ' - ' . $blog_title
                 : $form_attrs['adminEmailSubject']
         );
 
@@ -429,12 +432,15 @@ class GutenaForms extends Form {
             $body .= '<p><strong>' . esc_html( $label ) . '</strong> <br />' . esc_html( $field_value ) . ' </p>';
         }
 
+        // Firing Gutena Forms' own filter so its native post-submit behavior runs, not defining a hook of our own.
         $body = apply_filters(
-            'gutena_forms_submit_admin_notification', $body, [
+            'gutena_forms_submit_admin_notification', //phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound
+            $body,
+            [
                 'formName'    => $form['form_name'],
                 'formID'      => $form['form_id'],
                 'submit_data' => $submission,
-            ] 
+            ]
         );
 
         $body = wpautop( $body, true );

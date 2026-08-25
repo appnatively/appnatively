@@ -43,6 +43,7 @@ class BusinessDirectoryPlugin extends Provider {
         $args     = [
             "post_type"      => $this->post_type(),
             "post_status"    => "publish",
+            "has_password"    => false,
             "paged"          => $page,
             "posts_per_page" => $per_page,
             "s"              => sanitize_text_field( (string) $request->get_param( "search" ) ),
@@ -70,12 +71,12 @@ class BusinessDirectoryPlugin extends Provider {
     }
 
     public function listing( ?ListingDTO $listing, Request $request, array $fields = [] ): ?ListingDTO {
-        $post = $this->get_listing_post( (int) $request->get_param( "id" ) );
+        $post = $this->get_listing_post( (int) craf_appna_route_param( $request, "id" ) );
         return $post ? $this->map_listing_to_dto( $post, $fields ) : null;
     }
 
     public function related_listings( ?ListingPaginatorDTO $listing_paginator, Request $request, array $fields = [] ): ListingPaginatorDTO {
-        $listing_id = (int) $request->get_param( "id" );
+        $listing_id = (int) craf_appna_route_param( $request, "id" );
         $page       = (int) $request->get_param( "page" ) ?: 1;
         $per_page   = (int) $request->get_param( "per_page" ) ?: 10;
 
@@ -107,9 +108,12 @@ class BusinessDirectoryPlugin extends Provider {
             [
                 "post_type"      => $this->post_type(),
                 "post_status"    => "publish",
+                "has_password"    => false,
                 "paged"          => $page,
                 "posts_per_page" => $per_page,
+                //phpcs:ignore WordPressVIPMinimum.Performance.WPQueryParams.PostNotIn_post__not_in -- small, bounded exclusion of the current listing from its own "related" query.
                 "post__not_in"   => [$listing_id],
+                //phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_tax_query -- filtering listings by taxonomy is the point of this query.
                 "tax_query"      => $tax_query,
                 "orderby"        => "date",
                 "order"          => "DESC",
@@ -126,7 +130,7 @@ class BusinessDirectoryPlugin extends Provider {
     }
 
     public function reviews( ?array $reviews, Request $request ): ?array {
-        return $this->get_listing_post( (int) $request->get_param( "id" ) ) ? $this->empty_reviews( $request ) : null;
+        return $this->get_listing_post( (int) craf_appna_route_param( $request, "id" ) ) ? $this->empty_reviews( $request ) : null;
     }
 
     public function categories( ?CategoryPaginatorDTO $category_paginator, Request $request, array $fields = [] ): CategoryPaginatorDTO {
@@ -134,7 +138,7 @@ class BusinessDirectoryPlugin extends Provider {
     }
 
     public function category( ?CategoryDTO $category, Request $request, array $fields = [] ): ?CategoryDTO {
-        $term = get_term( (int) $request->get_param( "id" ), $this->category_taxonomy() );
+        $term = get_term( (int) craf_appna_route_param( $request, "id" ), $this->category_taxonomy() );
         return ( $term && ! is_wp_error( $term ) ) ? $this->map_category_to_dto( $term, $fields ) : null;
     }
 
@@ -168,7 +172,7 @@ class BusinessDirectoryPlugin extends Provider {
 
     private function get_listing_post( int $listing_id ): ?WP_Post {
         $post = get_post( $listing_id );
-        if ( ! $post instanceof WP_Post || $post->post_type !== $this->post_type() || "publish" !== $post->post_status ) {
+        if ( ! $post instanceof WP_Post || $post->post_type !== $this->post_type() || "publish" !== $post->post_status || craf_appna_is_post_password_protected( $post ) ) {
             return null;
         }
 
@@ -203,6 +207,7 @@ class BusinessDirectoryPlugin extends Provider {
             $tax_query[] = ["taxonomy" => $taxonomy, "field" => "term_id", "terms" => $ids];
         }
         if ( ! empty( $tax_query ) ) {
+            //phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_tax_query -- filtering listings by taxonomy is the point of this query.
             $args["tax_query"] = $tax_query;
         }
     }

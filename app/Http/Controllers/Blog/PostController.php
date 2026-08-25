@@ -79,6 +79,9 @@ class PostController extends Controller {
         $query_args = [
             "post_type"      => "post",
             "post_status"    => "publish",
+            // Password-protected posts keep the `publish` status. WP_Query only
+            // drops them on its own for search queries, so ask explicitly.
+            "has_password"   => false,
             "paged"          => $page,
             "posts_per_page" => $per_page,
             "s"              => $search,
@@ -87,6 +90,7 @@ class PostController extends Controller {
         ];
 
         if ( $post_category_id ) {
+            //phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_tax_query -- filtering posts by category is the point of this query.
             $query_args["tax_query"] = [
                 [
                     "taxonomy" => "category",
@@ -133,7 +137,7 @@ class PostController extends Controller {
             ]
         );
 
-        $id       = (int) $request->get_param( "id" );
+        $id       = (int) craf_appna_route_param( $request, "id" );
         $page     = (int) $request->get_param( "page" ) ?: 1;
         $per_page = (int) $request->get_param( "per_page" ) ?: 10;
         $fields   = craf_appna_get_verified_fields( $request->get_param( "fields" ), $this->allowed_fields );
@@ -143,8 +147,10 @@ class PostController extends Controller {
         $query_args = [
             "post_type"      => "post",
             "post_status"    => "publish",
+            "has_password"   => false,
             "paged"          => $page,
             "posts_per_page" => $per_page,
+            //phpcs:ignore WordPressVIPMinimum.Performance.WPQueryParams.PostNotIn_post__not_in -- small, bounded exclusion of the current post from its own "related" query.
             "post__not_in"   => [$id],
             "orderby"        => "date",
             "order"          => "DESC",
@@ -188,10 +194,16 @@ class PostController extends Controller {
             ]
         );
 
-        $id   = (int) $request->get_param( "id" );
+        $id   = (int) craf_appna_route_param( $request, "id" );
         $post = get_post( $id );
 
         if ( ! $post instanceof WP_Post || "post" !== $post->post_type || "publish" !== $post->post_status ) {
+            throw new Exception( esc_html__( "Post not found", "appnatively" ) );
+        }
+
+        // Reported the same way as a missing post: whether a given id is
+        // protected rather than absent is not something to disclose.
+        if ( craf_appna_is_post_password_protected( $post ) ) {
             throw new Exception( esc_html__( "Post not found", "appnatively" ) );
         }
 
@@ -225,6 +237,7 @@ class PostController extends Controller {
             $dto->set_excerpt( (string) get_the_excerpt( $post ) );
         }
         if ( in_array( "content", $fields, true ) ) {
+            //phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- invoking WordPress core's own "the_content" filter to render post content the same way a theme would, not defining a hook of our own.
             $dto->set_content( (string) apply_filters( "the_content", $post->post_content ) );
         }
         if ( in_array( "status", $fields, true ) ) {

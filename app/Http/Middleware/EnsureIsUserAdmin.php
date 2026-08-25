@@ -19,7 +19,11 @@ class EnsureIsUserAdmin implements Middleware
      */
     public function handle( WP_REST_Request $wp_rest_request, $next ) {
         if ( ! current_user_can( 'manage_options' ) ) {
-            return new WP_Error( 'unauthorized', 'You are not authorized to perform this action.' );
+            return new WP_Error(
+                'craf_appna_forbidden',
+                __( 'You are not authorized to perform this action.', 'appnatively' ),
+                [ 'status' => 403 ]
+            );
         }
 
         return $next( $wp_rest_request );

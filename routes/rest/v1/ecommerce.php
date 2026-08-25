@@ -24,6 +24,9 @@ Route::group(
     }
 );
 
+// Carts serve guests and signed-in users alike, so a token is optional here —
+// but when one is sent the cart has to bind to that account rather than to an
+// anonymous session.
 Route::group(
     'cart', function() {
         Route::get( '/', [CartController::class, 'index'] );
@@ -32,9 +35,11 @@ Route::group(
         Route::post( '/remove', [CartController::class, 'remove'] );
         Route::post( '/clear', [CartController::class, 'clear'] );
     }
-);
+)->middleware( 'user' );
 
-Route::get( 'orders', [OrderController::class, 'index'] );
-Route::get( 'orders/{id}', [OrderController::class, 'show'] );
+// Orders are per-customer data: the token has to be verified before the
+// controller runs, not inside it.
+Route::get( 'orders', [OrderController::class, 'index'] )->middleware( 'auth' );
+Route::get( 'orders/{id}', [OrderController::class, 'show'] )->middleware( 'auth' )->where( 'id', '\d+' );
 
 Route::get( 'wishlist', [WishlistController::class, 'index'] );

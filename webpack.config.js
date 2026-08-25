@@ -3,15 +3,15 @@ const defaultConfig = require( '@wordpress/scripts/config/webpack.config' );
 
 const devHost = 'app.local';
 
-const alias = {
-	'@': path.resolve( __dirname, 'resources/js' ),
-};
+// const alias = {
+// 	'@': path.resolve( __dirname, 'resources/js' ),
+// };
 
 module.exports = {
 	...defaultConfig,
 	entry: {
-		'js/app': './resources/js/index.tsx',
-		'css/app': './resources/css/app.css',
+		// 'js/app': './resources/js/index.tsx',
+		// 'css/app': './resources/css/app.css',
 	},
 	watchOptions: {
 		ignored: [ '**/assets/build/**', '**/*.asset.php' ],
@@ -26,10 +26,10 @@ module.exports = {
 			( plugin ) => plugin.constructor.name !== 'RtlCssPlugin'
 		),
 	],
-	resolve: {
-		...defaultConfig.resolve,
-		alias,
-	},
+	// resolve: {
+	// 	...defaultConfig.resolve,
+	// 	alias,
+	// },
 	devServer: {
 		devMiddleware: {
 			writeToDisk: true,

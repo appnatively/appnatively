@@ -42,14 +42,18 @@ abstract class Form extends Provider {
 
     /**
      * Throttle submissions per (IP, integration, form) so the public submit
-     * endpoint can't be flooded. Fails open if the caller's IP can't be determined
-     * rather than blocking legitimate traffic.
+     * endpoint can't be flooded.
+     *
+     * The address comes from Helpers::get_user_ip_address(), which reads
+     * HTTP_CLIENT_IP and X-Forwarded-For before falling back to REMOTE_ADDR —
+     * both are headers the caller can set, so this is a best-effort bucket,
+     * not a hard guarantee against rotating them for a fresh one.
+     *
+     * If no address can be determined at all, callers share one bucket rather
+     * than skipping the check.
      */
     private function check_rate_limit( int $form_id ): void {
-        $ip = Helpers::get_user_ip_address();
-        if ( ! $ip ) {
-            return;
-        }
+        $ip = Helpers::get_user_ip_address() ?? 'unknown';
 
         $max    = (int) apply_filters( 'craf_appna_form_rate_limit_max', 5 );
         $window = (int) apply_filters( 'craf_appna_form_rate_limit_window', MINUTE_IN_SECONDS );
@@ -58,7 +62,7 @@ abstract class Form extends Provider {
         $count = (int) get_transient( $key );
 
         if ( $count >= $max ) {
-            throw new Exception( __( 'Too many submissions. Please wait a moment and try again.', 'appnatively' ), 429 );
+            throw new Exception( esc_html__( 'Too many submissions. Please wait a moment and try again.', 'appnatively' ), 429 );
         }
 
         set_transient( $key, $count + 1, $window );
@@ -75,7 +79,7 @@ abstract class Form extends Provider {
 
         $form = $this->get_form( $request->get_param( "form_id" ) );
         if ( ! $form ) {
-            throw new Exception( __( 'Form not found', 'appnatively' ) );
+            throw new Exception( esc_html__( 'Form not found', 'appnatively' ) );
         }
 
         $this->prepare_request_for_validation( $request, $form );
@@ -92,7 +96,7 @@ abstract class Form extends Provider {
     }
 
     public function form( $value, Request $request ): ?FormDTO {
-        $id       = (int) $request->get_param( "id" );
+        $id       = (int) craf_appna_route_param( $request, "id" );
         $raw_form = $this->get_form( $id );
 
         if ( empty( $raw_form ) ) {

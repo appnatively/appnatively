@@ -46,14 +46,19 @@ class PluginsController extends Controller {
 
         foreach ( $integrated_plugins_list as $slug => $plugin ) {
             $plugin_file = isset( $plugin['file'] ) ? $plugin['file'] : $slug . '/' . $slug . '.php';
-            if ( is_plugin_active( $plugin_file ) ) {
+            if ( craf_appna_is_plugin_active( $plugin_file ) ) {
                 $activated_plugins[ $plugin['category'] ][ $slug ] = $plugin['label'];
             }
         }
 
+        // Reported here rather than on the unauthenticated handshake: the
+        // installed version is exactly what a scan looking for sites running a
+        // known-vulnerable release wants, and Studio already holds the key by
+        // the time it needs to know.
         return Response::send(
             [
-                "plugins" => $activated_plugins
+                "plugins" => $activated_plugins,
+                "version" => craf_appna_version(),
             ]
         );
     }

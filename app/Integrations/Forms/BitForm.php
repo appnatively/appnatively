@@ -239,7 +239,7 @@ class BitForm extends Form {
         $result = FormManager::getInstance( (int) $form['id'] )->saveFormEntry( $submitted_data );
 
         if ( is_wp_error( $result ) ) {
-            throw new Exception( $result->get_error_message() );
+            throw new Exception( esc_html( $result->get_error_message() ) );
         }
     }
 
@@ -254,7 +254,10 @@ class BitForm extends Form {
                     'value' => $opt->val ?? ( $opt->lbl ?? '' ),
                 ];
             }
+            // optionsList is Bit Form's own property name, so it stays as-is.
+            //phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase
         } elseif ( in_array( $native_type, ['select', 'html-select'], true ) && ! empty( $field->optionsList ) ) {
+            //phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase
             $first_wrapper = reset( $field->optionsList );
             if ( $first_wrapper ) {
                 $inner   = array_values( (array) $first_wrapper );

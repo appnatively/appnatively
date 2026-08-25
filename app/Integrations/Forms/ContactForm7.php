@@ -7,6 +7,8 @@ defined( "ABSPATH" ) || exit;
 use Crafium\AppNatively\App\Models\Post;
 use Crafium\AppNatively\App\DTO\Forms\FormDTO;
 use Crafium\AppNatively\App\DTO\Forms\FormFieldDTO;
+use Crafium\AppNatively\App\Support\Auth;
+use Crafium\AppNatively\WpMVC\Exceptions\Exception;
 use Crafium\AppNatively\WpMVC\Helpers\Helpers;
 use Crafium\AppNatively\WpMVC\RequestValidator\Request;
 
@@ -302,6 +304,12 @@ class ContactForm7 extends Form {
 
             $value = $request->get_param( $tag->name );
             if ( $value !== null ) {
+                // The app renders a choice by its label and sends that label
+                // back. Translate it to the value the tag declares before CF7
+                // sees the submission, so CF7's own check that a choice is one
+                // it offered stays in force for anything genuinely off-list.
+                $value = $this->resolve_choice_value( $tag, $value );
+
                 if ( 'checkbox' === $mapped_type && is_array( $value ) ) {
                     $posted_data[$tag->name] = ! empty( $value ) ? array_combine( $value, $value ) : [];
                 } else {
@@ -316,14 +324,28 @@ class ContactForm7 extends Form {
             }
         }
 
-        if ( $this->cf7_form->nonce_is_active() &&
-            is_user_logged_in()
+        // Contact Form 7's nonce guards against a browser being made to submit
+        // a form using its owner's cookies. A request carrying a Bearer token
+        // cannot be produced that way — a browser will not attach an
+        // Authorization header on a third party's behalf — so supplying the
+        // nonce here restores parity with a real submission rather than
+        // removing a check. A cookie-authenticated request is exactly the case
+        // the nonce exists for, so it is left to prove itself.
+        if ( $this->cf7_form->nonce_is_active()
+            && is_user_logged_in()
+            && Auth::is_token_authenticated()
         ) {
             $posted_data['_wpnonce'] = wpcf7_create_nonce();
         }
 
         $original_post = $_POST; // phpcs:ignore WordPress.Security.NonceVerification.Missing
-        $_POST         = $posted_data;
+
+        // WordPress slashes $_POST on a normal request and every consumer
+        // unslashes on the way back out — CF7's own submission handler calls
+        // wp_unslash() on (array) $_POST. REST parameters arrive unslashed, so
+        // they have to be slashed here or that unslash strips characters the
+        // user actually typed.
+        $_POST = wp_slash( $posted_data );
 
         $original_server = $_SERVER;
 
@@ -332,6 +354,9 @@ class ContactForm7 extends Form {
             $_SERVER['HTTP_USER_AGENT'] = 'AppNatively/1.0';
         }
 
+        // Helpers::get_user_ip_address() honours HTTP_CLIENT_IP and
+        // X-Forwarded-For before REMOTE_ADDR, so what CF7, Flamingo and
+        // Akismet record here follows whichever of those headers is present.
         $ip = Helpers::get_user_ip_address();
         if ( $ip ) {
             $_SERVER['REMOTE_ADDR'] = $ip;
@@ -342,40 +367,90 @@ class ContactForm7 extends Form {
             $_SERVER['REMOTE_ADDR'] = '127.0.0.1';
         }
 
-        $filter = function ( $result, $tags ) {
-            $invalid = $result->get_invalid_fields();
-            $clean   = new \WPCF7_Validation();
-
-            foreach ( $invalid as $field_name => $error ) {
-                if ( str_contains( $error['reason'], 'Undefined value' ) ) {
-                    continue;
-                }
-                $clean->invalidate( $field_name, $error['reason'] );
-            }
-
-            return $clean;
-        };
-
-        add_filter( 'wpcf7_validate', $filter, 10, 2 );
-
         try {
             $result = $this->cf7_form->submit();
 
             if ( 'mail_sent' !== $result['status'] ) {
-                throw new \Exception(
-                    sprintf(
-                        /* translators: %1$s: CF7 submission status, %2$s: CF7 response message */
-                        __( 'CF7 submission failed (status: %1$s) — %2$s', 'appnatively' ),
-                        $result['status'],
-                        $result['message']
-                    )
-                );
+                // Thrown as the framework's own exception rather than a native
+                // one so the message actually reaches the caller: Route::callback()
+                // masks anything without get_messages() as "Something went wrong",
+                // which is no help at all for a field the sender can correct.
+                // CF7's message is the copy the site owner configured and already
+                // shows on the public form, so it is safe to relay.
+                $message = is_string( $result['message'] ?? null ) && '' !== $result['message']
+                    ? $result['message']
+                    : __( 'The form could not be submitted. Please check your entries and try again.', 'appnatively' );
+
+                throw new Exception( esc_html( $message ), 400 );
             }
         } finally {
-            remove_filter( 'wpcf7_validate', $filter, 10 );
             $_POST   = $original_post;
             $_SERVER = $original_server;
         }
+    }
+
+    /**
+     * Translate a submitted choice from its display label to the value its form
+     * tag declares.
+     *
+     * map_form_to_dto() hands the app `{label, value}` pairs and the app may
+     * send either back. CF7 checks a choice submission against the values the
+     * tag declared and rejects anything else — the check that stops a caller
+     * putting an arbitrary value into a select, radio or checkbox — so a label
+     * is resolved here rather than by suppressing that rejection.
+     *
+     * Anything matching neither a value nor a label is passed through
+     * untouched, so CF7 still sees it and still refuses it.
+     *
+     * @param \WPCF7_FormTag $tag   The form tag being submitted.
+     * @param mixed          $value The submitted value, or array of values.
+     * @return mixed
+     */
+    private function resolve_choice_value( \WPCF7_FormTag $tag, $value ) {
+        if ( empty( $tag->values ) ) {
+            return $value;
+        }
+
+        if ( is_array( $value ) ) {
+            return array_map(
+                function ( $single ) use ( $tag ) {
+                    return $this->resolve_single_choice( $tag, $single );
+                },
+                $value
+            );
+        }
+
+        return $this->resolve_single_choice( $tag, $value );
+    }
+
+    /**
+     * Resolve one submitted item against a tag's declared values and labels.
+     *
+     * @param \WPCF7_FormTag $tag    The form tag.
+     * @param mixed          $single The submitted item.
+     * @return mixed
+     */
+    private function resolve_single_choice( \WPCF7_FormTag $tag, $single ) {
+        if ( ! is_string( $single ) && ! is_numeric( $single ) ) {
+            return $single;
+        }
+
+        $single = (string) $single;
+        $values = (array) $tag->values;
+
+        // Already one of the declared values — nothing to translate.
+        if ( in_array( $single, $values, true ) ) {
+            return $single;
+        }
+
+        // A tag written as "Label|value" keeps the two in step by index.
+        foreach ( (array) $tag->labels as $index => $label ) {
+            if ( (string) $label === $single && isset( $values[ $index ] ) ) {
+                return $values[ $index ];
+            }
+        }
+
+        return $single;
     }
 
     public function get_forms(): array {
@@ -450,7 +525,7 @@ class ContactForm7 extends Form {
 
             // Clean the label text: strip form-tag tokens and HTML tags, collapse whitespace.
             $text = preg_replace( '/\[[^\]]*\]/', '', $inner );
-            $text = trim( strip_tags( $text ) );
+            $text = trim( wp_strip_all_tags( $text ) );
             $text = preg_replace( '/\s+/', ' ', $text );
 
             if ( $text === '' ) {

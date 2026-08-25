@@ -240,14 +240,14 @@ class CartManager {
                 );
 
                 if ( is_wp_error( $checkout ) ) {
-                    throw new Exception( $checkout->get_error_message(), 400 );
+                    throw new Exception( esc_html( $checkout->get_error_message() ), 400 );
                 }
             } else {
                 $line_item_data['checkout'] = $checkout->id;
                 $result                     = LineItem::create( $line_item_data );
 
                 if ( is_wp_error( $result ) ) {
-                    throw new Exception( $result->get_error_message(), 400 );
+                    throw new Exception( esc_html( $result->get_error_message() ), 400 );
                 }
             }
         }
@@ -279,7 +279,7 @@ class CartManager {
             $result = ( new LineItem( [ 'id' => $item_id ] ) )->update( [ 'quantity' => $quantity ] );
 
             if ( is_wp_error( $result ) ) {
-                throw new Exception( $result->get_error_message(), 400 );
+                throw new Exception( esc_html( $result->get_error_message() ), 400 );
             }
         }
 

@@ -4,38 +4,22 @@ namespace Crafium\AppNatively\App\Integrations\Ecommerce\Concerns;
 
 defined( "ABSPATH" ) || exit;
 
+use Crafium\AppNatively\App\Support\Auth;
 use Crafium\AppNatively\WpMVC\RequestValidator\Request;
 
 trait EcommerceIntegrationHelpers {
     /**
-     * Resolve the WP user id encoded in a request's Bearer token, if any,
-     * without changing the current user. Used both to authenticate (see
-     * authenticate_from_bearer_token()) and by callers that need the id
-     * itself without triggering a login (e.g. minting a one-time autologin
-     * token for an external checkout page).
+     * Resolve the WP user id a request's Bearer token belongs to, without
+     * changing the current user.
+     *
+     * Delegates to the Auth service so there is exactly one place that knows
+     * how a token is formatted and where its hash is stored.
      *
      * @param Request $request The REST request instance.
      * @return int|null
      */
     private function resolve_user_id_from_bearer_token( Request $request ): ?int {
-        $auth_header = $request->get_header( 'Authorization' );
-        if ( ! $auth_header || ! preg_match( '/Bearer\s+(.*)$/i', $auth_header, $matches ) ) {
-            return null;
-        }
-
-        $hashed_token = hash( 'sha256', $matches[1] );
-        $users        = get_users(
-            [
-                //phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
-                'meta_key'    => 'craf_appna_auth_token',
-                //phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value
-                'meta_value'  => $hashed_token,
-                'number'      => 1,
-                'count_total' => false,
-            ]
-        );
-
-        return ! empty( $users ) ? (int) $users[0]->ID : null;
+        return Auth::resolve( $request );
     }
 
     /**
@@ -46,14 +30,7 @@ trait EcommerceIntegrationHelpers {
      * @return void
      */
     private function authenticate_from_bearer_token( Request $request ): void {
-        if ( get_current_user_id() ) {
-            return;
-        }
-
-        $user_id = $this->resolve_user_id_from_bearer_token( $request );
-        if ( $user_id ) {
-            wp_set_current_user( $user_id );
-        }
+        Auth::authenticate( $request );
     }
 
     /**

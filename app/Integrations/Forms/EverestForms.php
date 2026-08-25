@@ -39,6 +39,7 @@ class EverestForms extends Form {
                 'id'                             => $field_id,
                 'type'                           => $field['type'] ?? '',
                 'name'                           => $field['label'] ?? '',
+                //phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key -- DTO array key, not a WP_Query arg.
                 'meta_key'                       => $field['meta-key'] ?? '',
                 'required'                       => ! empty( $field['required'] ),
                 'min_value'                      => $field['min_value'] ?? '',
@@ -369,6 +370,7 @@ class EverestForms extends Form {
             $entry_fields[ $field_id ] = [
                 'id'       => $field_id,
                 'name'     => $field['name'],
+                //phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key -- DTO array key, not a WP_Query arg.
                 'meta_key' => $field['meta_key'],
                 'type'     => $field['type'],
                 'value'    => $formatted_value,

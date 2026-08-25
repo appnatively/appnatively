@@ -3,22 +3,29 @@
 defined( 'ABSPATH' ) || exit;
 
 use Crafium\AppNatively\App\Http\Controllers\ShopController;
+use Crafium\AppNatively\App\Http\Controllers\ConnectionController;
 use Crafium\AppNatively\App\Http\Controllers\PluginsController;
 use Crafium\AppNatively\WpMVC\Routing\Route;
-use Crafium\AppNatively\WpMVC\Routing\Response;
 
-Route::get(
-    'me', function(){
-        return Response::send( [] );
-    }
-);
+/**
+ * Unauthenticated handshake. Confirms the plugin is installed and reachable
+ * and reports its version — nothing about the site's configuration.
+ */
+Route::get( 'connection', [ConnectionController::class, 'index'] );
 
-Route::get( 'plugins', [PluginsController::class, 'index'] );
+/**
+ * Describes which supported plugins are active. This enumerates installed
+ * software, so it is restricted to callers holding the site connection key
+ * rather than served to anyone who asks.
+ */
+Route::get( 'plugins', [PluginsController::class, 'index'] )->middleware( 'app' );
+
 Route::get( 'shop', [ShopController::class, 'index'] );
+
 Route::group(
     'ecommerce', function() {
         require __DIR__ . '/ecommerce.php';
-    } 
+    }
 );
 
 Route::group(

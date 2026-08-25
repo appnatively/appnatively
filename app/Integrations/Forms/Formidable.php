@@ -348,6 +348,7 @@ class Formidable extends Form {
             );
 
             if ( $entry_id ) {
+                //phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- firing Formidable's own hook so its native post-entry behavior runs, not defining a hook of our own.
                 do_action( 'frm_after_create_entry', $entry_id, $form_id );
             }
         }

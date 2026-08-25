@@ -92,7 +92,7 @@ class ProductRepository {
      * @return ProductDTO|null
      */
     public function product( $data, WP_REST_Request $request, array $fields ): ?ProductDTO {
-        $id = (int) $request->get_param( "id" );
+        $id = (int) craf_appna_route_param( $request, "id" );
 
         if ( ! $id ) {
             return null;
@@ -101,7 +101,7 @@ class ProductRepository {
         // Use native model with eager loading
         $product = Product::with( [ 'detail', 'variants' ] )->find( $id );
 
-        if ( ! $product || $product->post_status !== 'publish' ) {
+        if ( ! $product || $product->post_status !== 'publish' || '' !== (string) $product->post_password ) {
             throw new Exception( esc_html__( "Product not found.", "appnatively" ), 404 );
         }
 
@@ -128,7 +128,7 @@ class ProductRepository {
         $products = [];
         foreach ( $ids as $id ) {
             $product = Product::with( [ 'detail', 'variants' ] )->find( $id );
-            if ( $product && $product->post_status === 'publish' ) {
+            if ( $product && $product->post_status === 'publish' && '' === (string) $product->post_password ) {
                 $products[] = $this->map_to_product_dto( $product, $fields );
             }
         }
@@ -189,7 +189,7 @@ class ProductRepository {
      * @return CategoryDTO|null
      */
     public function category( $data, WP_REST_Request $request, array $fields ): ?CategoryDTO {
-        $id = (int) $request->get_param( "id" );
+        $id = (int) craf_appna_route_param( $request, "id" );
 
         if ( ! $id ) {
             return null;

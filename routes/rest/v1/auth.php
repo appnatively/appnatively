@@ -7,13 +7,17 @@ use Crafium\AppNatively\WpMVC\Routing\Route;
 
 Route::group(
     'auth', function() {
+        // Public: these are how a caller obtains a token in the first place.
         Route::post( '/login', [AuthController::class, 'login'] );
         Route::post( '/register', [AuthController::class, 'register'] );
-        Route::post( '/logout', [AuthController::class, 'logout'] );
         Route::post( '/forgot-password', [AuthController::class, 'forgot_password'] );
-        Route::post( '/update-profile', [AuthController::class, 'update_profile'] );
-        Route::post( '/update-password', [AuthController::class, 'updatePassword'] );
-        Route::get( '/me', [AuthController::class, 'me'] );
-        Route::get( '/autologin-token', [AuthController::class, 'autologin_token'] );
+
+        // Everything below acts on an existing account and requires the token
+        // to be verified in permission_callback before the controller runs.
+        Route::post( '/logout', [AuthController::class, 'logout'] )->middleware( 'auth' );
+        Route::post( '/update-profile', [AuthController::class, 'update_profile'] )->middleware( 'auth' );
+        Route::post( '/update-password', [AuthController::class, 'update_password'] )->middleware( 'auth' );
+        Route::get( '/me', [AuthController::class, 'me'] )->middleware( 'auth' );
+        Route::get( '/autologin-token', [AuthController::class, 'autologin_token'] )->middleware( 'auth' );
     }
 );

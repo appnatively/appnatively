@@ -200,7 +200,7 @@ class Forminator extends Form {
             if ( $mapped === 'gdpr' ) {
                 $gdpr_msg                      = ! empty( $field['required_message'] )
                     ? $field['required_message']
-                    : __( 'This field is required. Please check it.', 'forminator' );
+                    : __( 'This field is required. Please check it.', 'appnatively' );
                 $messages[ "{$name}.integer" ] = $gdpr_msg;
                 $messages[ "{$name}.in" ]      = $gdpr_msg;
             }

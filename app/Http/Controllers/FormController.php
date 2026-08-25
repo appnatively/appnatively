@@ -17,7 +17,7 @@ class FormController extends Controller {
     public function index( Request $request ): array {
         $request->validate(
             [
-                "integration" => "required|string",
+                "integration" => "required|string|" . craf_appna_in_rule( craf_appna_get_form_integrations() ),
             ]
         );
 
@@ -34,7 +34,7 @@ class FormController extends Controller {
         $request->validate(
             [
                 "id"          => "required|numeric",
-                "integration" => "required|string",
+                "integration" => "required|string|" . craf_appna_in_rule( craf_appna_get_form_integrations() ),
             ]
         );
 
@@ -56,7 +56,7 @@ class FormController extends Controller {
         $request->validate(
             [
                 "form_id"     => "required|integer",
-                "integration" => "required|string",
+                "integration" => "required|string|" . craf_appna_in_rule( craf_appna_get_form_integrations() ),
             ]
         );
 

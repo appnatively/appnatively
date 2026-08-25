@@ -44,8 +44,8 @@ class WishlistController extends Controller {
     public function index( Request $request ): array {
         $request->validate(
             [
-                "ids"         => "required|array",
-                "integration" => "required|string",
+                "ids"         => "required|array|max:100",
+                "integration" => "required|string|" . craf_appna_in_rule( craf_appna_get_ecommerce_integrations() ),
             ]
         );
 

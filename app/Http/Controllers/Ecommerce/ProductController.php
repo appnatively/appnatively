@@ -65,7 +65,7 @@ class ProductController extends Controller {
             "in_stock"    => "nullable|boolean",
             "rating_min"  => "nullable|numeric|min:0|max:5",
             "attributes"  => "nullable|array",
-            "integration" => "required|string",
+            "integration" => "required|string|" . craf_appna_in_rule( craf_appna_get_ecommerce_integrations() ),
         ];
     }
 
@@ -128,7 +128,7 @@ class ProductController extends Controller {
         $request->validate(
             [
                 "id"          => "required|numeric",
-                "integration" => "required|string",
+                "integration" => "required|string|" . craf_appna_in_rule( craf_appna_get_ecommerce_integrations() ),
             ]
         );
 

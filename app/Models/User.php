@@ -35,9 +35,13 @@ class User extends Model {
     /**
      * The attributes that should be hidden.
      *
+     * user_activation_key is a live password-reset credential: anyone holding
+     * it can complete a reset for the account, so it belongs here alongside the
+     * password hash rather than one serialization away from being exposed.
+     *
      * @var array
      */
-    protected array $hidden = ['user_pass'];
+    protected array $hidden = ['user_pass', 'user_activation_key'];
 
     /**
      * The attributes that are mass assignable.

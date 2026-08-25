@@ -86,7 +86,7 @@ class CartManager {
             $result = CartResource::create( [ 'id' => $variation_id, 'quantity' => $quantity ] );
 
             if ( is_wp_error( $result ) ) {
-                throw new Exception( $result->get_error_message(), 400 );
+                throw new Exception( esc_html( $result->get_error_message() ), 400 );
             }
         }
 
@@ -118,7 +118,7 @@ class CartManager {
             );
 
             if ( is_wp_error( $result ) ) {
-                throw new Exception( $result->get_error_message(), 400 );
+                throw new Exception( esc_html( $result->get_error_message() ), 400 );
             }
         }
 

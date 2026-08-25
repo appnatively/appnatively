@@ -33,7 +33,7 @@ class OrderController extends Controller {
             [
                 "page"        => "nullable|integer|min:1",
                 "per_page"    => "nullable|integer|min:1|max:100",
-                "integration" => "required|string",
+                "integration" => "required|string|" . craf_appna_in_rule( craf_appna_get_ecommerce_integrations() ),
             ]
         );
 
@@ -60,12 +60,12 @@ class OrderController extends Controller {
         $request->validate(
             [
                 "id"          => "required",
-                "integration" => "required|string",
+                "integration" => "required|string|" . craf_appna_in_rule( craf_appna_get_ecommerce_integrations() ),
             ]
         );
 
         $integration = sanitize_text_field( $request->get_param( "integration" ) );
-        $id          = $request->get_param( "id" );
+        $id          = craf_appna_route_param( $request, "id" );
 
         // Apply filter to get order from specific integration (e.g. WooCommerce)
         $order = apply_filters( "craf_appna_ecommerce_{$integration}_order_get", null, $id, $request );

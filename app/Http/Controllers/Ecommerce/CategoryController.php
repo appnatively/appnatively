@@ -40,7 +40,7 @@ class CategoryController extends Controller {
                 "per_page"    => "nullable|integer|min:1|max:100",
                 "search"      => "nullable|string",
                 "sort"        => "nullable|string",
-                "integration" => "required|string",
+                "integration" => "required|string|" . craf_appna_in_rule( craf_appna_get_ecommerce_integrations() ),
             ]
         );
 
@@ -65,7 +65,7 @@ class CategoryController extends Controller {
         $request->validate(
             [
                 "id"          => "required|numeric",
-                "integration" => "required|string",
+                "integration" => "required|string|" . craf_appna_in_rule( craf_appna_get_ecommerce_integrations() ),
             ]
         );
 

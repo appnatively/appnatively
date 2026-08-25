@@ -125,6 +125,7 @@ class Directorist extends Provider {
         $wp_query_args = [
             "post_type"      => $post_type,
             "post_status"    => "publish",
+            "has_password"    => false,
             "paged"          => $page,
             "posts_per_page" => $per_page,
             "s"              => $search,
@@ -159,10 +160,12 @@ class Directorist extends Provider {
         }
 
         if ( ! empty( $tax_query ) ) {
+            //phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_tax_query -- filtering listings by taxonomy is the point of this query.
             $wp_query_args["tax_query"] = $tax_query;
         }
 
         if ( ! empty( $is_featured ) && filter_var( $is_featured, FILTER_VALIDATE_BOOLEAN ) ) {
+            //phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query -- filtering listings by the featured flag is the point of this query.
             $wp_query_args["meta_query"] = [
                 [
                     "key"   => "_featured",
@@ -198,11 +201,11 @@ class Directorist extends Provider {
      * @return ListingDTO|null
      */
     public function listing( ?ListingDTO $listing, Request $request, array $fields = [] ): ?ListingDTO {
-        $listing_id = (int) $request->get_param( "id" );
+        $listing_id = (int) craf_appna_route_param( $request, "id" );
         $post_type  = $this->get_post_type();
         $post       = get_post( $listing_id );
 
-        if ( ! $post instanceof WP_Post || $post->post_type !== $post_type || $post->post_status !== "publish" ) {
+        if ( ! $post instanceof WP_Post || $post->post_type !== $post_type || $post->post_status !== "publish" || craf_appna_is_post_password_protected( $post ) ) {
             return null;
         }
 
@@ -218,13 +221,13 @@ class Directorist extends Provider {
      * @return ListingPaginatorDTO
      */
     public function related_listings( ?ListingPaginatorDTO $listing_paginator, Request $request, array $fields = [] ): ListingPaginatorDTO {
-        $listing_id = (int) $request->get_param( "id" );
+        $listing_id = (int) craf_appna_route_param( $request, "id" );
         $page       = (int) $request->get_param( "page" ) ?: 1;
         $per_page   = (int) $request->get_param( "per_page" ) ?: 10;
         $post_type  = $this->get_post_type();
         $post       = get_post( $listing_id );
 
-        if ( ! $post instanceof WP_Post || $post->post_type !== $post_type || $post->post_status !== "publish" ) {
+        if ( ! $post instanceof WP_Post || $post->post_type !== $post_type || $post->post_status !== "publish" || craf_appna_is_post_password_protected( $post ) ) {
             return new ListingPaginatorDTO( $page, $per_page, 0, 1, [] );
         }
 
@@ -269,9 +272,12 @@ class Directorist extends Provider {
             [
                 "post_type"      => $post_type,
                 "post_status"    => "publish",
+                "has_password"    => false,
                 "paged"          => $page,
                 "posts_per_page" => $per_page,
+                //phpcs:ignore WordPressVIPMinimum.Performance.WPQueryParams.PostNotIn_post__not_in -- small, bounded exclusion of the current listing from its own "related" query.
                 "post__not_in"   => [ $listing_id ],
+                //phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_tax_query -- filtering listings by taxonomy is the point of this query.
                 "tax_query"      => $tax_query,
                 "orderby"        => "date",
                 "order"          => "DESC",
@@ -302,13 +308,13 @@ class Directorist extends Provider {
      * @return array|null
      */
     public function reviews( ?array $reviews, Request $request ): ?array {
-        $listing_id = (int) $request->get_param( "id" );
+        $listing_id = (int) craf_appna_route_param( $request, "id" );
         $page       = (int) $request->get_param( "page" ) ?: 1;
         $per_page   = (int) $request->get_param( "per_page" ) ?: 10;
         $post_type  = $this->get_post_type();
         $post       = get_post( $listing_id );
 
-        if ( ! $post instanceof WP_Post || $post->post_type !== $post_type || $post->post_status !== "publish" ) {
+        if ( ! $post instanceof WP_Post || $post->post_type !== $post_type || $post->post_status !== "publish" || craf_appna_is_post_password_protected( $post ) ) {
             return null;
         }
 
@@ -381,6 +387,7 @@ class Directorist extends Provider {
             [
                 "post_type"      => $post_type,
                 "post_status"    => "publish",
+                "has_password"    => false,
                 "posts_per_page" => count( $ids ),
                 "post__in"       => $ids,
                 "orderby"        => "post__in",
@@ -470,7 +477,7 @@ class Directorist extends Provider {
      * @return CategoryDTO|null
      */
     public function category( ?CategoryDTO $category, Request $request, array $fields = [] ): ?CategoryDTO {
-        $category_id = (int) $request->get_param( "id" );
+        $category_id = (int) craf_appna_route_param( $request, "id" );
         $taxonomy    = $this->get_category_taxonomy();
         $term        = get_term( $category_id, $taxonomy );
 
@@ -604,7 +611,7 @@ class Directorist extends Provider {
     }
 
     public function location( ?TermDTO $location, Request $request, array $fields = [] ): ?TermDTO {
-        $location_id = (int) $request->get_param( "id" );
+        $location_id = (int) craf_appna_route_param( $request, "id" );
         $taxonomy    = $this->get_location_taxonomy();
         $term        = get_term( $location_id, $taxonomy );
 

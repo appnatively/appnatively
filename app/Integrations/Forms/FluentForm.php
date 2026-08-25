@@ -412,7 +412,7 @@ class FluentForm extends Form
         $form_model = \FluentForm\App\Models\Form::find( (int) $form['id'] );
 
         // Trigger the submission inserted hook so notifications/feeds run
-        // phpcs:ignore WordPress.NamingConventions.ValidHookName.UseUnderscores
+        // phpcs:ignore WordPress.NamingConventions.ValidHookName.UseUnderscores, WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- firing Fluent Forms' own hook so its native notifications/feeds run, not defining a hook of our own.
         do_action( 'fluentform/submission_inserted', $submission_id, $form_data, $form_model ?: (object) $form );
     }
 

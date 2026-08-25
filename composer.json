@@ -1,9 +1,9 @@
 {
-	"name": "wpmvc1774522210/appnatively",
-	"description": "WpMVC is a WordPress plugin framework that makes web development easy and enjoyable.",
+	"name": "crafium/appnatively",
+	"description": "Turn your WordPress site into a native iOS and Android mobile app.",
 	"type": "project",
-	"license": "MIT",
-	"version": "2.0.0",
+	"license": "GPL-2.0-or-later",
+	"version": "0.0.1",
 	"scripts": {
 		"setup": [
 			"composer install --no-cache",
