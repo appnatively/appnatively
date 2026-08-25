@@ -49,7 +49,7 @@ jobs:
         run: pnpm fixtextdomain
 
       - name: Generate Text Domain POT file
-        run: composer make-production-pot
+        run: composer i18n
 
       - name: Remove Composer Dev Dependencies
         run: composer build
