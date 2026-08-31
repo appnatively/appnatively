@@ -4,7 +4,7 @@ Tags: mobile app, app builder, native app, woocommerce mobile app, headless
 Requires at least: 6.5
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 0.0.1
+Stable tag: 0.0.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -129,6 +129,9 @@ Yes. Use the `craf_appna_integrated_plugins` filter to register your own plugin 
 The source code and public repository for this plugin is available on GitHub at [AppNatively](https://github.com/appnatively/appnatively).
 
 == Changelog ==
+
+= 0.0.2 - 31 Aug 2026 =
+* Add coupons, discounts, reviews, related products rest api
 
 = 0.0.1 - 25 Aug 2026 =
 * Initial release.
