@@ -13,6 +13,8 @@ Route::group(
     'products', function() {
         Route::get( '/', [ProductController::class, 'index'] );
         Route::get( '/filters', [ProductController::class, 'filters'] );
+        Route::get( '/{id}/reviews', [ProductController::class, 'reviews'] );
+        Route::get( '/{id}/related', [ProductController::class, 'related'] )->where( 'id', '\d+' );
         Route::get( '/{id}', [ProductController::class, 'show'] );
     }
 );
@@ -34,12 +36,16 @@ Route::group(
         Route::post( '/update', [CartController::class, 'update'] );
         Route::post( '/remove', [CartController::class, 'remove'] );
         Route::post( '/clear', [CartController::class, 'clear'] );
+        Route::post( '/discount', [CartController::class, 'discount'] );
+        Route::post( '/discount/remove', [CartController::class, 'discount_remove'] );
     }
 )->middleware( 'user' );
 
 // Orders are per-customer data: the token has to be verified before the
 // controller runs, not inside it.
 Route::get( 'orders', [OrderController::class, 'index'] )->middleware( 'auth' );
-Route::get( 'orders/{id}', [OrderController::class, 'show'] )->middleware( 'auth' )->where( 'id', '\d+' );
+// The detail endpoint also serves WooCommerce's guest order-received flow;
+// each repository still enforces ownership or a valid guest order key.
+Route::get( 'orders/{id}', [OrderController::class, 'show'] )->where( 'id', '\d+' );
 
 Route::get( 'wishlist', [WishlistController::class, 'index'] );

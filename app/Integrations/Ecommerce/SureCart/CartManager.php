@@ -142,6 +142,9 @@ class CartManager {
                 ->set_items( [] )
                 ->set_subtotal( '0' )
                 ->set_total( '0' )
+                ->set_discount_total( '0' )
+                ->set_shipping_total( '0' )
+                ->set_tax_total( '0' )
                 ->set_currency( $currency )
                 ->set_item_count( 0 )
                 ->set_checkout_url( esc_url( (string) \SureCart::pages()->url( 'checkout' ) ) );
@@ -177,6 +180,9 @@ class CartManager {
             ->set_items( $items )
             ->set_subtotal( $this->format_amount( $checkout->subtotal_amount ?? 0 ) )
             ->set_total( $this->format_amount( $checkout->total_amount ?? 0 ) )
+            ->set_discount_total( $this->format_amount( $checkout->discount_amount ?? 0 ) )
+            ->set_shipping_total( $this->format_amount( $checkout->shipping_amount ?? 0 ) )
+            ->set_tax_total( $this->format_amount( $checkout->tax_amount ?? 0 ) )
             ->set_currency( (string) ( $checkout->currency ?? $currency ) )
             ->set_item_count( $item_count )
             ->set_checkout_url( esc_url( add_query_arg( 'checkout_id', $checkout->id, (string) \SureCart::pages()->url( 'checkout' ) ) ) );
@@ -326,6 +332,32 @@ class CartManager {
             }
         }
 
+        return $this->cart_get_by_id( $checkout_id );
+    }
+
+    public function cart_discount_apply( ?CartDTO $cart_dto, Request $request ): CartDTO {
+        $checkout_id = $this->resolve_cart_id_param( $request );
+        if ( ! $checkout_id ) {
+            throw new Exception( esc_html__( 'Cart not found.', 'appnatively' ), 404 ); }
+        $checkout = Checkout::find( $checkout_id );
+        if ( is_wp_error( $checkout ) || ! $checkout || ! $this->owns_checkout( $checkout ) ) {
+            throw new Exception( esc_html__( 'Cart not found.', 'appnatively' ), 404 ); }
+        $updated = $checkout->update( [ 'discount' => [ 'promotion_code' => sanitize_text_field( (string) $request->get_param( 'code' ) ) ] ] );
+        if ( is_wp_error( $updated ) ) {
+            throw new Exception( esc_html( $updated->get_error_message() ), 400 ); }
+        return $this->cart_get_by_id( $checkout_id );
+    }
+
+    public function cart_discount_remove( ?CartDTO $cart_dto, Request $request ): CartDTO {
+        $checkout_id = $this->resolve_cart_id_param( $request );
+        if ( ! $checkout_id ) {
+            throw new Exception( esc_html__( 'Cart not found.', 'appnatively' ), 404 ); }
+        $checkout = Checkout::find( $checkout_id );
+        if ( is_wp_error( $checkout ) || ! $checkout || ! $this->owns_checkout( $checkout ) ) {
+            throw new Exception( esc_html__( 'Cart not found.', 'appnatively' ), 404 ); }
+        $updated = $checkout->update( [ 'discount' => null ] );
+        if ( is_wp_error( $updated ) ) {
+            throw new Exception( esc_html( $updated->get_error_message() ), 400 ); }
         return $this->cart_get_by_id( $checkout_id );
     }
 }

@@ -32,7 +32,9 @@ class ProductController extends Controller {
         "status",
         "stock_status",
         "images",
-        "categories"
+        "categories",
+        "average_rating",
+        "rating_count"
     ];
 
     /**
@@ -145,5 +147,54 @@ class ProductController extends Controller {
                 "data" => $product
             ]
         );
+    }
+
+    public function reviews( Request $request ): array {
+        $request->validate(
+            [
+                'id'          => 'required|numeric',
+                'page'        => 'nullable|integer|min:1',
+                'per_page'    => 'nullable|integer|min:1|max:100',
+                'integration' => 'required|string|' . craf_appna_in_rule( craf_appna_get_ecommerce_integrations() )
+            ] 
+        );
+
+        $integration = sanitize_text_field( $request->get_param( 'integration' ) );
+        $reviews     = apply_filters( "craf_appna_ecommerce_{$integration}_product_reviews", null, $request );
+
+        if ( ! is_array( $reviews ) || ! isset( $reviews['items'], $reviews['rating_counts'] ) ) {
+            throw new Exception( esc_html__( 'Reviews integration not found', 'appnatively' ) );
+        }
+
+        return Response::send( [ 'data' => $reviews ] );
+    }
+
+    /**
+     * Display related products for the specified resource.
+     *
+     * @param Request $request The REST request instance.
+     * @return array
+     * @throws Exception
+     */
+    public function related( Request $request ): array {
+        $request->validate(
+            [
+                'id'          => 'required|numeric',
+                'page'        => 'nullable|integer|min:1',
+                'per_page'    => 'nullable|integer|min:1|max:100',
+                'fields'      => 'nullable|string',
+                'integration' => 'required|string|' . craf_appna_in_rule( craf_appna_get_ecommerce_integrations() ),
+            ]
+        );
+
+        $integration       = sanitize_text_field( $request->get_param( 'integration' ) );
+        $fields            = craf_appna_get_verified_fields( $request->get_param( 'fields' ), $this->allowed_fields );
+        $product_paginator = apply_filters( "craf_appna_ecommerce_{$integration}_related_products", null, $request, $fields );
+
+        if ( ! $product_paginator instanceof ProductPaginatorDTO ) {
+            throw new Exception( esc_html__( 'Related products integration not found', 'appnatively' ) );
+        }
+
+        return Response::send( [ 'data' => $product_paginator ] );
     }
 }

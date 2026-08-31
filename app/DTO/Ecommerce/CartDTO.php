@@ -18,6 +18,15 @@ class CartDTO extends DTO {
 
     private string $total = "0";
 
+    private string $discount_total = "0";
+
+    private string $shipping_total = "0";
+
+    private string $tax_total = "0";
+
+    /** @var CouponDTO[] */
+    private array $coupons = [];
+
     private string $currency;
 
     private int $item_count = 0;
@@ -71,6 +80,43 @@ class CartDTO extends DTO {
     public function set_total( string $total ): self {
         $this->total = $total;
         return $this;
+    }
+
+    public function get_discount_total(): string {
+        return $this->discount_total;
+    }
+
+    public function set_discount_total( string $value ): self {
+        $this->discount_total = $value;
+        return $this;
+    }
+
+    public function get_shipping_total(): string {
+        return $this->shipping_total;
+    }
+
+    public function set_shipping_total( string $value ): self {
+        $this->shipping_total = $value;
+        return $this;
+    }
+
+    public function get_tax_total(): string {
+        return $this->tax_total;
+    }
+
+    public function set_tax_total( string $value ): self {
+        $this->tax_total = $value;
+        return $this;
+    }
+
+    /** @return CouponDTO[] */
+    public function get_coupons(): array {
+        return $this->coupons;
+    }
+
+    /** @param CouponDTO[] $coupons */
+    public function set_coupons( array $coupons ): self {
+        $this->coupons = $coupons; return $this;
     }
 
     /**

@@ -149,6 +149,22 @@ class CartManager {
         return $this->cart_get( null, $request );
     }
 
+    public function cart_discount_apply( ?CartDTO $cart_dto, Request $request ): CartDTO {
+        $this->get_cart( $request );
+        $result = CartResource::applyCoupon( [ sanitize_text_field( (string) $request->get_param( 'code' ) ) ] );
+        if ( is_wp_error( $result ) ) {
+            throw new Exception( esc_html( $result->get_error_message() ), 400 ); }
+        return $this->cart_get( null, $request );
+    }
+
+    public function cart_discount_remove( ?CartDTO $cart_dto, Request $request ): CartDTO {
+        $this->get_cart( $request );
+        $result = CartResource::removeCoupon( sanitize_text_field( (string) $request->get_param( 'code' ) ) );
+        if ( is_wp_error( $result ) ) {
+            throw new Exception( esc_html( $result->get_error_message() ), 400 ); }
+        return $this->cart_get( null, $request );
+    }
+
     /**
      * Map FluentCart Cart model to CartDTO.
      *
@@ -189,6 +205,9 @@ class CartManager {
             ->set_items( $items )
             ->set_subtotal( $this->format_amount( $cart->getItemsSubtotal() ) )
             ->set_total( $this->format_amount( $cart->getEstimatedTotal() ) )
+            ->set_discount_total( $this->format_amount( method_exists( $cart, 'getDiscountTotal' ) ? $cart->getDiscountTotal() : ( $cart->discount_total ?? 0 ) ) )
+            ->set_shipping_total( $this->format_amount( method_exists( $cart, 'getShippingTotal' ) ? $cart->getShippingTotal() : ( $cart->shipping_total ?? 0 ) ) )
+            ->set_tax_total( $this->format_amount( method_exists( $cart, 'getTaxTotal' ) ? $cart->getTaxTotal() : ( $cart->tax_total ?? 0 ) ) )
             ->set_currency( (string) CurrencySettings::get( "currency" ) )
             ->set_item_count( (int) array_sum( array_column( $cart_data, 'quantity' ) ) )
             ->set_checkout_url( (string) ( new StoreSettings() )->getCheckoutPage() );

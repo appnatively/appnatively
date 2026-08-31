@@ -5,6 +5,7 @@ namespace Crafium\AppNatively\App\Integrations\Ecommerce\WooCommerce;
 defined( "ABSPATH" ) || exit;
 
 use Crafium\AppNatively\App\DTO\Ecommerce\CartDTO;
+use Crafium\AppNatively\App\DTO\Ecommerce\CouponDTO;
 use Crafium\AppNatively\App\DTO\Ecommerce\CartItemDTO;
 use Crafium\AppNatively\App\DTO\Ecommerce\ProductImageDTO;
 use Crafium\AppNatively\App\Integrations\Ecommerce\Concerns\EcommerceIntegrationHelpers;
@@ -160,6 +161,9 @@ class CartManager {
 
         $dto->set_subtotal( (string) WC()->cart->get_subtotal() )
             ->set_total( (string) WC()->cart->get_total( 'edit' ) )
+            ->set_discount_total( (string) WC()->cart->get_discount_total() )
+            ->set_shipping_total( (string) WC()->cart->get_shipping_total() )
+            ->set_tax_total( (string) WC()->cart->get_total_tax() )
             ->set_currency( get_woocommerce_currency() )
             ->set_item_count( WC()->cart->get_cart_contents_count() )
             ->set_checkout_url( $checkout_url );
@@ -214,6 +218,15 @@ class CartManager {
         }
 
         $dto->set_items( $items );
+
+        $coupons = [];
+        foreach ( WC()->cart->get_coupons() as $code => $coupon ) {
+            $coupons[] = ( new CouponDTO() )
+                ->set_code( (string) $code )
+                ->set_amount( (string) WC()->cart->get_coupon_discount_amount( $code ) )
+                ->set_description( (string) $coupon->get_description() );
+        }
+        $dto->set_coupons( $coupons );
 
         return $dto;
     }
@@ -357,6 +370,26 @@ class CartManager {
 
         $this->save_cart();
 
+        return $this->cart_get( null, $request );
+    }
+
+    public function cart_discount_apply( ?CartDTO $cart_dto, Request $request ): CartDTO {
+        $this->ensure_cart_loaded( $request );
+        $code = sanitize_text_field( (string) $request->get_param( 'code' ) );
+        wc_clear_notices();
+        if ( ! WC()->cart->apply_coupon( $code ) ) {
+            $messages = array_map( static fn( $notice ) => wp_strip_all_tags( $notice['notice'] ?? '' ), (array) wc_get_notices( 'error' ) );
+            wc_clear_notices();
+            throw new Exception( esc_html( implode( ' ', array_filter( $messages ) ?: [ __( 'Invalid coupon code.', 'appnatively' ) ] ) ), 400 );
+        }
+        $this->save_cart();
+        return $this->cart_get( null, $request );
+    }
+
+    public function cart_discount_remove( ?CartDTO $cart_dto, Request $request ): CartDTO {
+        $this->ensure_cart_loaded( $request );
+        WC()->cart->remove_coupon( sanitize_text_field( (string) $request->get_param( 'code' ) ) );
+        $this->save_cart();
         return $this->cart_get( null, $request );
     }
 }

@@ -133,4 +133,40 @@ class CartController extends Controller {
 
         return Response::send( ["data" => $cart] );
     }
+
+    public function discount( Request $request ): array {
+        $request->validate(
+            [
+                'code'        => 'required|string',
+                'integration' => 'required|string|' . craf_appna_in_rule( craf_appna_get_ecommerce_integrations() ),
+            ]
+        );
+
+        $integration = sanitize_text_field( $request->get_param( 'integration' ) );
+        $cart        = apply_filters( "craf_appna_ecommerce_{$integration}_cart_discount_apply", null, $request );
+
+        if ( ! $cart instanceof CartDTO ) {
+            throw new Exception( esc_html__( 'Failed to apply discount code', 'appnatively' ) );
+        }
+
+        return Response::send( [ 'data' => $cart ] );
+    }
+
+    public function discount_remove( Request $request ): array {
+        $request->validate(
+            [
+                'code'        => 'required|string',
+                'integration' => 'required|string|' . craf_appna_in_rule( craf_appna_get_ecommerce_integrations() ),
+            ]
+        );
+
+        $integration = sanitize_text_field( $request->get_param( 'integration' ) );
+        $cart        = apply_filters( "craf_appna_ecommerce_{$integration}_cart_discount_remove", null, $request );
+
+        if ( ! $cart instanceof CartDTO ) {
+            throw new Exception( esc_html__( 'Failed to remove discount code', 'appnatively' ) );
+        }
+
+        return Response::send( [ 'data' => $cart ] );
+    }
 }

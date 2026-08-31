@@ -79,6 +79,66 @@ class ProductRepository {
     }
 
     /**
+     * Get published products sharing a category or tag with the requested product.
+     *
+     * @param ProductPaginatorDTO|null $product_paginator The product paginator DTO.
+     * @param Request $request The REST request instance.
+     * @param array $fields The requested fields.
+     * @return ProductPaginatorDTO
+     */
+    public function related_products( ?ProductPaginatorDTO $product_paginator, Request $request, array $fields = [] ): ProductPaginatorDTO {
+        $product_id = (int) craf_appna_route_param( $request, 'id' );
+        $page       = (int) $request->get_param( 'page' ) ?: 1;
+        $per_page   = (int) $request->get_param( 'per_page' ) ?: 10;
+        $product    = $product_id ? wc_get_product( $product_id ) : null;
+
+        if ( ! $product ) {
+            return new ProductPaginatorDTO( $page, $per_page, 0, 1, [] );
+        }
+
+        $term_ids = [];
+        foreach ( [ 'product_cat', 'product_tag' ] as $taxonomy ) {
+            if ( ! taxonomy_exists( $taxonomy ) ) {
+                continue;
+            }
+
+            $ids = wp_get_post_terms( $product_id, $taxonomy, [ 'fields' => 'ids' ] );
+            if ( ! is_wp_error( $ids ) ) {
+                $term_ids = array_merge( $term_ids, array_map( 'intval', $ids ) );
+            }
+        }
+
+        if ( empty( $term_ids ) ) {
+            return new ProductPaginatorDTO( $page, $per_page, 0, 1, [] );
+        }
+
+        $query = $this->base_product_query()
+            ->where( 'posts.ID', '!=', $product_id )
+            ->where_has(
+                'terms', function( $q ) use ( $term_ids ) {
+                    $q->where_in( 'term_id', array_unique( $term_ids ) );
+                }
+            )
+            ->select( $this->get_columns_from_fields( $fields ) )
+            ->order_by( 'post_date', 'desc' );
+
+        $paginator = $query->paginate( $page, $per_page );
+        $items     = [];
+
+        foreach ( $paginator->items() as $post ) {
+            $items[] = $this->map_post_to_product_dto( $post, $fields );
+        }
+
+        return new ProductPaginatorDTO(
+            $page,
+            $per_page,
+            $paginator->total(),
+            $paginator->last_page(),
+            $items
+        );
+    }
+
+    /**
      * Resolve device-local wishlist product IDs into full product records.
      * No pagination, filtering, or sorting — just the exact saved set.
      *
@@ -505,6 +565,12 @@ class ProductRepository {
         }
         if ( in_array( "on_sale", $fields ) ) {
             $dto->set_on_sale( $product->is_on_sale() );
+        }
+        if ( in_array( "average_rating", $fields ) ) {
+            $dto->set_average_rating( (float) $product->get_average_rating() );
+        }
+        if ( in_array( "rating_count", $fields ) ) {
+            $dto->set_rating_count( (int) $product->get_rating_count() );
         }
 
         // Logistics

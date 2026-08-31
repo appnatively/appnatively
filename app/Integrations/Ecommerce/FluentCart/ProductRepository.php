@@ -83,6 +83,67 @@ class ProductRepository {
     }
 
     /**
+     * Get published products sharing a taxonomy term with the requested product.
+     *
+     * @param mixed           $data    The current data.
+     * @param WP_REST_Request $request The request object.
+     * @param array           $fields  The verified fields.
+     *
+     * @return ProductPaginatorDTO|null
+     */
+    public function related_products( $data, WP_REST_Request $request, array $fields ): ?ProductPaginatorDTO {
+        $product_id = (int) craf_appna_route_param( $request, 'id' );
+        $page       = (int) $request->get_param( 'page' ) ?: 1;
+        $per_page   = (int) $request->get_param( 'per_page' ) ?: 10;
+        $tax_query  = [ 'relation' => 'OR' ];
+
+        foreach ( [ 'product-categories', 'product-brands', 'product-tags' ] as $taxonomy ) {
+            if ( ! taxonomy_exists( $taxonomy ) ) {
+                continue;
+            }
+
+            $term_ids = wp_get_post_terms( $product_id, $taxonomy, [ 'fields' => 'ids' ] );
+            if ( ! is_wp_error( $term_ids ) && ! empty( $term_ids ) ) {
+                $tax_query[] = [
+                    'taxonomy' => $taxonomy,
+                    'field'    => 'term_id',
+                    'terms'    => array_map( 'intval', $term_ids ),
+                ];
+            }
+        }
+
+        if ( 1 === count( $tax_query ) ) {
+            return new ProductPaginatorDTO( $page, $per_page, 0, 1, [] );
+        }
+
+        $query = new \WP_Query(
+            [
+                'post_type'      => 'fluent-products',
+                'post_status'    => 'publish',
+                'has_password'   => false,
+                'paged'          => $page,
+                'posts_per_page' => $per_page,
+                //phpcs:ignore WordPressVIPMinimum.Performance.WPQueryParams.PostNotIn_post__not_in -- excludes the current product from its related results.
+                'post__not_in'   => [ $product_id ],
+                //phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_tax_query -- matching products by shared taxonomy terms is the point of this query.
+                'tax_query'      => $tax_query,
+                'orderby'        => 'date',
+                'order'          => 'DESC',
+            ]
+        );
+
+        $products = [];
+        foreach ( $query->posts as $post ) {
+            $product = Product::with( [ 'detail', 'variants' ] )->find( $post->ID );
+            if ( $product ) {
+                $products[] = $this->map_to_product_dto( $product, $fields );
+            }
+        }
+
+        return new ProductPaginatorDTO( $page, $per_page, (int) $query->found_posts, max( 1, (int) $query->max_num_pages ), $products );
+    }
+
+    /**
      * Get single product.
      *
      * @param mixed           $data    The current data.

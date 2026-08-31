@@ -43,7 +43,7 @@ class ClassifiedListing extends Provider {
         $args     = [
             "post_type"      => $this->post_type(),
             "post_status"    => "publish",
-            "has_password"    => false,
+            "has_password"   => false,
             "paged"          => $page,
             "posts_per_page" => $per_page,
             "s"              => sanitize_text_field( (string) $request->get_param( "search" ) ),
@@ -101,7 +101,7 @@ class ClassifiedListing extends Provider {
             [
                 "post_type"      => $this->post_type(),
                 "post_status"    => "publish",
-                "has_password"    => false,
+                "has_password"   => false,
                 "paged"          => $page,
                 "posts_per_page" => $per_page,
                 //phpcs:ignore WordPressVIPMinimum.Performance.WPQueryParams.PostNotIn_post__not_in -- small, bounded exclusion of the current listing from its own "related" query.

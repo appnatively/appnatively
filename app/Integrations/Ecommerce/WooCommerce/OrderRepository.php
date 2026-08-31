@@ -131,16 +131,23 @@ class OrderRepository {
         $this->authenticate_from_bearer_token( $request );
         $user_id = get_current_user_id();
 
-        if ( ! $user_id ) {
-            return null;
-        }
-
         $wc_order = wc_get_order( $id );
+
+        if ( ! $user_id ) {
+            $key = sanitize_text_field( (string) $request->get_param( 'key' ) );
+            return $wc_order && $key && hash_equals( (string) $wc_order->get_order_key(), $key )
+                ? $this->map_order_details( $wc_order )
+                : null;
+        }
 
         if ( ! $wc_order || $wc_order->get_customer_id() !== $user_id ) {
             return null;
         }
 
+        return $this->map_order_details( $wc_order );
+    }
+
+    private function map_order_details( \WC_Order $wc_order ): OrderDTO {
         $line_items = [];
 
         foreach ( $wc_order->get_items() as $item_id => $item ) {

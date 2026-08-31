@@ -49,7 +49,7 @@ class ProductRepository {
         $args = [
             'post_type'      => 'sc_product',
             'post_status'    => 'publish',
-            'has_password'    => false,
+            'has_password'   => false,
             'posts_per_page' => $per_page,
             'paged'          => $page,
         ];
@@ -80,6 +80,52 @@ class ProductRepository {
         }
 
         return new ProductPaginatorDTO( $page, $per_page, (int) $query->found_posts, (int) $query->max_num_pages, $products );
+    }
+
+    /**
+     * Get published products from the same collection as the requested product.
+     */
+    public function related_products( ?ProductPaginatorDTO $product_paginator, Request $request, array $fields = [] ): ProductPaginatorDTO {
+        $product_id = (int) craf_appna_route_param( $request, 'id' );
+        $page       = (int) $request->get_param( 'page' ) ?: 1;
+        $per_page   = (int) $request->get_param( 'per_page' ) ?: 10;
+        $term_ids   = $product_id ? wp_get_post_terms( $product_id, self::COLLECTION_TAXONOMY, [ 'fields' => 'ids' ] ) : [];
+
+        if ( is_wp_error( $term_ids ) || empty( $term_ids ) ) {
+            return new ProductPaginatorDTO( $page, $per_page, 0, 1, [] );
+        }
+
+        $query = new \WP_Query(
+            [
+                'post_type'      => 'sc_product',
+                'post_status'    => 'publish',
+                'has_password'   => false,
+                'paged'          => $page,
+                'posts_per_page' => $per_page,
+                //phpcs:ignore WordPressVIPMinimum.Performance.WPQueryParams.PostNotIn_post__not_in -- excludes the current product from its related results.
+                'post__not_in'   => [ $product_id ],
+                //phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_tax_query -- filtering products by collection is the point of this query.
+                'tax_query'      => [
+                    [
+                        'taxonomy' => self::COLLECTION_TAXONOMY,
+                        'field'    => 'term_id',
+                        'terms'    => array_map( 'intval', $term_ids ),
+                    ],
+                ],
+                'orderby'        => 'date',
+                'order'          => 'DESC',
+            ]
+        );
+
+        $products = [];
+        foreach ( $query->posts as $post ) {
+            $product = sc_get_product( $post );
+            if ( $product ) {
+                $products[] = $this->map_to_product_dto( $product, $post->ID, $fields );
+            }
+        }
+
+        return new ProductPaginatorDTO( $page, $per_page, (int) $query->found_posts, max( 1, (int) $query->max_num_pages ), $products );
     }
 
     /**
@@ -131,7 +177,7 @@ class ProductRepository {
             [
                 'post_type'      => 'sc_product',
                 'post_status'    => 'publish',
-                'has_password'    => false,
+                'has_password'   => false,
                 'post__in'       => $ids,
                 'posts_per_page' => count( $ids ),
                 'orderby'        => 'post__in',

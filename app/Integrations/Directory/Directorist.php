@@ -125,7 +125,7 @@ class Directorist extends Provider {
         $wp_query_args = [
             "post_type"      => $post_type,
             "post_status"    => "publish",
-            "has_password"    => false,
+            "has_password"   => false,
             "paged"          => $page,
             "posts_per_page" => $per_page,
             "s"              => $search,
@@ -272,7 +272,7 @@ class Directorist extends Provider {
             [
                 "post_type"      => $post_type,
                 "post_status"    => "publish",
-                "has_password"    => false,
+                "has_password"   => false,
                 "paged"          => $page,
                 "posts_per_page" => $per_page,
                 //phpcs:ignore WordPressVIPMinimum.Performance.WPQueryParams.PostNotIn_post__not_in -- small, bounded exclusion of the current listing from its own "related" query.
@@ -387,7 +387,7 @@ class Directorist extends Provider {
             [
                 "post_type"      => $post_type,
                 "post_status"    => "publish",
-                "has_password"    => false,
+                "has_password"   => false,
                 "posts_per_page" => count( $ids ),
                 "post__in"       => $ids,
                 "orderby"        => "post__in",
