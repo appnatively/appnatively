@@ -65,13 +65,13 @@ jobs:
       - name: Build plugin
         run: pnpm git-compress
 
-      # - name: Deploy to wp org
-      #   uses: 10up/action-wordpress-plugin-deploy@stable
-      #   env:
-      #     SVN_USERNAME: ${{ secrets.SVN_USERNAME }}
-      #     SVN_PASSWORD: ${{ secrets.SVN_PASSWORD }}
-      #     SLUG: appnatively
-      #     BUILD_DIR: appnatively
+      - name: Deploy to wp org
+        uses: 10up/action-wordpress-plugin-deploy@stable
+        env:
+          SVN_USERNAME: ${{ secrets.SVN_USERNAME }}
+          SVN_PASSWORD: ${{ secrets.SVN_PASSWORD }}
+          SLUG: appnatively
+          BUILD_DIR: appnatively
 
       - name: Create zip file
         run: |
