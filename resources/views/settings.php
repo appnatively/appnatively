@@ -25,9 +25,55 @@ use Crafium\AppNatively\App\Providers\Admin\MenuServiceProvider;
         </div>
     <?php endif; ?>
 
-    <p class="description" style="max-width: 42em;">
-        <?php esc_html_e( 'This plugin publishes a read-only API that your mobile app reads your content through, plus endpoints for cart, orders and form submissions. Everything it exposes is controlled here.', 'appnatively' ); ?>
+    <p class="description" style="max-width: 48em;">
+        <?php esc_html_e( 'This plugin connects your WordPress website with AppNatively, the platform for building native Android and iOS apps. It provides the APIs AppNatively uses to access your website content, products, orders, forms, and supported integrations.', 'appnatively' );?>
     </p>
+
+    <div
+        class="notice notice-info inline"
+        style="max-width: 48em; margin-top: 20px; margin-bottom: 24px;"
+    >
+        <p>
+            <strong>
+                <?php esc_html_e( 'Ready to turn your WordPress website into a mobile app?', 'appnatively' ); ?>
+            </strong>
+        </p>
+
+        <p>
+            <?php
+            esc_html_e(
+                'Build and manage your native Android and iOS app with AppNatively Studio. After creating your AppNatively account, connect this WordPress website using the connection key shown below.',
+                'appnatively'
+            );
+            ?>
+        </p>
+
+        <p>
+            <a
+                href="<?php echo esc_url( 'https://appnatively.com?utm_source=appnatively_plugin' ); ?>"
+                class="button button-primary"
+                target="_blank"
+                rel="noopener noreferrer"
+            >
+                <?php esc_html_e( 'Visit AppNatively', 'appnatively' ); ?>
+
+                <span
+                    class="dashicons dashicons-external"
+                    style="font-size: 16px; line-height: 28px; margin-left: 3px;"
+                    aria-hidden="true"
+                ></span>
+            </a>
+
+            <a
+                href="<?php echo esc_url( 'https://appnatively.com?utm_source=appnatively_plugin' ); ?>"
+                target="_blank"
+                rel="noopener noreferrer"
+                style="margin-left: 10px;"
+            >
+                appnatively.com
+            </a>
+        </p>
+    </div>
 
     <form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
         <input type="hidden" name="action" value="craf_appna_save_settings">
@@ -51,8 +97,8 @@ use Crafium\AppNatively\App\Providers\Admin\MenuServiceProvider;
                 <th scope="row"><?php esc_html_e( 'Address', 'appnatively' ); ?></th>
                 <td>
                     <code><?php echo esc_html( $site_url ); ?></code>
-                    <p class="description"><?php esc_html_e( 'Requires the "Post name" permalink structure.', 'appnatively' ); ?></p>
                     <?php if ( ! $permalink_ok ) : ?>
+                    <p class="description"><?php esc_html_e( 'Requires the "Post name" permalink structure.', 'appnatively' ); ?></p>
                         <p class="description" style="color: #b32d2e;">
                             <span class="dashicons dashicons-warning" aria-hidden="true"></span>
                             <?php
