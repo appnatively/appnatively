@@ -150,6 +150,7 @@ function craf_appna_get_directory_integrations(): array {
             "business-directory-plugin",
             "classified-listing",
             "hivepress",
+            "adirectory",
         ]
     );
 }

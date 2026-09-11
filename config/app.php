@@ -16,6 +16,7 @@ use Crafium\AppNatively\App\Integrations\Directory\GeoDirectory;
 use Crafium\AppNatively\App\Integrations\Directory\HivePress;
 use Crafium\AppNatively\App\Integrations\Directory\BusinessDirectoryPlugin;
 use Crafium\AppNatively\App\Integrations\Directory\ClassifiedListing;
+use Crafium\AppNatively\App\Integrations\Directory\ADirectory;
 use Crafium\AppNatively\App\Integrations\Forms\FormGent;
 use Crafium\AppNatively\App\Integrations\Forms\FluentForm;
 use Crafium\AppNatively\App\Integrations\Forms\EverestForms;
@@ -92,6 +93,7 @@ return [
         HivePress::class,
         BusinessDirectoryPlugin::class,
         ClassifiedListing::class,
+        ADirectory::class,
 
         // Forms Integrations
         FormGent::class,
