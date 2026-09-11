@@ -4,7 +4,7 @@ Tags: mobile app, app builder, native app, woocommerce mobile app, headless
 Requires at least: 6.5
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 0.0.3
+Stable tag: 0.0.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -57,6 +57,7 @@ Whether you run an online store, collect leads through forms, or publish a direc
 *   HivePress
 *   Business Directory Plugin
 *   Classified Listing
+*   aDirectory
 
 === External Services ===
 
@@ -102,7 +103,7 @@ AppNatively supports WooCommerce, Fluent Cart, and SureCart.
 FormGent, Fluent Forms, Contact Form 7, WPForms, Ninja Forms, Formidable, Forminator, Everest Forms, SureForms, WeForms, HappyForms, Gutena Forms, and Bit Form.
 
 = Which directory plugins are supported? =
-Directorist, GeoDirectory, HivePress, Business Directory Plugin, and Classified Listing.
+Directorist, GeoDirectory, HivePress, Business Directory Plugin, Classified Listing, and aDirectory.
 
 = How do I connect my site to AppNatively Studio? =
 Open **AppNatively** in your dashboard and copy the connection key, then go to [AppNatively Studio](https://appnatively.com/studio), open your app, and visit **Settings &rarr; Website Connection**. Select **WordPress**, enter your site URL, paste the key, click **Check Connection**, and save.
@@ -129,6 +130,9 @@ Yes. Use the `craf_appna_integrated_plugins` filter to register your own plugin 
 The source code and public repository for this plugin is available on GitHub at [AppNatively](https://github.com/appnatively/appnatively).
 
 == Changelog ==
+
+= 0.0.4 - 11 Sep 2026 =
+* Add aDirectory directory integration
 
 = 0.0.3 - 03 Sep 2026 =
 * Added a clear introduction explaining how the AppNatively WordPress plugin connects with the AppNatively platform.

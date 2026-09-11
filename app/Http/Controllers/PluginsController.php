@@ -28,6 +28,7 @@ class PluginsController extends Controller {
                 "hivepress"                 => [ "category" => "directory", "label" => "HivePress", "file" => "hivepress/hivepress.php"],
                 "business-directory-plugin" => [ "category" => "directory", "label" => "Business Directory Plugin", "file" => "business-directory-plugin/business-directory-plugin.php"],
                 "classified-listing"        => [ "category" => "directory", "label" => "Classified Listing", "file" => "classified-listing/classified-listing.php"],
+                "adirectory"                => [ "category" => "directory", "label" => "aDirectory", "file" => "adirectory/adirectory.php"],
                 "contact-form-7"            => [ "category" => "form", "label" => "Contact Form 7", "file" => "contact-form-7/wp-contact-form-7.php"],
                 "everest-forms"             => [ "category" => "form", "label" => "Everest Forms"],
                 "formidable"                => [ "category" => "form", "label" => "Formidable"],
