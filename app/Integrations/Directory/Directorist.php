@@ -808,6 +808,9 @@ class Directorist extends Provider {
         if ( in_array( "image", $fields, true ) ) {
             $dto->set_image( $this->get_listing_image( $listing->ID ) );
         }
+        if ( in_array( "images", $fields, true ) ) {
+            $dto->set_images( $this->get_listing_images( $listing->ID, in_array( "image", $fields, true ) ) );
+        }
         if ( in_array( "views_count", $fields, true ) ) {
             $dto->set_views_count( $this->get_listing_views_count( $listing->ID ) );
         }
@@ -971,22 +974,72 @@ class Directorist extends Provider {
      * @return array
      */
     private function get_listing_image( int $listing_id ): array {
-        $image_id = get_post_thumbnail_id( $listing_id );
-        if ( ! $image_id ) {
-            $image_id = (int) get_post_meta( $listing_id, "_listing_prv_img", true );
-        }
-        $src = $image_id ? wp_get_attachment_url( $image_id ) : "";
+        $image_id = $this->get_listing_image_id( $listing_id );
+        return $image_id ? $this->map_attachment_image( $image_id ) : [];
+    }
 
-        if ( ! $src ) {
-            return [];
+    private function get_listing_images( int $listing_id, bool $exclude_cover = false ): array {
+        $image_ids = $this->get_listing_image_ids( $listing_id );
+        if ( $exclude_cover ) {
+            $cover_id  = $this->get_listing_image_id( $listing_id );
+            $image_ids = array_values( array_filter( $image_ids, fn( int $image_id ): bool => $image_id !== $cover_id ) );
         }
 
-        return [
+        return array_values( array_filter( array_map( [$this, "map_attachment_image"], $image_ids ) ) );
+    }
+
+    private function get_listing_image_id( int $listing_id ): int {
+        $image_id = (int) get_post_thumbnail_id( $listing_id );
+        if ( $image_id > 0 ) {
+            return $image_id;
+        }
+
+        if ( function_exists( "directorist_get_listing_preview_image" ) ) {
+            $image_id = (int) directorist_get_listing_preview_image( $listing_id );
+            if ( $image_id > 0 ) {
+                return $image_id;
+            }
+        }
+
+        $image_id = (int) get_post_meta( $listing_id, "_listing_prv_img", true );
+        if ( $image_id > 0 ) {
+            return $image_id;
+        }
+
+        $image_ids = $this->get_listing_image_ids( $listing_id );
+        return $image_ids ? (int) reset( $image_ids ) : 0;
+    }
+
+    private function get_listing_image_ids( int $listing_id ): array {
+        $image_ids = [];
+        if ( function_exists( "directorist_get_listing_gallery_images" ) ) {
+            $image_ids = $this->positive_ids( directorist_get_listing_gallery_images( $listing_id ) );
+        } else {
+            $image_ids = $this->positive_ids( get_post_meta( $listing_id, "_listing_img", true ) );
+        }
+
+        $preview_id = function_exists( "directorist_get_listing_preview_image" ) ? (int) directorist_get_listing_preview_image( $listing_id ) : (int) get_post_meta( $listing_id, "_listing_prv_img", true );
+        if ( $preview_id > 0 ) {
+            array_unshift( $image_ids, $preview_id );
+        }
+
+        $thumbnail_id = (int) get_post_thumbnail_id( $listing_id );
+        if ( $thumbnail_id > 0 ) {
+            array_unshift( $image_ids, $thumbnail_id );
+        }
+
+        return array_values( array_unique( array_filter( $image_ids ) ) );
+    }
+
+    private function map_attachment_image( int $image_id ): array {
+        $src = wp_get_attachment_url( $image_id );
+
+        return $src ? [
             "id"    => (int) $image_id,
             "src"   => esc_url_raw( (string) $src ),
             "alt"   => sanitize_text_field( (string) get_post_meta( $image_id, "_wp_attachment_image_alt", true ) ),
             "title" => (string) get_the_title( $image_id ),
-        ];
+        ] : [];
     }
 
     /**

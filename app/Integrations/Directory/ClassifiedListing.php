@@ -241,6 +241,9 @@ class ClassifiedListing extends Provider {
         if ( in_array( "image", $fields, true ) ) {
             $dto->set_image( $this->get_listing_image( (int) $post->ID ) );
         }
+        if ( in_array( "images", $fields, true ) ) {
+            $dto->set_images( $this->get_listing_images( (int) $post->ID, in_array( "image", $fields, true ) ) );
+        }
         if ( in_array( "views_count", $fields, true ) ) {
             $dto->set_views_count( (int) $this->get_meta_value( $post->ID, ["_views", "views", "view_count"] ) );
         }
@@ -378,14 +381,86 @@ class ClassifiedListing extends Provider {
     }
 
     private function get_listing_image( int $post_id ): array {
-        $image_id = get_post_thumbnail_id( $post_id );
-        if ( ! $image_id ) {
-            $gallery = get_post_meta( $post_id, "_rtcl_gallery", true );
-            if ( is_array( $gallery ) && ! empty( $gallery ) ) {
-                $image_id = (int) reset( $gallery );
+        $image_id = $this->get_listing_image_id( $post_id );
+        return $image_id ? $this->map_attachment_image( $image_id ) : [];
+    }
+
+    private function get_listing_images( int $post_id, bool $exclude_cover = false ): array {
+        $image_ids = $this->get_listing_image_ids( $post_id );
+        if ( $exclude_cover ) {
+            $cover_id  = $this->get_listing_image_id( $post_id );
+            $image_ids = array_values( array_filter( $image_ids, fn( int $image_id ): bool => $image_id !== $cover_id ) );
+        }
+
+        return array_values( array_filter( array_map( [$this, "map_attachment_image"], $image_ids ) ) );
+    }
+
+    private function get_listing_image_id( int $post_id ): int {
+        $image_id = (int) get_post_thumbnail_id( $post_id );
+        if ( $image_id > 0 ) {
+            return $image_id;
+        }
+
+        $image_ids = $this->get_listing_image_ids( $post_id );
+        return $image_ids ? (int) reset( $image_ids ) : 0;
+    }
+
+    private function get_listing_image_ids( int $post_id ): array {
+        $image_ids = [];
+
+        if ( class_exists( "\\Rtcl\\Helpers\\Functions" ) && method_exists( "\\Rtcl\\Helpers\\Functions", "get_listing_images" ) ) {
+            foreach ( \Rtcl\Helpers\Functions::get_listing_images( $post_id ) as $image ) {
+                if ( is_object( $image ) && isset( $image->ID ) ) {
+                    $image_ids[] = (int) $image->ID;
+                } elseif ( is_numeric( $image ) ) {
+                    $image_ids[] = (int) $image;
+                }
             }
         }
-        $src = $image_id ? wp_get_attachment_url( $image_id ) : "";
+
+        if ( empty( $image_ids ) ) {
+            $attachments = get_children(
+                [
+                    "post_parent"    => $post_id,
+                    "post_type"      => "attachment",
+                    "posts_per_page" => -1,
+                    "post_status"    => "inherit",
+                    "orderby"        => "menu_order",
+                    "order"          => "ASC",
+                    //phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query -- matches Classified Listing's own gallery image query.
+                    "meta_query"     => [
+                        "relation" => "OR",
+                        [
+                            "key"     => "_rtcl_attachment_type",
+                            "value"   => "image",
+                            "compare" => "=",
+                        ],
+                        [
+                            "key"     => "_rtcl_attachment_type",
+                            "compare" => "NOT EXISTS",
+                        ],
+                    ],
+                ]
+            );
+
+            foreach ( $attachments as $attachment ) {
+                $image_ids[] = (int) $attachment->ID;
+            }
+        }
+
+        $gallery      = get_post_meta( $post_id, "_rtcl_gallery", true );
+        $image_ids    = array_merge( $image_ids, $this->positive_ids( $gallery ) );
+        $thumbnail_id = (int) get_post_thumbnail_id( $post_id );
+
+        if ( $thumbnail_id > 0 ) {
+            array_unshift( $image_ids, $thumbnail_id );
+        }
+
+        return array_values( array_unique( array_filter( $image_ids ) ) );
+    }
+
+    private function map_attachment_image( int $image_id ): array {
+        $src = wp_get_attachment_url( $image_id );
         return $src ? ["id" => (int) $image_id, "src" => esc_url_raw( (string) $src ), "alt" => sanitize_text_field( (string) get_post_meta( $image_id, "_wp_attachment_image_alt", true ) ), "title" => (string) get_the_title( $image_id )] : [];
     }
 

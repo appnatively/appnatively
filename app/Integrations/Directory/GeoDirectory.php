@@ -289,6 +289,9 @@ class GeoDirectory extends Provider {
         if ( in_array( "image", $fields, true ) ) {
             $dto->set_image( $this->get_listing_image( (int) $post->ID ) );
         }
+        if ( in_array( "images", $fields, true ) ) {
+            $dto->set_images( $this->get_listing_images( (int) $post->ID, in_array( "image", $fields, true ) ) );
+        }
         if ( in_array( "views_count", $fields, true ) ) {
             $dto->set_views_count( 0 );
         }
@@ -366,19 +369,105 @@ class GeoDirectory extends Provider {
     }
 
     private function get_listing_image( int $post_id ): array {
-        $image_id = get_post_thumbnail_id( $post_id );
-        $src      = $image_id ? wp_get_attachment_url( $image_id ) : "";
+        $image_id = (int) get_post_thumbnail_id( $post_id );
+        if ( $image_id > 0 ) {
+            return $this->map_attachment_image( $image_id );
+        }
 
+        $images = $this->get_geodirectory_images( $post_id, 1 );
+        return $images ? $this->map_geodirectory_image( reset( $images ) ) : [];
+    }
+
+    private function get_listing_images( int $post_id, bool $exclude_cover = false ): array {
+        $images = [];
+        foreach ( $this->get_geodirectory_images( $post_id ) as $image ) {
+            $mapped = $this->map_geodirectory_image( $image );
+            if ( $mapped ) {
+                $images[] = $mapped;
+            }
+        }
+
+        $thumbnail_id = (int) get_post_thumbnail_id( $post_id );
+        if ( $thumbnail_id > 0 ) {
+            $thumbnail = $this->map_attachment_image( $thumbnail_id );
+            if ( $thumbnail ) {
+                array_unshift( $images, $thumbnail );
+            }
+        }
+
+        $seen = [];
+        $images = array_values(
+            array_filter(
+                $images,
+                function( array $image ) use ( &$seen ): bool {
+                    $key = (string) ( $image["id"] ?: $image["src"] );
+                    if ( "" === $key || isset( $seen[$key] ) ) {
+                        return false;
+                    }
+                    $seen[$key] = true;
+                    return true;
+                }
+            )
+        );
+
+        if ( $exclude_cover ) {
+            $cover = $this->get_listing_image( $post_id );
+            $cover_key = $cover ? (string) ( $cover["id"] ?: $cover["src"] ) : "";
+            $images = array_values(
+                array_filter(
+                    $images,
+                    fn( array $image ): bool => "" === $cover_key || (string) ( $image["id"] ?: $image["src"] ) !== $cover_key
+                )
+            );
+        }
+
+        return $images;
+    }
+
+    private function get_geodirectory_images( int $post_id, $limit = "" ): array {
+        if ( function_exists( "geodir_get_images" ) ) {
+            return (array) geodir_get_images( $post_id, $limit, false, "", ["post_images"], [] );
+        }
+
+        if ( class_exists( "\\GeoDir_Media" ) ) {
+            return (array) \GeoDir_Media::get_attachments_by_type( $post_id, "post_images", $limit );
+        }
+
+        return [];
+    }
+
+    private function map_geodirectory_image( $image ): array {
+        if ( ! is_object( $image ) ) {
+            return [];
+        }
+
+        $image_id = isset( $image->ID ) ? (int) $image->ID : 0;
+        if ( $image_id > 0 && "attachment" === get_post_type( $image_id ) ) {
+            return $this->map_attachment_image( $image_id );
+        }
+
+        $src = function_exists( "geodir_get_image_src" ) ? geodir_get_image_src( $image, "" ) : "";
         if ( ! $src ) {
             return [];
         }
 
         return [
+            "id"    => $image_id,
+            "src"   => esc_url_raw( (string) $src ),
+            "alt"   => sanitize_text_field( (string) ( $image->title ?? "" ) ),
+            "title" => sanitize_text_field( (string) ( $image->title ?? "" ) ),
+        ];
+    }
+
+    private function map_attachment_image( int $image_id ): array {
+        $src = wp_get_attachment_url( $image_id );
+
+        return $src ? [
             "id"    => (int) $image_id,
             "src"   => esc_url_raw( (string) $src ),
             "alt"   => sanitize_text_field( (string) get_post_meta( $image_id, "_wp_attachment_image_alt", true ) ),
             "title" => (string) get_the_title( $image_id ),
-        ];
+        ] : [];
     }
 
     private function get_rating( int $post_id ): float {

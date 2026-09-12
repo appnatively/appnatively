@@ -77,7 +77,7 @@ trait ListingIntegrationHelpers {
      */
     private function positive_ids( $value ): array {
         if ( ! is_array( $value ) ) {
-            return [];
+            $value = [$value];
         }
 
         return array_values( array_filter( array_map( "intval", $value ), fn( int $id ): bool => $id > 0 ) );

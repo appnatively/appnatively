@@ -23,6 +23,8 @@ class ListingDTO extends DTO {
 
     private array $image = [];
 
+    private array $images = [];
+
     private int $views_count = 0;
 
     private string $address;
@@ -115,6 +117,15 @@ class ListingDTO extends DTO {
 
     public function set_image( array $image ): self {
         $this->image = $image;
+        return $this;
+    }
+
+    public function get_images(): array {
+        return $this->images;
+    }
+
+    public function set_images( array $images ): self {
+        $this->images = $images;
         return $this;
     }
 

@@ -26,6 +26,7 @@ class ListingController extends Controller {
         "excerpt",
         "status",
         "image",
+        "images",
         "views_count",
         "address",
         "latitude",

@@ -249,6 +249,9 @@ class ADirectory extends Provider {
         if ( in_array( "image", $fields, true ) ) {
             $dto->set_image( $this->get_listing_image( (int) $post->ID ) );
         }
+        if ( in_array( "images", $fields, true ) ) {
+            $dto->set_images( $this->get_listing_images( (int) $post->ID, in_array( "image", $fields, true ) ) );
+        }
         if ( in_array( "views_count", $fields, true ) ) {
             $dto->set_views_count( 0 );
         }
@@ -434,8 +437,43 @@ class ADirectory extends Provider {
     }
 
     private function get_listing_image( int $post_id ): array {
-        $image_id = get_post_thumbnail_id( $post_id );
-        $src      = $image_id ? wp_get_attachment_url( $image_id ) : "";
+        $image_id = $this->get_listing_image_id( $post_id );
+        return $image_id ? $this->map_attachment_image( $image_id ) : [];
+    }
+
+    private function get_listing_images( int $post_id, bool $exclude_cover = false ): array {
+        $image_ids = $this->get_listing_image_ids( $post_id );
+        if ( $exclude_cover ) {
+            $cover_id  = $this->get_listing_image_id( $post_id );
+            $image_ids = array_values( array_filter( $image_ids, fn( int $image_id ): bool => $image_id !== $cover_id ) );
+        }
+
+        return array_values( array_filter( array_map( [$this, "map_attachment_image"], $image_ids ) ) );
+    }
+
+    private function get_listing_image_id( int $post_id ): int {
+        $image_id = (int) get_post_thumbnail_id( $post_id );
+        if ( $image_id > 0 ) {
+            return $image_id;
+        }
+
+        $image_ids = $this->get_listing_image_ids( $post_id );
+        return $image_ids ? (int) reset( $image_ids ) : 0;
+    }
+
+    private function get_listing_image_ids( int $post_id ): array {
+        $image_ids    = $this->positive_ids( get_post_meta( $post_id, "_images", true ) );
+        $thumbnail_id = (int) get_post_thumbnail_id( $post_id );
+
+        if ( $thumbnail_id > 0 ) {
+            array_unshift( $image_ids, $thumbnail_id );
+        }
+
+        return array_values( array_unique( array_filter( $image_ids ) ) );
+    }
+
+    private function map_attachment_image( int $image_id ): array {
+        $src = wp_get_attachment_url( $image_id );
 
         return $src ? [
             "id"    => (int) $image_id,

@@ -246,6 +246,9 @@ class HivePress extends Provider {
         if ( in_array( "image", $fields, true ) ) {
             $dto->set_image( $this->get_listing_image( (int) $post->ID ) );
         }
+        if ( in_array( "images", $fields, true ) ) {
+            $dto->set_images( $this->get_listing_images( (int) $post->ID, in_array( "image", $fields, true ) ) );
+        }
         if ( in_array( "views_count", $fields, true ) ) {
             $dto->set_views_count( (int) $this->get_meta_value( $post->ID, ["_hp_view_count", "hp_view_count", "_view_count"] ) );
         }
@@ -387,8 +390,62 @@ class HivePress extends Provider {
     }
 
     private function get_listing_image( int $post_id ): array {
-        $image_id = get_post_thumbnail_id( $post_id );
-        $src      = $image_id ? wp_get_attachment_url( $image_id ) : "";
+        $image_id = $this->get_listing_image_id( $post_id );
+
+        return $image_id ? $this->map_attachment_image( $image_id ) : [];
+    }
+
+    private function get_listing_images( int $post_id, bool $exclude_cover = false ): array {
+        $image_ids = $this->get_listing_image_ids( $post_id );
+        if ( $exclude_cover ) {
+            $cover_id  = $this->get_listing_image_id( $post_id );
+            $image_ids = array_values( array_filter( $image_ids, fn( int $image_id ): bool => $image_id !== $cover_id ) );
+        }
+
+        return array_values(
+            array_filter(
+                array_map( [$this, "map_attachment_image"], $image_ids )
+            )
+        );
+    }
+
+    private function get_listing_image_id( int $post_id ): int {
+        $image_id = (int) get_post_thumbnail_id( $post_id );
+        if ( $image_id > 0 ) {
+            return $image_id;
+        }
+
+        $image_ids = $this->get_listing_image_ids( $post_id );
+        return $image_ids ? (int) reset( $image_ids ) : 0;
+    }
+
+    private function get_listing_image_ids( int $post_id ): array {
+        $image_ids = [];
+
+        if ( class_exists( "HivePress\\Models\\Listing" ) ) {
+            $listing = \HivePress\Models\Listing::query()->get_by_id( $post_id );
+            if ( $listing && method_exists( $listing, "get_images__id" ) ) {
+                $image_ids = array_merge( $image_ids, $this->positive_ids( $listing->get_images__id() ) );
+            }
+        }
+
+        foreach ( get_attached_media( "image", $post_id ) as $image ) {
+            $parent_field = is_object( $image ) && isset( $image->hp_parent_field ) ? (string) $image->hp_parent_field : "";
+            if ( "images" === $parent_field || "" === $parent_field ) {
+                $image_ids[] = (int) $image->ID;
+            }
+        }
+
+        $thumbnail_id = (int) get_post_thumbnail_id( $post_id );
+        if ( $thumbnail_id > 0 ) {
+            array_unshift( $image_ids, $thumbnail_id );
+        }
+
+        return array_values( array_unique( array_filter( $image_ids ) ) );
+    }
+
+    private function map_attachment_image( int $image_id ): array {
+        $src = wp_get_attachment_url( $image_id );
 
         return $src ? [
             "id"    => (int) $image_id,
