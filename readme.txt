@@ -1,5 +1,5 @@
 === AppNatively ===
-Contributors: crafium, mdalaminbey
+Contributors: mdalaminbey, tanjimhasan, crafium
 Tags: mobile app, app builder, native app, woocommerce mobile app, headless
 Requires at least: 6.5
 Tested up to: 7.1
