@@ -427,16 +427,16 @@ class SureForms extends Form
                     foreach ( $field['options'] as $key => $option ) {
                         if ( is_string( $option ) ) {
                             $items[] = [
-                                'id'    => (string) $key,
-                                'label' => $option,
-                                'value' => $option,
+                                'id'          => (string) $key,
+                                'optionLabel' => $option,
+                                'optionValue' => $option,
                             ];
                         } elseif ( is_array( $option ) ) {
                             $option_label = $option['label'] ?? $option['optionTitle'] ?? '';
                             $items[]      = [
-                                'id'    => $option['value'] ?? (string) $key,
-                                'label' => $option_label,
-                                'value' => $option['value'] ?? $option_label,
+                                'id'          => $option['value'] ?? (string) $key,
+                                'optionLabel' => $option_label,
+                                'optionValue' => $option['value'] ?? $option_label,
                             ];
                         }
                     }

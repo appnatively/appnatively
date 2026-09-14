@@ -452,9 +452,9 @@ class FormGent extends Form {
 
                         foreach ( $field['options'] as $key => $option ) {
                             $items[] = [
-                                'id'    => (string) $key,
-                                'label' => is_string( $option ) ? $option : ( $option['label'] ?? '' ),
-                                'value' => is_string( $option ) ? $option : ( $option['value'] ?? '' ),
+                                'id'          => (string) $key,
+                                'optionLabel' => is_string( $option ) ? $option : ( $option['label'] ?? '' ),
+                                'optionValue' => is_string( $option ) ? $option : ( $option['value'] ?? '' ),
                             ];
                         }
 

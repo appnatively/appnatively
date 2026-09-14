@@ -505,17 +505,16 @@ class FluentForm extends Form
 
                         foreach ( $options as $key => $option ) {
                             if ( is_string( $option ) ) {
-                                // Legacy {value => label} map
                                 $items[] = [
-                                    'id'    => (string) $key,
-                                    'label' => $option,
-                                    'value' => $option,
+                                    'id'          => (string) $key,
+                                    'optionLabel' => $option,
+                                    'optionValue' => $option,
                                 ];
                             } elseif ( is_array( $option ) ) {
                                 $items[] = [
-                                    'id'    => isset( $option['id'] ) ? (string) $option['id'] : (string) $key,
-                                    'label' => $option['label'] ?? $option['value'] ?? (string) $key,
-                                    'value' => $option['value'] ?? $option['label'] ?? (string) $key,
+                                    'id'          => isset( $option['id'] ) ? (string) $option['id'] : (string) $key,
+                                    'optionLabel' => $option['label'] ?? $option['value'] ?? (string) $key,
+                                    'optionValue' => $option['value'] ?? $option['label'] ?? (string) $key,
                                 ];
                             }
                         }
@@ -585,13 +584,13 @@ class FluentForm extends Form
 
     private function flatpickr_to_date_fns_format( string $format ): string {
         $map = [
-            'Y' => 'yyyy',
-            'y' => 'yy',
+            'Y' => 'YYYY',
+            'y' => 'YY',
             'm' => 'MM',
             'n' => 'M',
             'M' => 'MMM',
             'F' => 'MMMM',
-            'd' => 'dd',
+            'd' => 'DD',
             'j' => 'd',
             'D' => 'EEE',
             'l' => 'EEEE',
@@ -603,7 +602,7 @@ class FluentForm extends Form
             'i' => 'mm',
             'S' => 'ss',
             's' => 'ss',
-            'K' => 'a',
+            'K' => 'A',
             'Z' => 'xxx',
         ];
 

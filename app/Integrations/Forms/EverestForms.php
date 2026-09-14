@@ -85,13 +85,13 @@ class EverestForms extends Form {
 
     private function php_to_date_fns_format( string $format ): string {
         $map = [
-            'Y' => 'yyyy',
-            'y' => 'yy',
+            'Y' => 'YYYY',
+            'y' => 'YY',
             'm' => 'MM',
             'n' => 'M',
             'M' => 'MMM',
             'F' => 'MMMM',
-            'd' => 'dd',
+            'd' => 'DD',
             'j' => 'd',
             'D' => 'EEE',
             'l' => 'EEEE',
@@ -101,8 +101,8 @@ class EverestForms extends Form {
             'g' => 'h',
             'i' => 'mm',
             's' => 'ss',
-            'A' => 'a',
-            'a' => 'aaa',
+            'A' => 'A',
+            'a' => 'A',
         ];
 
         $out = '';
@@ -470,9 +470,9 @@ class EverestForms extends Form {
 
                     foreach ( $field['options'] as $key => $option ) {
                         $items[] = [
-                            'id'    => (string) $key,
-                            'label' => is_string( $option ) ? $option : ( $option['label'] ?? '' ),
-                            'value' => is_string( $option ) ? $option : ( $option['value'] ?? '' ),
+                            'id'          => (string) $key,
+                            'optionLabel' => is_string( $option ) ? $option : ( $option['label'] ?? '' ),
+                            'optionValue' => is_string( $option ) ? $option : ( $option['value'] ?? '' ),
                         ];
                     }
 
@@ -501,7 +501,7 @@ class EverestForms extends Form {
                         $final_format = trim( $date_fns . ' ' . $time_fns );
                     } else {
                         $picker_type  = 'date';
-                        $final_format = $date_fns ?: 'yyyy-MM-dd';
+                        $final_format = $date_fns ?: 'YYYY-MM-DD';
                     }
 
                     $fdto->set_picker_type( $picker_type )->set_date_format( $final_format );

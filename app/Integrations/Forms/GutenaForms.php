@@ -570,9 +570,9 @@ class GutenaForms extends Form {
 
                     foreach ( $field['options'] as $key => $value ) {
                         $items[] = [
-                            'id'    => (string) $key,
-                            'label' => $value,
-                            'value' => $value,
+                            'id'          => (string) $key,
+                            'optionLabel' => $value,
+                            'optionValue' => $value,
                         ];
                     }
 

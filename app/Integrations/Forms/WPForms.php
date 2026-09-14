@@ -638,13 +638,13 @@ class WPForms extends Form {
 
                     foreach ( $field['choices'] as $key => $choice ) {
                         $items[] = [
-                            'id'    => (string) $key,
-                            'label' => $choice['label'] ?? '',
+                            'id'          => (string) $key,
+                            'optionLabel' => $choice['label'] ?? '',
                             // Hand the app the token WPForms will actually
                             // accept back. Reading $choice['value'] blindly
                             // yields an empty string on any field that doesn't
                             // use explicit values, which is most of them.
-                            'value' => $this->expected_choice_token( $field, (array) $choice, $key ),
+                            'optionValue' => $this->expected_choice_token( $field, (array) $choice, $key ),
                         ];
                     }
 
@@ -662,7 +662,7 @@ class WPForms extends Form {
 
                 if ( $std_type === 'date_time_picker' ) {
                     $fdto->set_picker_type( 'date' )
-                        ->set_date_format( 'yyyy-MM-dd' );
+                        ->set_date_format( 'YYYY-MM-DD' );
                 }
 
                 $field_dtos[] = $fdto;

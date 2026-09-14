@@ -618,9 +618,9 @@ class ContactForm7 extends Form {
 
                         foreach ( $tag->values as $key => $value ) {
                             $items[] = [
-                                'id'    => (string) $key,
-                                'label' => $tag->labels[$key] ?? $value,
-                                'value' => $value,
+                                'id'          => (string) $key,
+                                'optionLabel' => $tag->labels[$key] ?? $value,
+                                'optionValue' => $value,
                             ];
                         }
 

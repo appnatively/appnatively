@@ -52,21 +52,23 @@ class FormFieldDTO extends DTO {
     private ?string $confirm_placeholder = null;
 
     private static array $universal_properties = [
-        'id', 'type', 'required', 'label', 'field_name', 'placeholder',
+        'id', 'fieldType', 'isRequired', 'fieldLabel', 'submissionKey', 'placeholderText', 'leadingIcon',
     ];
 
     private static array $type_property_map = [
-        'text'             => ['character_limit'],
-        'email'            => [],
-        'url'              => [],
-        'number'           => ['min_length', 'max_length'],
-        'checkbox'         => ['items'],
-        'radio'            => ['items'],
-        'single_select'    => ['items'],
-        'date_time_picker' => ['picker_type', 'date_format'],
-        'password'         => ['min_length', 'show_confirmation', 'confirm_label', 'confirm_placeholder'],
-        'range'            => ['range_mode', 'min_value', 'max_value', 'range_step'],
-        'rating'           => ['rating_max', 'rating_icon_name'],
+        'text'             => ['minimumTextLength', 'maximumCharacterCount'],
+        'email'            => ['minimumTextLength', 'maximumTextLength'],
+        'url'              => ['minimumTextLength', 'maximumTextLength'],
+        'number'           => ['minimumValue', 'maximumValue'],
+        'checkbox'         => ['options'],
+        'radio'            => ['options'],
+        'single_select'    => ['options'],
+        'multi_select'     => ['options'],
+        'date_time_picker' => ['dateTimeMode', 'submittedDateTimeFormat'],
+        'password'         => ['minimumTextLength', 'maximumTextLength', 'showConfirmationField', 'confirmationLabel', 'confirmationPlaceholder'],
+        'range'            => ['rangeSelectionMode', 'minimumValue', 'maximumValue', 'valueStep'],
+        'rating'           => ['maximumRating', 'ratingIcon'],
+        'switch'           => [],
         'gdpr'             => [],
     ];
 
@@ -142,14 +144,7 @@ class FormFieldDTO extends DTO {
     }
 
     public function set_items( array $items ): self {
-        $this->items = array_map(
-            function ( $item ) {
-                if ( empty( $item['value'] ) && ! empty( $item['label'] ) ) {
-                      $item['value'] = $item['label'];
-                }
-                return $item;
-            }, $items 
-        );
+        $this->items = $items;
         return $this;
     }
 
@@ -283,14 +278,39 @@ class FormFieldDTO extends DTO {
         $data = parent::to_array();
         $type = $data['type'] ?? '';
 
+        $mapped = [
+            'id'                      => $data['id'] ?? null,
+            'fieldType'               => $type,
+            'isRequired'              => $data['required'] ?? null,
+            'fieldLabel'              => $data['label'] ?? null,
+            'submissionKey'           => $data['field_name'] ?? null,
+            'placeholderText'         => $data['placeholder'] ?? null,
+            'leadingIcon'             => $data['icon_name'] ?? null,
+            'options'                 => $data['items'] ?? [],
+            'rangeSelectionMode'      => $data['range_mode'] ?? null,
+            'minimumValue'            => $data['min_value'] ?? null,
+            'maximumValue'            => $data['max_value'] ?? null,
+            'valueStep'               => $data['range_step'] ?? null,
+            'maximumRating'           => $data['rating_max'] ?? null,
+            'ratingIcon'              => $data['rating_icon_name'] ?? null,
+            'dateTimeMode'            => $data['picker_type'] ?? null,
+            'submittedDateTimeFormat' => $data['date_format'] ?? null,
+            'maximumCharacterCount'   => $data['character_limit'] ?? null,
+            'minimumTextLength'       => $data['min_length'] ?? null,
+            'maximumTextLength'       => $data['max_length'] ?? null,
+            'showConfirmationField'   => $data['show_confirmation'] ?? null,
+            'confirmationLabel'       => $data['confirm_label'] ?? null,
+            'confirmationPlaceholder' => $data['confirm_placeholder'] ?? null,
+        ];
+
         $allowed = self::$universal_properties;
         if ( isset( self::$type_property_map[$type] ) ) {
             $allowed = array_merge( $allowed, self::$type_property_map[$type] );
         }
 
         return array_filter(
-            array_intersect_key( $data, array_flip( $allowed ) ),
-            fn( $value ) => $value !== null
+            array_intersect_key( $mapped, array_flip( $allowed ) ),
+            fn( $value ) => $value !== null && $value !== []
         );
     }
 }

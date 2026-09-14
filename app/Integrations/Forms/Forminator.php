@@ -457,15 +457,15 @@ class Forminator extends Form {
                     foreach ( $field['options'] as $key => $option ) {
                         if ( is_string( $option ) ) {
                             $items[] = [
-                                'id'    => (string) $key,
-                                'label' => $option,
-                                'value' => $option,
+                                'id'          => (string) $key,
+                                'optionLabel' => $option,
+                                'optionValue' => $option,
                             ];
                         } elseif ( is_array( $option ) ) {
                             $items[] = [
-                                'id'    => $option['value'] ?? (string) $key,
-                                'label' => $option['label'] ?? '',
-                                'value' => $option['value'] ?? '',
+                                'id'          => $option['value'] ?? (string) $key,
+                                'optionLabel' => $option['label'] ?? '',
+                                'optionValue' => $option['value'] ?? '',
                             ];
                         }
                     }
@@ -489,9 +489,9 @@ class Forminator extends Form {
 
                 if ( $std_type === 'date_time_picker' ) {
                     if ( ( $field['type'] ?? '' ) === 'time' ) {
-                        $fdto->set_picker_type( 'time' )->set_date_format( 'hh:mm a' );
+                        $fdto->set_picker_type( 'time' )->set_date_format( 'hh:mm A' );
                     } else {
-                        $fdto->set_picker_type( 'date' )->set_date_format( 'yyyy-MM-dd' );
+                        $fdto->set_picker_type( 'date' )->set_date_format( 'YYYY-MM-DD' );
                     }
                 }
 

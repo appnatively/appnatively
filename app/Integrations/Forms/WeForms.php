@@ -349,9 +349,9 @@ class WeForms extends Form {
 
                     foreach ( $field['options'] as $key => $option ) {
                         $items[] = [
-                            'id'    => (string) $key,
-                            'label' => $option,
-                            'value' => $option,
+                            'id'          => (string) $key,
+                            'optionLabel' => $option,
+                            'optionValue' => $option,
                         ];
                     }
 
@@ -363,7 +363,7 @@ class WeForms extends Form {
                 }
 
                 if ( $std_type === 'date_time_picker' ) {
-                    $fdto->set_picker_type( 'date' )->set_date_format( 'yyyy-MM-dd' );
+                    $fdto->set_picker_type( 'date' )->set_date_format( 'YYYY-MM-DD' );
                 }
 
                 $field_dtos[] = $fdto;

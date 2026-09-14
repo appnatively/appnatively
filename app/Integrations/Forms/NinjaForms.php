@@ -194,9 +194,9 @@ class NinjaForms extends Form {
         foreach ( $options as $key => $option ) {
             $option  = (array) $option;
             $items[] = [
-                'id'    => isset( $option['value'] ) ? (string) $option['value'] : (string) $key,
-                'label' => $option['label'] ?? '',
-                'value' => $option['value'] ?? ( $option['label'] ?? '' ),
+                'id'          => isset( $option['value'] ) ? (string) $option['value'] : (string) $key,
+                'optionLabel' => $option['label'] ?? '',
+                'optionValue' => $option['value'] ?? ( $option['label'] ?? '' ),
             ];
         }
 

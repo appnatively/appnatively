@@ -249,9 +249,9 @@ class BitForm extends Form {
         if ( in_array( $native_type, ['radio', 'check'], true ) && ! empty( $field->opt ) ) {
             foreach ( (array) $field->opt as $key => $opt ) {
                 $items[] = [
-                    'id'    => (string) $key,
-                    'label' => $opt->lbl ?? '',
-                    'value' => $opt->val ?? ( $opt->lbl ?? '' ),
+                    'id'          => (string) $key,
+                    'optionLabel' => $opt->lbl ?? '',
+                    'optionValue' => $opt->val ?? ( $opt->lbl ?? '' ),
                 ];
             }
             // optionsList is Bit Form's own property name, so it stays as-is.
@@ -265,9 +265,9 @@ class BitForm extends Form {
 
                 foreach ( (array) $options as $key => $opt ) {
                     $items[] = [
-                        'id'    => (string) $key,
-                        'label' => $opt->lbl ?? '',
-                        'value' => $opt->val ?? ( $opt->lbl ?? '' ),
+                        'id'          => (string) $key,
+                        'optionLabel' => $opt->lbl ?? '',
+                        'optionValue' => $opt->val ?? ( $opt->lbl ?? '' ),
                     ];
                 }
             }
