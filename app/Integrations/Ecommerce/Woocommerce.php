@@ -56,6 +56,10 @@ class Woocommerce extends Provider {
      * @return void
      */
     public function boot() {
+        if ( ! $this->is_loaded() ) {
+            return;
+        }
+
         add_filter( "craf_appna_ecommerce_woocommerce_products", [$this, "products"], 10, 3 );
         add_filter( "craf_appna_ecommerce_woocommerce_wishlist", [$this, "wishlist"], 10, 3 );
         add_filter( "craf_appna_ecommerce_woocommerce_products_filters", [$this, "products_filters"], 10, 2 );
@@ -76,6 +80,10 @@ class Woocommerce extends Provider {
         add_filter( "craf_appna_ecommerce_woocommerce_orders_get", [$this, "orders_get"], 10, 2 );
         add_filter( "craf_appna_ecommerce_woocommerce_order_get", [$this, "order_get"], 10, 3 );  
         add_filter( "craf_appna_shop_data", [$this, "shop_data"] );      
+    }
+
+    private function is_loaded(): bool {
+        return class_exists( "WooCommerce" ) || function_exists( "WC" );
     }
 
     public function shop_data() {

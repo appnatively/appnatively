@@ -395,7 +395,7 @@ class GeoDirectory extends Provider {
             }
         }
 
-        $seen = [];
+        $seen   = [];
         $images = array_values(
             array_filter(
                 $images,
@@ -411,9 +411,9 @@ class GeoDirectory extends Provider {
         );
 
         if ( $exclude_cover ) {
-            $cover = $this->get_listing_image( $post_id );
+            $cover     = $this->get_listing_image( $post_id );
             $cover_key = $cover ? (string) ( $cover["id"] ?: $cover["src"] ) : "";
-            $images = array_values(
+            $images    = array_values(
                 array_filter(
                     $images,
                     fn( array $image ): bool => "" === $cover_key || (string) ( $image["id"] ?: $image["src"] ) !== $cover_key

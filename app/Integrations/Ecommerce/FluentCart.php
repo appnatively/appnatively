@@ -50,6 +50,10 @@ class FluentCart extends Provider {
      * @return void
      */
     public function boot(): void {
+        if ( ! $this->is_loaded() ) {
+            return;
+        }
+
         add_filter( "craf_appna_ecommerce_fluent-cart_products", [ $this, "products" ], 10, 3 );
         add_filter( "craf_appna_ecommerce_fluent-cart_wishlist", [ $this, "wishlist" ], 10, 3 );
         add_filter( "craf_appna_ecommerce_fluent-cart_product", [ $this, "product" ], 10, 3 );
@@ -69,6 +73,10 @@ class FluentCart extends Provider {
         add_filter( "craf_appna_ecommerce_fluent-cart_orders_get", [ $this, "orders_get" ], 10, 2 );
         add_filter( "craf_appna_ecommerce_fluent-cart_order_get", [ $this, "order_get" ], 10, 3 );
         add_filter( "craf_appna_shop_data", [ $this, "shop_data" ] );
+    }
+
+    private function is_loaded(): bool {
+        return defined( "FLUENTCART_VERSION" ) || class_exists( CurrencySettings::class );
     }
 
     /**

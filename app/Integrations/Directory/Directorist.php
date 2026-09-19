@@ -34,6 +34,10 @@ class Directorist extends Provider {
      * @return void
      */
     public function boot(): void {
+        if ( ! $this->is_loaded() ) {
+            return;
+        }
+
         add_filter( "craf_appna_directory_directorist_listings", [$this, "listings"], 10, 3 );
         add_filter( "craf_appna_directory_directorist_listing", [$this, "listing"], 10, 3 );
         add_filter( "craf_appna_directory_directorist_related_listings", [$this, "related_listings"], 10, 3 );
@@ -44,6 +48,15 @@ class Directorist extends Provider {
         add_filter( "craf_appna_directory_directorist_tags", [$this, "tags"], 10, 3 );
         add_filter( "craf_appna_directory_directorist_locations", [$this, "locations"], 10, 3 );
         add_filter( "craf_appna_directory_directorist_location", [$this, "location"], 10, 3 );
+    }
+
+    /**
+     * Determine whether Directorist is active.
+     *
+     * @return bool
+     */
+    private function is_loaded(): bool {
+        return defined( "ATBDP_VERSION" ) || class_exists( Helper::class );
     }
 
     /**
