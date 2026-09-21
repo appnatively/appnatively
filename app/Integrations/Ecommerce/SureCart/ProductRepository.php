@@ -288,6 +288,10 @@ class ProductRepository {
             $dto->set_description( (string) ( $product->description ?? '' ) );
         }
 
+        if ( in_array( 'short_description', $fields, true ) ) {
+            $dto->set_short_description( (string) get_post_field( 'post_excerpt', $post_id ) );
+        }
+
         if ( in_array( 'status', $fields, true ) ) {
             $dto->set_status( (string) ( get_post_status( $post_id ) ?: 'publish' ) );
         }
