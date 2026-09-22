@@ -137,15 +137,32 @@ class Woocommerce extends Provider {
         $product_id = (int) craf_appna_route_param( $request, 'id' );
         $page       = max( 1, (int) ( $request->get_param( 'page' ) ?: 1 ) );
         $per_page   = min( 100, max( 1, (int) ( $request->get_param( 'per_page' ) ?: 10 ) ) );
+        $rating     = (int) $request->get_param( 'rating' );
+        $rating     = $rating >= 1 && $rating <= 5 ? $rating : 0;
+        $orderby    = (string) ( $request->get_param( 'orderby' ) ?: 'newest' );
         $product    = wc_get_product( $product_id );
         if ( ! $product ) {
             return [ 'current_page' => 1, 'last_page' => 1, 'per_page' => $per_page, 'total' => 0, 'average_rating' => 0, 'review_count' => 0, 'rating_counts' => [], 'items' => [] ]; }
-        $comments = get_comments( [ 'post_id' => $product_id, 'status' => 'approve', 'type' => 'review', 'number' => $per_page, 'paged' => $page ] );
-        $total    = (int) get_comments( [ 'post_id' => $product_id, 'status' => 'approve', 'type' => 'review', 'count' => true ] );
-        $items    = array_map( static function ( $comment ) { return [ 'id' => $comment->comment_ID, 'reviewer' => $comment->comment_author, 'review' => $comment->comment_content, 'rating' => (float) get_comment_meta( $comment->comment_ID, 'rating', true ), 'date_created' => $comment->comment_date_gmt ?: $comment->comment_date, 'avatar_url' => get_avatar_url( $comment->comment_author_email ) ]; }, $comments );
-        $counts   = [ '1' => 0, '2' => 0, '3' => 0, '4' => 0, '5' => 0 ];
-        foreach ( $items as $item ) {
-            $bucket = (string) round( (float) $item['rating'] ); if ( isset( $counts[ $bucket ] ) ) {
+        $base_args   = [ 'post_id' => $product_id, 'status' => 'approve', 'type' => 'review' ];
+        $filter_args = [];
+        if ( $rating ) {
+            $filter_args['meta_query'] = [ [ 'key' => 'rating', 'value' => $rating, 'compare' => '=', 'type' => 'NUMERIC' ] ];
+        }
+        $sort_args = [ 'orderby' => 'comment_date_gmt', 'order' => 'DESC' ];
+        if ( 'rating_desc' === $orderby || 'rating_asc' === $orderby ) {
+            $sort_args = [
+                'meta_key' => 'rating',
+                'orderby'  => [ 'meta_value_num' => 'rating_desc' === $orderby ? 'DESC' : 'ASC', 'comment_date_gmt' => 'DESC' ],
+            ];
+        }
+        $query_args     = array_merge( $base_args, $filter_args );
+        $comments       = get_comments( array_merge( $query_args, $sort_args, [ 'number' => $per_page, 'paged' => $page ] ) );
+        $total          = (int) get_comments( array_merge( $query_args, [ 'count' => true ] ) );
+        $items          = array_map( static function ( $comment ) { return [ 'id' => $comment->comment_ID, 'reviewer' => $comment->comment_author, 'review' => $comment->comment_content, 'rating' => (float) get_comment_meta( $comment->comment_ID, 'rating', true ), 'date_created' => $comment->comment_date_gmt ?: $comment->comment_date, 'avatar_url' => get_avatar_url( $comment->comment_author_email ) ]; }, $comments );
+        $counts         = [ '1' => 0, '2' => 0, '3' => 0, '4' => 0, '5' => 0 ];
+        $all_review_ids = get_comments( array_merge( $base_args, [ 'fields' => 'ids' ] ) );
+        foreach ( $all_review_ids as $comment_id ) {
+            $bucket = (string) round( (float) get_comment_meta( $comment_id, 'rating', true ) ); if ( isset( $counts[ $bucket ] ) ) {
                 $counts[ $bucket ]++; } }
         return [ 'current_page' => $page, 'last_page' => max( 1, (int) ceil( $total / $per_page ) ), 'per_page' => $per_page, 'total' => $total, 'average_rating' => (float) $product->get_average_rating(), 'review_count' => (int) $product->get_review_count(), 'rating_counts' => $counts, 'items' => $items ];
     }

@@ -155,6 +155,8 @@ class ListingController extends Controller {
                 "id"          => "required|numeric",
                 "page"        => "nullable|integer|min:1",
                 "per_page"    => "nullable|integer|min:1|max:100",
+                "rating"      => "nullable|integer|min:1|max:5",
+                "orderby"     => "nullable|string|in:newest,rating_desc,rating_asc",
                 "integration" => "required|string|in:" . implode( ",", craf_appna_get_directory_integrations() ),
             ]
         );

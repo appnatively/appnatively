@@ -514,42 +514,33 @@ class ADirectory extends Provider {
     }
 
     private function query_comment_reviews( int $listing_id, Request $request ): array {
-        $page     = (int) $request->get_param( "page" ) ?: 1;
-        $per_page = (int) $request->get_param( "per_page" ) ?: 10;
-        $base     = [
+        $base  = [
             "post_id" => $listing_id,
             "status"  => "approve",
             "parent"  => 0,
         ];
-
-        $total    = (int) get_comments( array_merge( $base, ["count" => true] ) );
-        $comments = get_comments(
-            array_merge(
-                $base, [
-                    "number"  => $per_page,
-                    "offset"  => ( $page - 1 ) * $per_page,
-                    "orderby" => "comment_date_gmt",
-                    "order"   => "DESC",
-                ]
-            )
+        $query = $this->query_directory_review_rows(
+            $base,
+            $request,
+            fn( WP_Comment $comment ): float => $this->get_comment_rating( (int) $comment->comment_ID )
         );
+        $review_count = (int) get_comments( array_merge( $base, ["count" => true] ) );
 
         $items = [];
-        foreach ( $comments as $comment ) {
-            $rating  = $this->get_comment_rating( (int) $comment->comment_ID );
-            $items[] = $this->map_review_comment( $comment, $rating );
+        foreach ( $query["rows"] as $row ) {
+            $items[] = $this->map_review_comment( $row["comment"], $row["rating"] );
         }
 
         $rating_counts = $this->get_review_rating_counts( $listing_id );
         $average       = $this->calculate_average_rating( $rating_counts );
 
         return [
-            "current_page"   => $page,
-            "per_page"       => $per_page,
-            "total"          => $total,
-            "last_page"      => max( 1, (int) ceil( $total / $per_page ) ),
+            "current_page"   => $query["current_page"],
+            "per_page"       => $query["per_page"],
+            "total"          => $query["total"],
+            "last_page"      => $query["last_page"],
             "average_rating" => $average,
-            "review_count"   => $total,
+            "review_count"   => $review_count,
             "rating_counts"  => $rating_counts,
             "items"          => $items,
         ];

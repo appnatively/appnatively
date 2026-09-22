@@ -74,4 +74,91 @@ class DirectoristTest extends DirectoryIntegrationTestCase {
         $this->assert_tag_collection( $this->integration );
         $this->assert_review_payload( $this->integration, $source_id );
     }
+
+    public function test_directorist_reviews_support_advanced_review_extension_storage(): void {
+        $source_id = $this->create_listing( $this->post_type, "Directorist Advanced Reviews" );
+
+        $this->create_review( $source_id, 5, "Excellent directorist review", "2024-01-01 10:00:00" );
+        $this->create_review( $source_id, 5, "Another excellent directorist review", "2024-01-02 10:00:00" );
+        $this->create_review( $source_id, 3, "Average directorist review", "2024-01-03 10:00:00" );
+
+        $reviews = apply_filters(
+            "craf_appna_directory_{$this->integration}_reviews",
+            null,
+            $this->create_request(
+                [
+                    "id"          => $source_id,
+                    "rating"      => 5,
+                    "page"        => 1,
+                    "per_page"    => 10,
+                    "integration" => $this->integration,
+                ]
+            )
+        );
+
+        $this->assertIsArray( $reviews );
+        $this->assertSame( 2, $reviews["total"] );
+        $this->assertCount( 2, $reviews["items"] );
+        $this->assertSame( [5.0, 5.0], array_column( $reviews["items"], "rating" ) );
+        $this->assertSame( 3, $reviews["review_count"] );
+        $this->assertSame( 2, $reviews["rating_counts"]["5"] );
+        $this->assertSame( 1, $reviews["rating_counts"]["3"] );
+        $this->assertSame( 4.3, $reviews["average_rating"] );
+    }
+
+    public function test_directorist_reviews_support_newest_and_rating_sort_orders(): void {
+        $source_id = $this->create_listing( $this->post_type, "Directorist Sorted Reviews" );
+
+        $this->create_review( $source_id, 1, "Old low directorist review", "2024-01-01 10:00:00" );
+        $this->create_review( $source_id, 5, "Middle high directorist review", "2024-01-02 10:00:00" );
+        $this->create_review( $source_id, 3, "Newest medium directorist review", "2024-01-03 10:00:00" );
+
+        $base_params = [
+            "id"          => $source_id,
+            "page"        => 1,
+            "per_page"    => 10,
+            "integration" => $this->integration,
+        ];
+
+        $newest = apply_filters(
+            "craf_appna_directory_{$this->integration}_reviews",
+            null,
+            $this->create_request( array_merge( $base_params, ["orderby" => "newest"] ) )
+        );
+        $highest = apply_filters(
+            "craf_appna_directory_{$this->integration}_reviews",
+            null,
+            $this->create_request( array_merge( $base_params, ["orderby" => "rating_desc"] ) )
+        );
+        $lowest = apply_filters(
+            "craf_appna_directory_{$this->integration}_reviews",
+            null,
+            $this->create_request( array_merge( $base_params, ["orderby" => "rating_asc"] ) )
+        );
+
+        $this->assertSame( ["Newest medium directorist review", "Middle high directorist review", "Old low directorist review"], array_column( $newest["items"], "review" ) );
+        $this->assertSame( [5.0, 3.0, 1.0], array_column( $highest["items"], "rating" ) );
+        $this->assertSame( [1.0, 3.0, 5.0], array_column( $lowest["items"], "rating" ) );
+    }
+
+    private function create_review( int $post_id, int $rating, string $content, string $date ): int {
+        $comment_id = wp_insert_comment(
+            [
+                "comment_post_ID"      => $post_id,
+                "comment_author"       => "Directorist Reviewer {$rating}",
+                "comment_author_email" => "directorist-reviewer-" . md5( $content ) . "@example.com",
+                "comment_content"      => $content,
+                "comment_approved"     => 1,
+                "comment_type"         => "review",
+                "comment_parent"       => 0,
+                "comment_date"         => $date,
+                "comment_date_gmt"     => get_gmt_from_date( $date ),
+            ]
+        );
+
+        update_comment_meta( $comment_id, "rating", $rating );
+        update_comment_meta( $comment_id, "title", "Review title {$rating}" );
+
+        return (int) $comment_id;
+    }
 }

@@ -13,6 +13,7 @@ use Crafium\AppNatively\App\DTO\Directory\TermPaginatorDTO;
 use Crafium\AppNatively\App\Integrations\Directory\Concerns\ListingIntegrationHelpers;
 use Crafium\AppNatively\WpMVC\Contracts\Provider;
 use Crafium\AppNatively\WpMVC\RequestValidator\Request;
+use WP_Comment;
 use WP_Post;
 use WP_Query;
 
@@ -676,50 +677,51 @@ class GeoDirectory extends Provider {
     }
 
     private function query_comment_reviews( int $listing_id, Request $request, array $rating_meta_keys ): array {
-        $page          = (int) $request->get_param( "page" ) ?: 1;
-        $per_page      = (int) $request->get_param( "per_page" ) ?: 10;
         $base          = [
             "post_id" => $listing_id,
             "status"  => "approve",
         ];
-        $total         = (int) get_comments( array_merge( $base, ["count" => true] ) );
-        $comments      = get_comments(
-            array_merge(
-                $base,
-                [
-                    "number"  => $per_page,
-                    "offset"  => ( $page - 1 ) * $per_page,
-                    "orderby" => "comment_date_gmt",
-                    "order"   => "DESC",
-                ]
-            )
+        $query         = $this->query_directory_review_rows(
+            $base,
+            $request,
+            fn( WP_Comment $comment ): float => $this->get_comment_rating( (int) $comment->comment_ID, $rating_meta_keys )
         );
         $items         = [];
+        $review_count  = (int) get_comments( array_merge( $base, ["count" => true] ) );
+
+        foreach ( $query["rows"] as $row ) {
+            $items[] = $this->map_review_comment( $row["comment"], $row["rating"] );
+        }
+
+        $stored_rating_counts = $this->get_stored_review_rating_counts( $listing_id );
+        $rating_counts        = null !== $stored_rating_counts
+            ? $stored_rating_counts
+            : $this->get_review_rating_counts( $listing_id, $rating_meta_keys );
+
+        return [
+            "current_page"   => $query["current_page"],
+            "per_page"       => $query["per_page"],
+            "total"          => $query["total"],
+            "last_page"      => $query["last_page"],
+            "average_rating" => $this->get_rating( $listing_id ),
+            "review_count"   => $review_count,
+            "rating_counts"  => $rating_counts,
+            "items"          => $items,
+        ];
+    }
+
+    private function get_review_rating_counts( int $listing_id, array $rating_meta_keys ): array {
         $rating_counts = $this->empty_rating_counts();
+        $comments      = get_comments( ["post_id" => $listing_id, "status" => "approve"] );
 
         foreach ( $comments as $comment ) {
             $rating = $this->get_comment_rating( (int) $comment->comment_ID, $rating_meta_keys );
             if ( $rating > 0 ) {
                 $rating_counts[(string) max( 1, min( 5, (int) round( $rating ) ) )]++;
             }
-            $items[] = $this->map_review_comment( $comment, $rating );
         }
 
-        $stored_rating_counts = $this->get_stored_review_rating_counts( $listing_id );
-        if ( null !== $stored_rating_counts ) {
-            $rating_counts = $stored_rating_counts;
-        }
-
-        return [
-            "current_page"   => $page,
-            "per_page"       => $per_page,
-            "total"          => $total,
-            "last_page"      => max( 1, (int) ceil( $total / $per_page ) ),
-            "average_rating" => $this->get_rating( $listing_id ),
-            "review_count"   => $total,
-            "rating_counts"  => $rating_counts,
-            "items"          => $items,
-        ];
+        return $rating_counts;
     }
 
     private function map_review_comment( $comment, float $rating ): array {

@@ -15,6 +15,7 @@ use Crafium\AppNatively\App\Models\Term;
 use Crafium\AppNatively\WpMVC\Contracts\Provider;
 use Crafium\AppNatively\WpMVC\RequestValidator\Request;
 use Directorist\Helper;
+use WP_Comment;
 use WP_Post;
 use WP_Query;
 
@@ -322,8 +323,6 @@ class Directorist extends Provider {
      */
     public function reviews( ?array $reviews, Request $request ): ?array {
         $listing_id = (int) craf_appna_route_param( $request, "id" );
-        $page       = (int) $request->get_param( "page" ) ?: 1;
-        $per_page   = (int) $request->get_param( "per_page" ) ?: 10;
         $post_type  = $this->get_post_type();
         $post       = get_post( $listing_id );
 
@@ -335,46 +334,38 @@ class Directorist extends Provider {
             "post_id" => $listing_id,
             "status"  => "approve",
             "type"    => "review",
+            "parent"  => 0,
         ];
 
-        $total = (int) get_comments(
-            array_merge(
-                $base_args,
-                [
-                    "count" => true,
-                ]
-            )
+        $query = $this->query_directory_review_rows(
+            $base_args,
+            $request,
+            fn( WP_Comment $comment ): float => (float) get_comment_meta( $comment->comment_ID, "rating", true )
         );
 
-        $comments = get_comments(
-            array_merge(
-                $base_args,
-                [
-                    "number"  => $per_page,
-                    "offset"  => ( $page - 1 ) * $per_page,
-                    "orderby" => "comment_date_gmt",
-                    "order"   => "DESC",
-                ]
-            )
-        );
-
-        $rating_counts = $this->get_review_rating_counts( $listing_id );
-        $average       = function_exists( "directorist_get_listing_rating" )
+        $rating_counts      = $this->get_review_rating_counts( $listing_id );
+        $calculated_average = $this->calculate_average_rating( $rating_counts );
+        $average            = function_exists( "directorist_get_listing_rating" )
             ? (float) directorist_get_listing_rating( $listing_id )
-            : $this->calculate_average_rating( $rating_counts );
-        $review_count  = function_exists( "directorist_get_listing_review_count" )
-            ? (int) directorist_get_listing_review_count( $listing_id )
-            : $total;
+            : $calculated_average;
+        $raw_review_count   = (int) get_comments( array_merge( $base_args, ["count" => true] ) );
+        $review_count       = function_exists( "directorist_get_listing_review_count" )
+            ? max( (int) directorist_get_listing_review_count( $listing_id ), $raw_review_count )
+            : $raw_review_count;
+
+        if ( $average <= 0 && $calculated_average > 0 ) {
+            $average = $calculated_average;
+        }
 
         return [
-            "current_page"   => $page,
-            "per_page"       => $per_page,
-            "total"          => $total,
-            "last_page"      => max( 1, (int) ceil( $total / $per_page ) ),
+            "current_page"   => $query["current_page"],
+            "per_page"       => $query["per_page"],
+            "total"          => $query["total"],
+            "last_page"      => $query["last_page"],
             "average_rating" => $average,
             "review_count"   => $review_count,
             "rating_counts"  => $rating_counts,
-            "items"          => array_map( [$this, "map_review_comment"], $comments ),
+            "items"          => array_map( fn( array $row ): array => $this->map_review_comment( $row["comment"] ), $query["rows"] ),
         ];
     }
 
@@ -1138,7 +1129,9 @@ class Directorist extends Provider {
                 $normalized[$rating] = (int) ( $counts[$rating] ?? 0 );
             }
 
-            return $normalized;
+            if ( array_sum( $normalized ) > 0 ) {
+                return $normalized;
+            }
         }
 
         $comments = get_comments(
@@ -1146,11 +1139,15 @@ class Directorist extends Provider {
                 "post_id" => $listing_id,
                 "status"  => "approve",
                 "type"    => "review",
+                "parent"  => 0,
             ]
         );
 
         foreach ( $comments as $comment ) {
             $rating = (int) round( (float) get_comment_meta( $comment->comment_ID, "rating", true ) );
+            if ( $rating <= 0 ) {
+                continue;
+            }
             $rating = max( 1, min( 5, $rating ) );
             $normalized[(string) $rating]++;
         }

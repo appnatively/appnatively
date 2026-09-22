@@ -87,6 +87,26 @@ class WoocommerceTest extends \WP_UnitTestCase
         return new Request( $wp_request );
     }
 
+    private function create_product_review( int $rating, string $content, string $date ): int {
+        $comment_id = wp_insert_comment(
+            [
+                'comment_post_ID'      => $this->simple_product_id,
+                'comment_author'       => "Reviewer {$rating}",
+                'comment_author_email' => "reviewer{$rating}" . md5( $content ) . '@example.com',
+                'comment_content'      => $content,
+                'comment_approved'     => 1,
+                'comment_type'         => 'review',
+                'comment_date'         => $date,
+                'comment_date_gmt'     => get_gmt_from_date( $date ),
+            ]
+        );
+
+        update_comment_meta( $comment_id, 'rating', $rating );
+        wp_update_comment_count( $this->simple_product_id );
+
+        return (int) $comment_id;
+    }
+
     public function test_products_returns_seeded_product() {
         $woocommerce = new Woocommerce();
         $request     = $this->build_request( [ 'page' => 1, 'per_page' => 10 ] );
@@ -156,6 +176,38 @@ class WoocommerceTest extends \WP_UnitTestCase
 
         $this->expectException( Exception::class );
         $woocommerce->category( null, $request, [ 'id' ] );
+    }
+
+    public function test_product_reviews_filters_by_exact_rating_and_keeps_product_wide_counts() {
+        $this->create_product_review( 5, 'Excellent review', '2024-01-01 10:00:00' );
+        $this->create_product_review( 5, 'Another excellent review', '2024-01-02 10:00:00' );
+        $this->create_product_review( 3, 'Average review', '2024-01-03 10:00:00' );
+
+        $woocommerce = new Woocommerce();
+        $reviews     = $woocommerce->product_reviews( null, $this->build_request( [ 'id' => $this->simple_product_id, 'rating' => 5, 'per_page' => 10 ] ) );
+
+        $this->assertSame( 2, $reviews['total'] );
+        $this->assertCount( 2, $reviews['items'] );
+        $this->assertSame( [ 5.0, 5.0 ], array_column( $reviews['items'], 'rating' ) );
+        $this->assertSame( 2, $reviews['rating_counts']['5'] );
+        $this->assertSame( 1, $reviews['rating_counts']['3'] );
+    }
+
+    public function test_product_reviews_supports_newest_and_rating_sort_orders() {
+        $this->create_product_review( 1, 'Old low review', '2024-01-01 10:00:00' );
+        $this->create_product_review( 5, 'Middle high review', '2024-01-02 10:00:00' );
+        $this->create_product_review( 3, 'Newest medium review', '2024-01-03 10:00:00' );
+
+        $woocommerce = new Woocommerce();
+        $base_params = [ 'id' => $this->simple_product_id, 'per_page' => 10 ];
+
+        $newest  = $woocommerce->product_reviews( null, $this->build_request( array_merge( $base_params, [ 'orderby' => 'newest' ] ) ) );
+        $highest = $woocommerce->product_reviews( null, $this->build_request( array_merge( $base_params, [ 'orderby' => 'rating_desc' ] ) ) );
+        $lowest  = $woocommerce->product_reviews( null, $this->build_request( array_merge( $base_params, [ 'orderby' => 'rating_asc' ] ) ) );
+
+        $this->assertSame( [ 'Newest medium review', 'Middle high review', 'Old low review' ], array_column( $newest['items'], 'review' ) );
+        $this->assertSame( [ 5.0, 3.0, 1.0 ], array_column( $highest['items'], 'rating' ) );
+        $this->assertSame( [ 1.0, 3.0, 5.0 ], array_column( $lowest['items'], 'rating' ) );
     }
 
     public function test_cart_add_get_update_remove_clear() {
