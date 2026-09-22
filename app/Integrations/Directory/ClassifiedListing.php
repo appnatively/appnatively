@@ -293,6 +293,16 @@ class ClassifiedListing extends Provider {
         if ( in_array( "rating", $fields, true ) ) {
             $dto->set_rating( (float) $this->get_meta_value( $post->ID, ["average_rating", "_average_rating", "rating"] ) );
         }
+        if ( in_array( "review_count", $fields, true ) || in_array( "rating_count", $fields, true ) ) {
+            $review_count = $this->get_listing_review_count( (int) $post->ID );
+
+            if ( in_array( "review_count", $fields, true ) ) {
+                $dto->set_review_count( $review_count );
+            }
+            if ( in_array( "rating_count", $fields, true ) ) {
+                $dto->set_rating_count( $review_count );
+            }
+        }
         return $dto;
     }
 
@@ -505,7 +515,7 @@ class ClassifiedListing extends Provider {
             $request,
             fn( WP_Comment $comment ): float => $this->get_comment_rating( (int) $comment->comment_ID )
         );
-        $review_count = (int) get_comments( array_merge( $base, ["count" => true] ) );
+        $review_count = $this->get_listing_review_count( $listing_id );
         $items        = [];
 
         foreach ( $query["rows"] as $row ) {
@@ -517,6 +527,10 @@ class ClassifiedListing extends Provider {
         $average       = $this->calculate_average_rating( $rating_counts );
 
         return ["current_page" => $query["current_page"], "per_page" => $query["per_page"], "total" => $query["total"], "last_page" => $query["last_page"], "average_rating" => $average, "review_count" => $review_count, "rating_counts" => $rating_counts, "items" => $items];
+    }
+
+    private function get_listing_review_count( int $listing_id ): int {
+        return (int) get_comments( ["post_id" => $listing_id, "status" => "approve", "count" => true] );
     }
 
     private function get_review_rating_counts( int $listing_id ): array {

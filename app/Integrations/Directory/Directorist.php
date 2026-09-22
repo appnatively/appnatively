@@ -348,10 +348,7 @@ class Directorist extends Provider {
         $average            = function_exists( "directorist_get_listing_rating" )
             ? (float) directorist_get_listing_rating( $listing_id )
             : $calculated_average;
-        $raw_review_count   = (int) get_comments( array_merge( $base_args, ["count" => true] ) );
-        $review_count       = function_exists( "directorist_get_listing_review_count" )
-            ? max( (int) directorist_get_listing_review_count( $listing_id ), $raw_review_count )
-            : $raw_review_count;
+        $review_count       = $this->get_listing_review_count( $listing_id );
 
         if ( $average <= 0 && $calculated_average > 0 ) {
             $average = $calculated_average;
@@ -863,6 +860,16 @@ class Directorist extends Provider {
         if ( in_array( "rating", $fields, true ) ) {
             $dto->set_rating( $this->get_listing_rating( $listing->ID ) );
         }
+        if ( in_array( "review_count", $fields, true ) || in_array( "rating_count", $fields, true ) ) {
+            $review_count = $this->get_listing_review_count( (int) $listing->ID );
+
+            if ( in_array( "review_count", $fields, true ) ) {
+                $dto->set_review_count( $review_count );
+            }
+            if ( in_array( "rating_count", $fields, true ) ) {
+                $dto->set_rating_count( $review_count );
+            }
+        }
 
         return $dto;
     }
@@ -1058,6 +1065,20 @@ class Directorist extends Provider {
         }
 
         return (float) $this->get_meta_value( $listing_id, ["_directorist_listing_rating", "_average_rating", "average_rating", "_rating", "rating"] );
+    }
+
+    /**
+     * Get the approved review count for a listing.
+     *
+     * @param int $listing_id The listing ID.
+     * @return int
+     */
+    private function get_listing_review_count( int $listing_id ): int {
+        $raw_review_count = (int) get_comments( ["post_id" => $listing_id, "status" => "approve", "type" => "review", "parent" => 0, "count" => true] );
+
+        return function_exists( "directorist_get_listing_review_count" )
+            ? max( (int) directorist_get_listing_review_count( $listing_id ), $raw_review_count )
+            : $raw_review_count;
     }
 
     /**

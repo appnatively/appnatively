@@ -57,6 +57,10 @@ class ListingDTO extends DTO {
 
     private float $rating;
 
+    private int $rating_count = 0;
+
+    private int $review_count = 0;
+
     public function get_id(): int {
         return $this->id;
     }
@@ -274,6 +278,24 @@ class ListingDTO extends DTO {
 
     public function set_rating( float $rating ): self {
         $this->rating = $rating;
+        return $this;
+    }
+
+    public function get_rating_count(): int {
+        return $this->rating_count;
+    }
+
+    public function set_rating_count( int $rating_count ): self {
+        $this->rating_count = $rating_count;
+        return $this;
+    }
+
+    public function get_review_count(): int {
+        return $this->review_count;
+    }
+
+    public function set_review_count( int $review_count ): self {
+        $this->review_count = $review_count;
         return $this;
     }
 

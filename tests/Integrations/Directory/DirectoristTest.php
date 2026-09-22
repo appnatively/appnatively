@@ -120,7 +120,7 @@ class DirectoristTest extends DirectoryIntegrationTestCase {
             "integration" => $this->integration,
         ];
 
-        $newest = apply_filters(
+        $newest  = apply_filters(
             "craf_appna_directory_{$this->integration}_reviews",
             null,
             $this->create_request( array_merge( $base_params, ["orderby" => "newest"] ) )
@@ -130,7 +130,7 @@ class DirectoristTest extends DirectoryIntegrationTestCase {
             null,
             $this->create_request( array_merge( $base_params, ["orderby" => "rating_desc"] ) )
         );
-        $lowest = apply_filters(
+        $lowest  = apply_filters(
             "craf_appna_directory_{$this->integration}_reviews",
             null,
             $this->create_request( array_merge( $base_params, ["orderby" => "rating_asc"] ) )

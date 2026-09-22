@@ -43,6 +43,8 @@ class ListingController extends Controller {
         "locations",
         "tags",
         "rating",
+        "rating_count",
+        "review_count",
     ];
 
     /**

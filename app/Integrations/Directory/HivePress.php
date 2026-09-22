@@ -305,6 +305,16 @@ class HivePress extends Provider {
         if ( in_array( "rating", $fields, true ) ) {
             $dto->set_rating( $this->get_listing_aggregate_rating( (int) $post->ID, 0.0 ) );
         }
+        if ( in_array( "review_count", $fields, true ) || in_array( "rating_count", $fields, true ) ) {
+            $review_count = $this->get_listing_review_count( (int) $post->ID );
+
+            if ( in_array( "review_count", $fields, true ) ) {
+                $dto->set_review_count( $review_count );
+            }
+            if ( in_array( "rating_count", $fields, true ) ) {
+                $dto->set_rating_count( $review_count );
+            }
+        }
 
         return $dto;
     }
@@ -498,18 +508,18 @@ class HivePress extends Provider {
     }
 
     private function query_comment_reviews( int $listing_id, Request $request ): array {
-        $base  = [
+        $base         = [
             "post_id" => $listing_id,
             "status"  => "approve",
             "type"    => "hp_review",
             "parent"  => 0,
         ];
-        $query = $this->query_directory_review_rows(
+        $query        = $this->query_directory_review_rows(
             $base,
             $request,
             fn( WP_Comment $comment ): float => (float) $comment->comment_karma
         );
-        $review_count = (int) get_comments( array_merge( $base, ["count" => true] ) );
+        $review_count = $this->get_listing_review_count( $listing_id );
 
         $items = [];
 
@@ -530,6 +540,10 @@ class HivePress extends Provider {
             "rating_counts"  => $rating_counts,
             "items"          => $items,
         ];
+    }
+
+    private function get_listing_review_count( int $listing_id ): int {
+        return (int) get_comments( ["post_id" => $listing_id, "status" => "approve", "type" => "hp_review", "parent" => 0, "count" => true] );
     }
 
     private function get_review_rating_counts( int $listing_id ): array {

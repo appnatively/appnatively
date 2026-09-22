@@ -341,6 +341,16 @@ class GeoDirectory extends Provider {
         if ( in_array( "rating", $fields, true ) ) {
             $dto->set_rating( $this->get_rating( $post->ID ) );
         }
+        if ( in_array( "review_count", $fields, true ) || in_array( "rating_count", $fields, true ) ) {
+            $review_count = $this->get_listing_review_count( (int) $post->ID );
+
+            if ( in_array( "review_count", $fields, true ) ) {
+                $dto->set_review_count( $review_count );
+            }
+            if ( in_array( "rating_count", $fields, true ) ) {
+                $dto->set_rating_count( $review_count );
+            }
+        }
 
         return $dto;
     }
@@ -677,17 +687,17 @@ class GeoDirectory extends Provider {
     }
 
     private function query_comment_reviews( int $listing_id, Request $request, array $rating_meta_keys ): array {
-        $base          = [
+        $base         = [
             "post_id" => $listing_id,
             "status"  => "approve",
         ];
-        $query         = $this->query_directory_review_rows(
+        $query        = $this->query_directory_review_rows(
             $base,
             $request,
             fn( WP_Comment $comment ): float => $this->get_comment_rating( (int) $comment->comment_ID, $rating_meta_keys )
         );
-        $items         = [];
-        $review_count  = (int) get_comments( array_merge( $base, ["count" => true] ) );
+        $items        = [];
+        $review_count = $this->get_listing_review_count( $listing_id );
 
         foreach ( $query["rows"] as $row ) {
             $items[] = $this->map_review_comment( $row["comment"], $row["rating"] );
@@ -708,6 +718,10 @@ class GeoDirectory extends Provider {
             "rating_counts"  => $rating_counts,
             "items"          => $items,
         ];
+    }
+
+    private function get_listing_review_count( int $listing_id ): int {
+        return (int) get_comments( ["post_id" => $listing_id, "status" => "approve", "count" => true] );
     }
 
     private function get_review_rating_counts( int $listing_id, array $rating_meta_keys ): array {
