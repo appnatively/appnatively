@@ -62,7 +62,7 @@ class ProductRepository {
 
         $query->order_by( $sort_column, $sort_direction );
 
-        $paginator = $query->paginate( $page, $per_page );
+        $paginator = $query->paginate( $page, $per_page, 1 );
 
         $items = [];
         foreach ( $paginator->items() as $post ) {
@@ -122,7 +122,7 @@ class ProductRepository {
             ->select( $this->get_columns_from_fields( $fields ) )
             ->order_by( 'post_date', 'desc' );
 
-        $paginator = $query->paginate( $page, $per_page );
+        $paginator = $query->paginate( $page, $per_page, 1 );
         $items     = [];
 
         foreach ( $paginator->items() as $post ) {
@@ -782,7 +782,7 @@ class ProductRepository {
             $query->where( "terms.name", "like", "%$search%" );
         }
 
-        $paginator = $query->paginate( $page, $per_page );
+        $paginator = $query->paginate( $page, $per_page, 1 );
 
         $items = [];
         foreach ( $paginator->items() as $term ) {
