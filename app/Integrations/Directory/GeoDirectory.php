@@ -10,6 +10,8 @@ use Crafium\AppNatively\App\DTO\Directory\ListingDTO;
 use Crafium\AppNatively\App\DTO\Directory\ListingPaginatorDTO;
 use Crafium\AppNatively\App\DTO\Directory\TermDTO;
 use Crafium\AppNatively\App\DTO\Directory\TermPaginatorDTO;
+use Crafium\AppNatively\App\Integrations\Directory\Catalog\GeoDirectoryCatalog;
+use Crafium\AppNatively\App\Integrations\Directory\Catalog\ListingCatalog;
 use Crafium\AppNatively\App\Integrations\Directory\Concerns\ListingIntegrationHelpers;
 use Crafium\AppNatively\WpMVC\Contracts\Provider;
 use Crafium\AppNatively\WpMVC\RequestValidator\Request;
@@ -20,6 +22,8 @@ use WP_Query;
 class GeoDirectory extends Provider {
     use ListingIntegrationHelpers;
 
+    private ?GeoDirectoryCatalog $catalog = null;
+
     public function register() {}
 
     public function boot(): void {
@@ -27,7 +31,7 @@ class GeoDirectory extends Provider {
             return;
         }
 
-        add_filter( "craf_appna_directory_geodirectory_listings", [$this, "listings"], 10, 3 );
+        $this->register_listing_hooks( "geodirectory" );
         add_filter( "craf_appna_directory_geodirectory_listing", [$this, "listing"], 10, 3 );
         add_filter( "craf_appna_directory_geodirectory_related_listings", [$this, "related_listings"], 10, 3 );
         add_filter( "craf_appna_directory_geodirectory_reviews", [$this, "reviews"], 10, 2 );
@@ -36,10 +40,6 @@ class GeoDirectory extends Provider {
         add_filter( "craf_appna_directory_geodirectory_tags", [$this, "tags"], 10, 3 );
         add_filter( "craf_appna_directory_geodirectory_locations", [$this, "locations"], 10, 3 );
         add_filter( "craf_appna_directory_geodirectory_location", [$this, "location"], 10, 3 );
-    }
-
-    public function listings( ?ListingPaginatorDTO $listing_paginator, Request $request, array $fields = [] ): ListingPaginatorDTO {
-        return $this->query_listings( $request, $fields );
     }
 
     public function listing( ?ListingDTO $listing, Request $request, array $fields = [] ): ?ListingDTO {
@@ -91,30 +91,24 @@ class GeoDirectory extends Provider {
         return null;
     }
 
+    protected function catalog(): ListingCatalog {
+        return $this->catalog ??= new GeoDirectoryCatalog();
+    }
+
     private function is_loaded(): bool {
         return function_exists( "geodir_get_post_info" ) || function_exists( "geodir_get_posttypes" ) || class_exists( "GeoDirectory" );
     }
 
     private function post_type(): string {
-        if ( function_exists( "geodir_get_posttypes" ) ) {
-            $post_types = geodir_get_posttypes( "array" );
-            if ( is_array( $post_types ) && ! empty( $post_types ) ) {
-                $post_type = (string) array_key_first( $post_types );
-                if ( "" !== $post_type ) {
-                    return $post_type;
-                }
-            }
-        }
-
-        return "gd_place";
+        return $this->catalog()->post_types()[0];
     }
 
     private function category_taxonomy(): string {
-        return $this->post_type() . "category";
+        return $this->catalog()->category_taxonomy();
     }
 
     private function tag_taxonomy(): string {
-        return $this->post_type() . "_tags";
+        return (string) $this->catalog()->tag_taxonomy();
     }
 
     private function get_listing_post( int $listing_id ): ?WP_Post {
@@ -125,40 +119,6 @@ class GeoDirectory extends Provider {
         }
 
         return $post;
-    }
-
-    private function query_listings( Request $request, array $fields ): ListingPaginatorDTO {
-        $page     = (int) $request->get_param( "page" ) ?: 1;
-        $per_page = (int) $request->get_param( "per_page" ) ?: 10;
-        $args     = [
-            "post_type"      => $this->post_type(),
-            "post_status"    => "publish",
-            "has_password"   => false,
-            "paged"          => $page,
-            "posts_per_page" => $per_page,
-            "s"              => sanitize_text_field( (string) $request->get_param( "search" ) ),
-        ];
-
-        $this->apply_sort_args( $args, (string) $request->get_param( "sort" ) );
-        $this->apply_tax_filters( $args, $request );
-
-        if ( filter_var( (string) $request->get_param( "isFeatured" ), FILTER_VALIDATE_BOOLEAN ) ) {
-            $args["meta_query"][] = [
-                "key"   => "is_featured",
-                "value" => "1",
-            ];
-        }
-
-        $query = new WP_Query( $args );
-        $items = [];
-
-        foreach ( $query->posts as $post ) {
-            if ( $post instanceof WP_Post ) {
-                $items[] = $this->map_listing_to_dto( $post, $fields );
-            }
-        }
-
-        return new ListingPaginatorDTO( $page, $per_page, (int) $query->found_posts, max( 1, (int) $query->max_num_pages ), $items );
     }
 
     private function query_related_listings( int $listing_id, Request $request, array $fields ): ListingPaginatorDTO {
@@ -209,57 +169,6 @@ class GeoDirectory extends Provider {
         }
 
         return new ListingPaginatorDTO( $page, $per_page, (int) $query->found_posts, max( 1, (int) $query->max_num_pages ), $items );
-    }
-
-    private function apply_sort_args( array &$args, string $sort ): void {
-        $order_by = "date";
-        $order    = "DESC";
-
-        if ( "" !== $sort ) {
-            if ( 0 === strpos( $sort, "-" ) ) {
-                $order_by = ltrim( $sort, "-" );
-                $order    = "DESC";
-            } else {
-                $order_by = $sort;
-                $order    = "ASC";
-            }
-        }
-
-        $sort_map = [
-            "date"  => "date",
-            "title" => "title",
-            "name"  => "name",
-            "id"    => "ID",
-        ];
-
-        $args["orderby"] = $sort_map[$order_by] ?? "date";
-        $args["order"]   = $order;
-    }
-
-    private function apply_tax_filters( array &$args, Request $request ): void {
-        $tax_query = [];
-        $map       = [
-            "categories" => $this->category_taxonomy(),
-            "tags"       => $this->tag_taxonomy(),
-        ];
-
-        foreach ( $map as $request_key => $taxonomy ) {
-            $ids = $this->positive_ids( $request->get_param( $request_key ) );
-            if ( empty( $ids ) || ! taxonomy_exists( $taxonomy ) ) {
-                continue;
-            }
-
-            $tax_query[] = [
-                "taxonomy" => $taxonomy,
-                "field"    => "term_id",
-                "terms"    => $ids,
-            ];
-        }
-
-        if ( ! empty( $tax_query ) ) {
-            //phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_tax_query -- filtering listings by taxonomy is the point of this query.
-            $args["tax_query"] = $tax_query;
-        }
     }
 
     private function map_listing_to_dto( WP_Post $post, array $fields ): ListingDTO {

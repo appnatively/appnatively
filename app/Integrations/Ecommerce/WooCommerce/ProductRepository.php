@@ -14,9 +14,9 @@ use Crafium\AppNatively\App\DTO\Ecommerce\ProductPaginatorDTO;
 use Crafium\AppNatively\App\DTO\Ecommerce\ProductVariantDTO;
 use Crafium\AppNatively\App\DTO\Ecommerce\CategoryDTO;
 use Crafium\AppNatively\App\DTO\Ecommerce\CategoryPaginatorDTO;
-use Crafium\AppNatively\App\DTO\Ecommerce\ProductFilterSourceDTO;
-use Crafium\AppNatively\App\DTO\Ecommerce\ProductFiltersDTO;
-use Crafium\AppNatively\App\Integrations\Ecommerce\Catalog\ProductQuery;
+use Crafium\AppNatively\App\DTO\Filter\FilterSourceDTO;
+use Crafium\AppNatively\App\DTO\Filter\FiltersDTO;
+use Crafium\AppNatively\App\Filtering\CatalogQuery;
 use Crafium\AppNatively\App\Integrations\Ecommerce\Concerns\EcommerceIntegrationHelpers;
 use Crafium\AppNatively\WpMVC\Database\Query\Builder;
 use Crafium\AppNatively\WpMVC\RequestValidator\Request;
@@ -25,11 +25,11 @@ use Crafium\AppNatively\WpMVC\Exceptions\Exception;
 class ProductRepository {
     use EcommerceIntegrationHelpers;
 
-    /** Product lists and filter facets (see ProductQuery). */
-    private ProductQuery $query;
+    /** Product lists and filter facets (see CatalogQuery). */
+    private CatalogQuery $query;
 
     public function __construct() {
-        $this->query = new ProductQuery( new WooCommerceCatalog() );
+        $this->query = new CatalogQuery( new WooCommerceCatalog() );
     }
 
     /**
@@ -144,18 +144,18 @@ class ProductRepository {
     /**
      * The filters available for the current context, with per-option counts.
      *
-     * @param ProductFiltersDTO|null $product_filters
+     * @param FiltersDTO|null $product_filters
      * @param Request $request The REST request instance.
-     * @return ProductFiltersDTO
+     * @return FiltersDTO
      */
-    public function filters( ?ProductFiltersDTO $product_filters, Request $request ): ProductFiltersDTO {
+    public function filters( ?FiltersDTO $product_filters, Request $request ): FiltersDTO {
         return $this->query->filters( $request );
     }
 
     /**
      * What the app builder can offer as filter rows.
      *
-     * @return ProductFilterSourceDTO[]
+     * @return FilterSourceDTO[]
      */
     public function filter_sources(): array {
         return $this->query->filter_sources();
@@ -163,7 +163,7 @@ class ProductRepository {
 
     /**
      * Published, unprotected products, without catalog visibility: single fetches and
-     * saved wishlists reach a product hidden from the catalog (lists use ProductQuery).
+     * saved wishlists reach a product hidden from the catalog (lists use CatalogQuery).
      *
      * @return Builder
      */

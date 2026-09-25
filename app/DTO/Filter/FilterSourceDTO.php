@@ -1,20 +1,21 @@
 <?php
 
-namespace Crafium\AppNatively\App\DTO\Ecommerce;
+namespace Crafium\AppNatively\App\DTO\Filter;
 
 defined( "ABSPATH" ) || exit;
 
 use Crafium\AppNatively\App\DTO\DTO;
 
 /**
- * Something a merchant can add as a filter row in the app builder: a product
- * taxonomy, an attribute, or a custom field (meta key / ACF field).
+ * Something a merchant can add as a filter row in the app builder: a taxonomy,
+ * an attribute, or a custom field (an ACF field or meta key, or one the plugin
+ * defines itself).
  */
-class ProductFilterSourceDTO extends DTO {
-    /** `taxonomy`, `attribute` or `meta` — the builder row's filterSource. */
+class FilterSourceDTO extends DTO {
+    /** `taxonomy`, `attribute`, `meta` or `field` — the builder row's filterSource. */
     private string $source;
 
-    /** Taxonomy name, `pa_*` attribute or meta key — the builder row's filterKey. */
+    /** Taxonomy name, attribute taxonomy, meta key or field key — the builder row's filterKey. */
     private string $key;
 
     private string $label;
@@ -22,7 +23,7 @@ class ProductFilterSourceDTO extends DTO {
     /** `choice`, `number` or `boolean`: narrows which displays suit it. */
     private string $value_type;
 
-    /** Whether the store filters by it (custom fields must be allow-listed first). */
+    /** Whether the site filters by it (custom fields must be allow-listed first). */
     private bool $enabled;
 
     public function get_source(): string {

@@ -10,6 +10,8 @@ use Crafium\AppNatively\App\DTO\Directory\ListingDTO;
 use Crafium\AppNatively\App\DTO\Directory\ListingPaginatorDTO;
 use Crafium\AppNatively\App\DTO\Directory\TermDTO;
 use Crafium\AppNatively\App\DTO\Directory\TermPaginatorDTO;
+use Crafium\AppNatively\App\Integrations\Directory\Catalog\DirectoristCatalog;
+use Crafium\AppNatively\App\Integrations\Directory\Catalog\ListingCatalog;
 use Crafium\AppNatively\App\Integrations\Directory\Concerns\ListingIntegrationHelpers;
 use Crafium\AppNatively\App\Models\Term;
 use Crafium\AppNatively\WpMVC\Contracts\Provider;
@@ -21,6 +23,8 @@ use WP_Query;
 
 class Directorist extends Provider {
     use ListingIntegrationHelpers;
+
+    private ?DirectoristCatalog $catalog = null;
 
     /**
      * Register any application services.
@@ -39,7 +43,7 @@ class Directorist extends Provider {
             return;
         }
 
-        add_filter( "craf_appna_directory_directorist_listings", [$this, "listings"], 10, 3 );
+        $this->register_listing_hooks( "directorist" );
         add_filter( "craf_appna_directory_directorist_listing", [$this, "listing"], 10, 3 );
         add_filter( "craf_appna_directory_directorist_related_listings", [$this, "related_listings"], 10, 3 );
         add_filter( "craf_appna_directory_directorist_reviews", [$this, "reviews"], 10, 2 );
@@ -60,13 +64,17 @@ class Directorist extends Provider {
         return defined( "ATBDP_VERSION" ) || class_exists( Helper::class );
     }
 
+    protected function catalog(): ListingCatalog {
+        return $this->catalog ??= new DirectoristCatalog();
+    }
+
     /**
      * Get the Directorist listing post type slug.
      *
      * @return string
      */
     private function get_post_type(): string {
-        return defined( "ATBDP_POST_TYPE" ) ? ATBDP_POST_TYPE : "at_biz_dir";
+        return $this->catalog()->post_types()[0];
     }
 
     /**
@@ -75,7 +83,7 @@ class Directorist extends Provider {
      * @return string
      */
     private function get_category_taxonomy(): string {
-        return defined( "ATBDP_CATEGORY" ) ? ATBDP_CATEGORY : "at_biz_dir-category";
+        return $this->catalog()->category_taxonomy();
     }
 
     /**
@@ -84,7 +92,7 @@ class Directorist extends Provider {
      * @return string
      */
     private function get_tags_taxonomy(): string {
-        return defined( "ATBDP_TAGS" ) ? ATBDP_TAGS : "at_biz_dir-tags";
+        return (string) $this->catalog()->tag_taxonomy();
     }
 
     /**
@@ -93,117 +101,7 @@ class Directorist extends Provider {
      * @return string
      */
     private function get_location_taxonomy(): string {
-        return defined( "ATBDP_LOCATION" ) ? ATBDP_LOCATION : "at_biz_dir-location";
-    }
-
-    /**
-     * Get listings paginator.
-     *
-     * @param ListingPaginatorDTO|null $listing_paginator The listing paginator.
-     * @param Request                  $request The REST request instance.
-     * @param array                    $fields The requested fields.
-     * @return ListingPaginatorDTO
-     */
-    public function listings( ?ListingPaginatorDTO $listing_paginator, Request $request, array $fields = [] ): ListingPaginatorDTO {
-        $page      = (int) $request->get_param( "page" ) ?: 1;
-        $per_page  = (int) $request->get_param( "per_page" ) ?: 10;
-        $search    = sanitize_text_field( (string) $request->get_param( "search" ) );
-        $sort      = sanitize_text_field( (string) $request->get_param( "sort" ) );
-        $post_type = $this->get_post_type();
-
-        $categories  = $request->get_param( "categories" );
-        $tags        = $request->get_param( "tags" );
-        $locations   = $request->get_param( "locations" );
-        $is_featured = $request->get_param( "isFeatured" );
-
-        $order_by = "date";
-        $order    = "DESC";
-
-        if ( ! empty( $sort ) ) {
-            if ( 0 === strpos( $sort, "-" ) ) {
-                $order_by = ltrim( $sort, "-" );
-                $order    = "DESC";
-            } else {
-                $order_by = $sort;
-                $order    = "ASC";
-            }
-        }
-
-        $sort_map = [
-            "date"  => "date",
-            "title" => "title",
-            "name"  => "name",
-            "id"    => "ID",
-        ];
-
-        $wp_query_args = [
-            "post_type"      => $post_type,
-            "post_status"    => "publish",
-            "has_password"   => false,
-            "paged"          => $page,
-            "posts_per_page" => $per_page,
-            "s"              => $search,
-            "orderby"        => $sort_map[$order_by] ?? "date",
-            "order"          => $order,
-        ];
-
-        $tax_query = [];
-
-        if ( ! empty( $categories ) && is_array( $categories ) ) {
-            $tax_query[] = [
-                "taxonomy" => $this->get_category_taxonomy(),
-                "field"    => "term_id",
-                "terms"    => array_map( "intval", $categories ),
-            ];
-        }
-
-        if ( ! empty( $tags ) && is_array( $tags ) ) {
-            $tax_query[] = [
-                "taxonomy" => $this->get_tags_taxonomy(),
-                "field"    => "term_id",
-                "terms"    => array_map( "intval", $tags ),
-            ];
-        }
-
-        if ( ! empty( $locations ) && is_array( $locations ) ) {
-            $tax_query[] = [
-                "taxonomy" => $this->get_location_taxonomy(),
-                "field"    => "term_id",
-                "terms"    => array_map( "intval", $locations ),
-            ];
-        }
-
-        if ( ! empty( $tax_query ) ) {
-            //phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_tax_query -- filtering listings by taxonomy is the point of this query.
-            $wp_query_args["tax_query"] = $tax_query;
-        }
-
-        if ( ! empty( $is_featured ) && filter_var( $is_featured, FILTER_VALIDATE_BOOLEAN ) ) {
-            //phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query -- filtering listings by the featured flag is the point of this query.
-            $wp_query_args["meta_query"] = [
-                [
-                    "key"   => "_featured",
-                    "value" => "1",
-                ],
-            ];
-        }
-
-        $query = new WP_Query( $wp_query_args );
-
-        $items = [];
-        foreach ( $query->posts as $listing ) {
-            if ( $listing instanceof WP_Post ) {
-                $items[] = $this->map_listing_to_dto( $listing, $fields );
-            }
-        }
-
-        return new ListingPaginatorDTO(
-            $page,
-            $per_page,
-            (int) $query->found_posts,
-            (int) $query->max_num_pages,
-            $items
-        );
+        return (string) $this->catalog()->location_taxonomy();
     }
 
     /**

@@ -12,6 +12,9 @@ use Crafium\AppNatively\WpMVC\Routing\Route;
 Route::get( 'categories', [CategoryController::class, 'index'] );
 Route::get( 'categories/{id}', [CategoryController::class, 'show'] )->where( 'id', '\d+' );
 Route::get( 'listings', [ListingController::class, 'index'] );
+Route::get( 'listings/filters', [ListingController::class, 'filters'] );
+// Builder-only: names the site's custom fields, so it needs the connection key.
+Route::get( 'listings/filter-sources', [ListingController::class, 'filter_sources'] )->middleware( 'app' );
 Route::get( 'listings/{id}/related', [ListingController::class, 'related'] )->where( 'id', '\d+' );
 Route::get( 'listings/{id}/reviews', [ListingController::class, 'reviews'] )->where( 'id', '\d+' );
 Route::get( 'listings/{id}', [ListingController::class, 'show'] )->where( 'id', '\d+' );

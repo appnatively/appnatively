@@ -10,6 +10,8 @@ use Crafium\AppNatively\App\DTO\Directory\ListingDTO;
 use Crafium\AppNatively\App\DTO\Directory\ListingPaginatorDTO;
 use Crafium\AppNatively\App\DTO\Directory\TermDTO;
 use Crafium\AppNatively\App\DTO\Directory\TermPaginatorDTO;
+use Crafium\AppNatively\App\Integrations\Directory\Catalog\ADirectoryCatalog;
+use Crafium\AppNatively\App\Integrations\Directory\Catalog\ListingCatalog;
 use Crafium\AppNatively\App\Integrations\Directory\Concerns\ListingIntegrationHelpers;
 use Crafium\AppNatively\WpMVC\Contracts\Provider;
 use Crafium\AppNatively\WpMVC\RequestValidator\Request;
@@ -20,11 +22,7 @@ use WP_Query;
 class ADirectory extends Provider {
     use ListingIntegrationHelpers;
 
-    private string $category_taxonomy = "adqs_category";
-
-    private string $location_taxonomy = "adqs_location";
-
-    private string $tag_taxonomy = "adqs_tags";
+    private ?ADirectoryCatalog $catalog = null;
 
     public function register() {}
 
@@ -33,7 +31,7 @@ class ADirectory extends Provider {
             return;
         }
 
-        add_filter( "craf_appna_directory_adirectory_listings", [$this, "listings"], 10, 3 );
+        $this->register_listing_hooks( "adirectory" );
         add_filter( "craf_appna_directory_adirectory_listing", [$this, "listing"], 10, 3 );
         add_filter( "craf_appna_directory_adirectory_related_listings", [$this, "related_listings"], 10, 3 );
         add_filter( "craf_appna_directory_adirectory_reviews", [$this, "reviews"], 10, 2 );
@@ -42,45 +40,6 @@ class ADirectory extends Provider {
         add_filter( "craf_appna_directory_adirectory_tags", [$this, "tags"], 10, 3 );
         add_filter( "craf_appna_directory_adirectory_locations", [$this, "locations"], 10, 3 );
         add_filter( "craf_appna_directory_adirectory_location", [$this, "location"], 10, 3 );
-    }
-
-    public function listings( ?ListingPaginatorDTO $listing_paginator, Request $request, array $fields = [] ): ListingPaginatorDTO {
-        $page       = (int) $request->get_param( "page" ) ?: 1;
-        $per_page   = (int) $request->get_param( "per_page" ) ?: 10;
-        $post_types = $this->post_types();
-
-        if ( empty( $post_types ) ) {
-            return new ListingPaginatorDTO( $page, $per_page, 0, 1, [] );
-        }
-
-        $args = [
-            "post_type"      => $post_types,
-            "post_status"    => "publish",
-            "has_password"   => false,
-            "paged"          => $page,
-            "posts_per_page" => $per_page,
-            "s"              => sanitize_text_field( (string) $request->get_param( "search" ) ),
-        ];
-
-        $this->apply_sort_args( $args, (string) $request->get_param( "sort" ) );
-        $this->apply_category_filter( $args, $request );
-
-        if ( filter_var( (string) $request->get_param( "isFeatured" ), FILTER_VALIDATE_BOOLEAN ) ) {
-            $args["meta_query"][] = [
-                "key"   => "_is_featured",
-                "value" => "yes",
-            ];
-        }
-
-        $query = new WP_Query( $args );
-        $items = [];
-        foreach ( $query->posts as $post ) {
-            if ( $post instanceof WP_Post ) {
-                $items[] = $this->map_listing_to_dto( $post, $fields );
-            }
-        }
-
-        return new ListingPaginatorDTO( $page, $per_page, (int) $query->found_posts, max( 1, (int) $query->max_num_pages ), $items );
     }
 
     public function listing( ?ListingDTO $listing, Request $request, array $fields = [] ): ?ListingDTO {
@@ -94,11 +53,11 @@ class ADirectory extends Provider {
         $per_page   = (int) $request->get_param( "per_page" ) ?: 10;
         $post       = $this->get_listing_post( $listing_id );
 
-        if ( ! $post || ! taxonomy_exists( $this->category_taxonomy ) ) {
+        if ( ! $post || ! taxonomy_exists( $this->catalog()->category_taxonomy() ) ) {
             return new ListingPaginatorDTO( $page, $per_page, 0, 1, [] );
         }
 
-        $category_ids = wp_get_post_terms( $listing_id, $this->category_taxonomy, ["fields" => "ids"] );
+        $category_ids = wp_get_post_terms( $listing_id, $this->catalog()->category_taxonomy(), ["fields" => "ids"] );
         if ( is_wp_error( $category_ids ) || empty( $category_ids ) ) {
             return new ListingPaginatorDTO( $page, $per_page, 0, 1, [] );
         }
@@ -115,7 +74,7 @@ class ADirectory extends Provider {
                 //phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_tax_query -- filtering listings by taxonomy is the point of this query.
                 "tax_query"      => [
                     [
-                        "taxonomy" => $this->category_taxonomy,
+                        "taxonomy" => $this->catalog()->category_taxonomy(),
                         "field"    => "term_id",
                         "terms"    => array_map( "intval", $category_ids ),
                     ],
@@ -150,21 +109,25 @@ class ADirectory extends Provider {
     }
 
     public function category( ?CategoryDTO $category, Request $request, array $fields = [] ): ?CategoryDTO {
-        $term = get_term( (int) craf_appna_route_param( $request, "id" ), $this->category_taxonomy );
+        $term = get_term( (int) craf_appna_route_param( $request, "id" ), $this->catalog()->category_taxonomy() );
         return ( $term && ! is_wp_error( $term ) ) ? $this->map_category_to_dto( $term, $fields ) : null;
     }
 
     public function tags( ?TermPaginatorDTO $tag_paginator, Request $request, array $fields = [] ): TermPaginatorDTO {
-        return $this->query_terms( $this->tag_taxonomy, $request, $fields );
+        return $this->query_terms( (string) $this->catalog()->tag_taxonomy(), $request, $fields );
     }
 
     public function locations( ?TermPaginatorDTO $location_paginator, Request $request, array $fields = [] ): TermPaginatorDTO {
-        return $this->query_terms( $this->location_taxonomy, $request, $fields );
+        return $this->query_terms( (string) $this->catalog()->location_taxonomy(), $request, $fields );
     }
 
     public function location( ?TermDTO $location, Request $request, array $fields = [] ): ?TermDTO {
-        $term = get_term( (int) craf_appna_route_param( $request, "id" ), $this->location_taxonomy );
+        $term = get_term( (int) craf_appna_route_param( $request, "id" ), (string) $this->catalog()->location_taxonomy() );
         return ( $term && ! is_wp_error( $term ) ) ? $this->map_term_to_dto( $term, $fields ) : null;
+    }
+
+    protected function catalog(): ListingCatalog {
+        return $this->catalog ??= new ADirectoryCatalog();
     }
 
     private function is_loaded(): bool {
@@ -172,7 +135,7 @@ class ADirectory extends Provider {
     }
 
     private function post_types(): array {
-        return function_exists( "adqs_get_directory_post_types" ) ? (array) adqs_get_directory_post_types() : [];
+        return $this->catalog()->post_types();
     }
 
     private function get_listing_post( int $listing_id ): ?WP_Post {
@@ -182,44 +145,6 @@ class ADirectory extends Provider {
         }
 
         return $post;
-    }
-
-    private function apply_sort_args( array &$args, string $sort ): void {
-        $order_by = "date";
-        $order    = "DESC";
-
-        if ( "" !== $sort ) {
-            if ( 0 === strpos( $sort, "-" ) ) {
-                $order_by = ltrim( $sort, "-" );
-                $order    = "DESC";
-            } else {
-                $order_by = $sort;
-                $order    = "ASC";
-            }
-        }
-
-        $sort_map = [
-            "date"  => "date",
-            "title" => "title",
-            "name"  => "name",
-            "id"    => "ID",
-        ];
-
-        $args["orderby"] = $sort_map[$order_by] ?? "date";
-        $args["order"]   = $order;
-    }
-
-    private function apply_category_filter( array &$args, Request $request ): void {
-        $ids = $this->positive_ids( $request->get_param( "categories" ) );
-        if ( empty( $ids ) || ! taxonomy_exists( $this->category_taxonomy ) ) {
-            return;
-        }
-
-        $args["tax_query"][] = [
-            "taxonomy" => $this->category_taxonomy,
-            "field"    => "term_id",
-            "terms"    => $ids,
-        ];
     }
 
     private function map_listing_to_dto( WP_Post $post, array $fields ): ListingDTO {
@@ -295,13 +220,13 @@ class ADirectory extends Provider {
             );
         }
         if ( in_array( "categories", $fields, true ) ) {
-            $dto->set_categories( $this->get_listing_terms( $post->ID, $this->category_taxonomy ) );
+            $dto->set_categories( $this->get_listing_terms( $post->ID, $this->catalog()->category_taxonomy() ) );
         }
         if ( in_array( "locations", $fields, true ) ) {
-            $dto->set_locations( $this->get_listing_terms( $post->ID, $this->location_taxonomy ) );
+            $dto->set_locations( $this->get_listing_terms( $post->ID, (string) $this->catalog()->location_taxonomy() ) );
         }
         if ( in_array( "tags", $fields, true ) ) {
-            $dto->set_tags( $this->get_listing_terms( $post->ID, $this->tag_taxonomy ) );
+            $dto->set_tags( $this->get_listing_terms( $post->ID, (string) $this->catalog()->tag_taxonomy() ) );
         }
         if ( in_array( "rating", $fields, true ) ) {
             $dto->set_rating( $this->get_listing_rating( (int) $post->ID ) );
@@ -329,11 +254,11 @@ class ADirectory extends Provider {
         $page     = (int) $request->get_param( "page" ) ?: 1;
         $per_page = (int) $request->get_param( "per_page" ) ?: 10;
 
-        if ( ! taxonomy_exists( $this->category_taxonomy ) ) {
+        if ( ! taxonomy_exists( $this->catalog()->category_taxonomy() ) ) {
             return new CategoryPaginatorDTO( $page, $per_page, 0, 1, [] );
         }
 
-        $terms = $this->get_terms_page( $this->category_taxonomy, $request, $page, $per_page );
+        $terms = $this->get_terms_page( $this->catalog()->category_taxonomy(), $request, $page, $per_page );
         $items = [];
         foreach ( $terms["items"] as $term ) {
             $items[] = $this->map_category_to_dto( $term, $fields );

@@ -4,19 +4,16 @@ namespace Crafium\AppNatively\App\Integrations\Ecommerce\Catalog;
 
 defined( "ABSPATH" ) || exit;
 
-use Crafium\AppNatively\WpMVC\Database\Query\Builder;
+use Crafium\AppNatively\App\Filtering\Catalog;
+use Crafium\AppNatively\App\Filtering\RangeFacet;
 
 /**
- * Where one ecommerce plugin keeps what the product list and filter read:
- * its post type, taxonomies, and SQL for price, stock, sale and rating.
- * ProductQuery builds every product list and facet from this, so each store
- * only describes its data layout.
- *
- * SQL expressions run inside a query on the posts table aliased `posts`
- * (after prepare() added its joins). They are constant SQL: no user input
- * and no literal `%` (the builder prepares the final statement).
+ * Where one ecommerce plugin keeps what the product list and filter read: its
+ * post type, taxonomies, and SQL for price, stock, sale and rating. From these
+ * it describes the product facets (price and rating ranges, the `availability`
+ * flags) and a list's `in_stock` setting to CatalogQuery.
  */
-abstract class ProductCatalog {
+abstract class ProductCatalog extends Catalog {
     /**
      * The products' post type.
      */
@@ -51,25 +48,6 @@ abstract class ProductCatalog {
     public function extra_taxonomies(): array {
         return [];
     }
-
-    /**
-     * Public-looking meta keys the store uses internally: never offered as custom-field filters.
-     *
-     * @return string[]
-     */
-    public function internal_meta_keys(): array {
-        return [];
-    }
-
-    /**
-     * Add the joins the SQL expressions below rely on.
-     */
-    public function prepare( Builder $query ): void {}
-
-    /**
-     * Keep only products the storefront lists (catalog visibility and the like).
-     */
-    public function where_visible( Builder $query, bool $searching ): void {}
 
     /**
      * A product's lowest price, in stored units.
@@ -112,34 +90,49 @@ abstract class ProductCatalog {
         return null;
     }
 
-    /**
-     * A product's sales count, when the store tracks it.
-     */
-    public function popularity_sql(): ?string {
-        return null;
+    public function post_types(): array {
+        return [ $this->post_type() ];
     }
 
-    /**
-     * Sort token => [expression, direction], for the tokens this store supports.
-     *
-     * @return array<string, array{0: string, 1: string}>
-     */
-    public function sorts(): array {
-        $sorts = [
-            'relevance'  => [ 'posts.post_date', 'desc' ],
-            'newest'     => [ 'posts.post_date', 'desc' ],
-            'oldest'     => [ 'posts.post_date', 'asc' ],
-            'price_low'  => [ $this->price_min_sql(), 'asc' ],
-            'price_high' => [ $this->price_max_sql(), 'desc' ],
-            'name_az'    => [ 'posts.post_title', 'asc' ],
-            'name_za'    => [ 'posts.post_title', 'desc' ],
+    public function term_facets(): array {
+        return array_filter(
+            [
+                'category' => $this->category_taxonomy(),
+                'tag'      => $this->tag_taxonomy(),
+            ]
+        );
+    }
+
+    public function taxonomy_groups(): array {
+        return [
+            'taxonomy'  => $this->extra_taxonomies(),
+            'attribute' => $this->attribute_taxonomies(),
         ];
-        if ( $this->rating_sql() ) {
-            $sorts['rating'] = [ $this->rating_sql(), 'desc' ];
+    }
+
+    public function ranges(): array {
+        $ranges = [
+            'price' => new RangeFacet( __( 'Price', 'appnatively' ), $this->price_min_sql(), $this->price_max_sql(), $this->price_divisor() ),
+        ];
+        if ( $this->rating_sql() && $this->rated_sql() ) {
+            $ranges['rating'] = new RangeFacet( __( 'Rating', 'appnatively' ), $this->rating_sql(), $this->rating_sql(), 1, [ 0, 5 ], $this->rated_sql() );
         }
-        if ( $this->popularity_sql() ) {
-            $sorts['popularity'] = [ $this->popularity_sql(), 'desc' ];
-        }
-        return $sorts;
+        return $ranges;
+    }
+
+    public function flags(): array {
+        return [
+            'availability' => [
+                'label'   => __( 'Availability', 'appnatively' ),
+                'options' => [
+                    'in_stock' => [ __( 'In stock', 'appnatively' ), $this->in_stock_sql() ],
+                    'on_sale'  => [ __( 'On sale', 'appnatively' ), $this->on_sale_sql() ],
+                ],
+            ],
+        ];
+    }
+
+    public function context_flags(): array {
+        return [ 'in_stock' => $this->in_stock_sql() ];
     }
 }

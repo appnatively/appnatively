@@ -7,6 +7,7 @@ use Crafium\AppNatively\App\DTO\Directory\CategoryPaginatorDTO;
 use Crafium\AppNatively\App\DTO\Directory\ListingDTO;
 use Crafium\AppNatively\App\DTO\Directory\ListingPaginatorDTO;
 use Crafium\AppNatively\App\DTO\Directory\TermPaginatorDTO;
+use Crafium\AppNatively\App\DTO\Filter\FiltersDTO;
 use Crafium\AppNatively\WpMVC\RequestValidator\Request;
 
 abstract class DirectoryIntegrationTestCase extends \WP_UnitTestCase {
@@ -141,7 +142,7 @@ abstract class DirectoryIntegrationTestCase extends \WP_UnitTestCase {
     }
 
     protected function assert_provider_filter_surface( string $integration ): void {
-        foreach ( ["listings", "listing", "related_listings", "reviews", "categories", "category", "tags", "locations", "location"] as $operation ) {
+        foreach ( ["listings", "listings_filters", "listings_filter_sources", "listing", "related_listings", "reviews", "categories", "category", "tags", "locations", "location"] as $operation ) {
             $this->assertNotFalse(
                 has_filter( "craf_appna_directory_{$integration}_{$operation}" ),
                 "Missing directory filter for {$integration}: {$operation}"
@@ -164,6 +165,34 @@ abstract class DirectoryIntegrationTestCase extends \WP_UnitTestCase {
         $this->assertInstanceOf( ListingPaginatorDTO::class, $paginator );
         $this->assertGreaterThanOrEqual( 1, $paginator->get_total() );
         $this->assertSame( $listing_id, $paginator->get_items()[0]->get_id() );
+    }
+
+    /**
+     * The featured listing is listed by `featured`, counted by the `status` facet and listed first.
+     */
+    protected function assert_featured_listing( string $integration, int $listing_id ): void {
+        $featured = apply_filters(
+            "craf_appna_directory_{$integration}_listings",
+            null,
+            $this->create_request( [ "featured" => "1", "integration" => $integration ] ),
+            $this->listing_fields()
+        );
+        $this->assertInstanceOf( ListingPaginatorDTO::class, $featured );
+        $this->assertSame( [ $listing_id ], array_map( fn( $listing ) => $listing->get_id(), $featured->get_items() ) );
+
+        $filters = apply_filters(
+            "craf_appna_directory_{$integration}_listings_filters",
+            null,
+            $this->create_request( [ "facets" => [ "status" ], "integration" => $integration ] )
+        );
+        $this->assertInstanceOf( FiltersDTO::class, $filters );
+        $status = $filters->get_facets()[0];
+        $this->assertSame( "status", $status->get_id() );
+        $this->assertSame( "featured", $status->get_options()[0]->get_value() );
+        $this->assertSame( 1, $status->get_options()[0]->get_count() );
+
+        $relevance = apply_filters( "craf_appna_directory_{$integration}_listings", null, $this->create_request( [ "integration" => $integration ] ), $this->listing_fields() );
+        $this->assertSame( $listing_id, $relevance->get_items()[0]->get_id() );
     }
 
     protected function assert_single_listing( string $integration, int $listing_id, string $title ): void {

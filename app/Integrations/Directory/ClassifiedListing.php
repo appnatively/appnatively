@@ -10,6 +10,8 @@ use Crafium\AppNatively\App\DTO\Directory\ListingDTO;
 use Crafium\AppNatively\App\DTO\Directory\ListingPaginatorDTO;
 use Crafium\AppNatively\App\DTO\Directory\TermDTO;
 use Crafium\AppNatively\App\DTO\Directory\TermPaginatorDTO;
+use Crafium\AppNatively\App\Integrations\Directory\Catalog\ClassifiedListingCatalog;
+use Crafium\AppNatively\App\Integrations\Directory\Catalog\ListingCatalog;
 use Crafium\AppNatively\App\Integrations\Directory\Concerns\ListingIntegrationHelpers;
 use Crafium\AppNatively\WpMVC\Contracts\Provider;
 use Crafium\AppNatively\WpMVC\RequestValidator\Request;
@@ -20,6 +22,8 @@ use WP_Query;
 class ClassifiedListing extends Provider {
     use ListingIntegrationHelpers;
 
+    private ?ClassifiedListingCatalog $catalog = null;
+
     public function register() {}
 
     public function boot(): void {
@@ -27,7 +31,7 @@ class ClassifiedListing extends Provider {
             return;
         }
 
-        add_filter( "craf_appna_directory_classified-listing_listings", [$this, "listings"], 10, 3 );
+        $this->register_listing_hooks( "classified-listing" );
         add_filter( "craf_appna_directory_classified-listing_listing", [$this, "listing"], 10, 3 );
         add_filter( "craf_appna_directory_classified-listing_related_listings", [$this, "related_listings"], 10, 3 );
         add_filter( "craf_appna_directory_classified-listing_reviews", [$this, "reviews"], 10, 2 );
@@ -36,36 +40,6 @@ class ClassifiedListing extends Provider {
         add_filter( "craf_appna_directory_classified-listing_tags", [$this, "tags"], 10, 3 );
         add_filter( "craf_appna_directory_classified-listing_locations", [$this, "locations"], 10, 3 );
         add_filter( "craf_appna_directory_classified-listing_location", [$this, "location"], 10, 3 );
-    }
-
-    public function listings( ?ListingPaginatorDTO $listing_paginator, Request $request, array $fields = [] ): ListingPaginatorDTO {
-        $page     = (int) $request->get_param( "page" ) ?: 1;
-        $per_page = (int) $request->get_param( "per_page" ) ?: 10;
-        $args     = [
-            "post_type"      => $this->post_type(),
-            "post_status"    => "publish",
-            "has_password"   => false,
-            "paged"          => $page,
-            "posts_per_page" => $per_page,
-            "s"              => sanitize_text_field( (string) $request->get_param( "search" ) ),
-        ];
-
-        $this->apply_sort_args( $args, (string) $request->get_param( "sort" ) );
-        $this->apply_tax_filters( $args, $request );
-
-        if ( filter_var( (string) $request->get_param( "isFeatured" ), FILTER_VALIDATE_BOOLEAN ) ) {
-            $args["meta_query"][] = ["key" => "featured", "value" => "1"];
-        }
-
-        $query = new WP_Query( $args );
-        $items = [];
-        foreach ( $query->posts as $post ) {
-            if ( $post instanceof WP_Post ) {
-                $items[] = $this->map_listing_to_dto( $post, $fields );
-            }
-        }
-
-        return new ListingPaginatorDTO( $page, $per_page, (int) $query->found_posts, max( 1, (int) $query->max_num_pages ), $items );
     }
 
     public function listing( ?ListingDTO $listing, Request $request, array $fields = [] ): ?ListingDTO {
@@ -151,28 +125,28 @@ class ClassifiedListing extends Provider {
         return ( $term && ! is_wp_error( $term ) ) ? $this->map_term_to_dto( $term, $fields ) : null;
     }
 
+    protected function catalog(): ListingCatalog {
+        return $this->catalog ??= new ClassifiedListingCatalog();
+    }
+
     private function is_loaded(): bool {
         return function_exists( "rtcl" ) || class_exists( "Rtcl\\Models\\Listing" ) || post_type_exists( "rtcl_listing" );
     }
 
     private function post_type(): string {
-        $rtcl = function_exists( "rtcl" ) ? rtcl() : null;
-        return is_object( $rtcl ) && isset( $rtcl->post_type ) ? (string) $rtcl->post_type : "rtcl_listing";
+        return $this->catalog()->post_types()[0];
     }
 
     private function category_taxonomy(): string {
-        $rtcl = function_exists( "rtcl" ) ? rtcl() : null;
-        return is_object( $rtcl ) && isset( $rtcl->category ) ? (string) $rtcl->category : "rtcl_category";
+        return $this->catalog()->category_taxonomy();
     }
 
     private function tag_taxonomy(): string {
-        $rtcl = function_exists( "rtcl" ) ? rtcl() : null;
-        return is_object( $rtcl ) && isset( $rtcl->tag ) ? (string) $rtcl->tag : "rtcl_tag";
+        return (string) $this->catalog()->tag_taxonomy();
     }
 
     private function location_taxonomy(): string {
-        $rtcl = function_exists( "rtcl" ) ? rtcl() : null;
-        return is_object( $rtcl ) && isset( $rtcl->location ) ? (string) $rtcl->location : "rtcl_location";
+        return (string) $this->catalog()->location_taxonomy();
     }
 
     private function get_listing_post( int $listing_id ): ?WP_Post {
@@ -182,38 +156,6 @@ class ClassifiedListing extends Provider {
         }
 
         return $post;
-    }
-
-    private function apply_sort_args( array &$args, string $sort ): void {
-        $order_by = "date";
-        $order    = "DESC";
-        if ( "" !== $sort ) {
-            if ( 0 === strpos( $sort, "-" ) ) {
-                $order_by = ltrim( $sort, "-" );
-                $order    = "DESC";
-            } else {
-                $order_by = $sort;
-                $order    = "ASC";
-            }
-        }
-        $map             = ["date" => "date", "title" => "title", "name" => "name", "id" => "ID"];
-        $args["orderby"] = $map[$order_by] ?? "date";
-        $args["order"]   = $order;
-    }
-
-    private function apply_tax_filters( array &$args, Request $request ): void {
-        $tax_query = [];
-        foreach ( ["categories" => $this->category_taxonomy(), "tags" => $this->tag_taxonomy(), "locations" => $this->location_taxonomy()] as $key => $taxonomy ) {
-            $ids = $this->positive_ids( $request->get_param( $key ) );
-            if ( empty( $ids ) || ! taxonomy_exists( $taxonomy ) ) {
-                continue;
-            }
-            $tax_query[] = ["taxonomy" => $taxonomy, "field" => "term_id", "terms" => $ids];
-        }
-        if ( ! empty( $tax_query ) ) {
-            //phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_tax_query -- filtering listings by taxonomy is the point of this query.
-            $args["tax_query"] = $tax_query;
-        }
     }
 
     private function map_listing_to_dto( WP_Post $post, array $fields ): ListingDTO {
@@ -291,7 +233,7 @@ class ClassifiedListing extends Provider {
             $dto->set_tags( $this->get_listing_terms( $post->ID, $this->tag_taxonomy() ) );
         }
         if ( in_array( "rating", $fields, true ) ) {
-            $dto->set_rating( (float) $this->get_meta_value( $post->ID, ["average_rating", "_average_rating", "rating"] ) );
+            $dto->set_rating( (float) $this->get_meta_value( $post->ID, ["_rtcl_average_rating", "average_rating", "rating"] ) );
         }
         if ( in_array( "review_count", $fields, true ) || in_array( "rating_count", $fields, true ) ) {
             $review_count = $this->get_listing_review_count( (int) $post->ID );

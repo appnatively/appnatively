@@ -12,9 +12,9 @@ use Crafium\AppNatively\App\DTO\Ecommerce\ProductDimensionDTO;
 use Crafium\AppNatively\App\DTO\Ecommerce\ProductImageDTO;
 use Crafium\AppNatively\App\DTO\Ecommerce\ProductPaginatorDTO;
 use Crafium\AppNatively\App\DTO\Ecommerce\ProductVariantDTO;
-use Crafium\AppNatively\App\DTO\Ecommerce\ProductFilterSourceDTO;
-use Crafium\AppNatively\App\DTO\Ecommerce\ProductFiltersDTO;
-use Crafium\AppNatively\App\Integrations\Ecommerce\Catalog\ProductQuery;
+use Crafium\AppNatively\App\DTO\Filter\FilterSourceDTO;
+use Crafium\AppNatively\App\DTO\Filter\FiltersDTO;
+use Crafium\AppNatively\App\Filtering\CatalogQuery;
 use Crafium\AppNatively\App\Integrations\Ecommerce\Concerns\EcommerceIntegrationHelpers;
 use Crafium\AppNatively\WpMVC\Exceptions\Exception;
 use FluentCart\App\Helpers\Helper;
@@ -25,17 +25,17 @@ use FluentCart\App\Models\Product;
 class ProductRepository {
     use EcommerceIntegrationHelpers;
 
-    /** Product lists and filter facets (see ProductQuery). */
-    private ProductQuery $query;
+    /** Product lists and filter facets (see CatalogQuery). */
+    private CatalogQuery $query;
 
     public function __construct() {
-        $this->query = new ProductQuery( new FluentCartCatalog() );
+        $this->query = new CatalogQuery( new FluentCartCatalog() );
     }
 
     /**
      * Get products paginated: the page context, the shopper's filter selection and sort.
      *
-     * Lists through ProductQuery rather than FluentCart's admin ProductFilter: that
+     * Lists through CatalogQuery rather than FluentCart's admin ProductFilter: that
      * filter lists every status (drafts, private, password-protected) and would take
      * admin-only params (views, advanced filters, selects) straight from the request.
      *
@@ -69,16 +69,16 @@ class ProductRepository {
      * The filters available for the current context, with per-option counts.
      *
      * @param WP_REST_Request $request The request object.
-     * @return ProductFiltersDTO
+     * @return FiltersDTO
      */
-    public function filters( WP_REST_Request $request ): ProductFiltersDTO {
+    public function filters( WP_REST_Request $request ): FiltersDTO {
         return $this->query->filters( $request );
     }
 
     /**
      * What the app builder can offer as filter rows.
      *
-     * @return ProductFilterSourceDTO[]
+     * @return FilterSourceDTO[]
      */
     public function filter_sources(): array {
         return $this->query->filter_sources();

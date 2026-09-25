@@ -12,7 +12,7 @@ use Crafium\AppNatively\App\DTO\Ecommerce\CategoryDTO;
 use Crafium\AppNatively\App\DTO\Ecommerce\CategoryPaginatorDTO;
 use Crafium\AppNatively\App\DTO\Ecommerce\ProductDTO;
 use Crafium\AppNatively\App\DTO\Ecommerce\ProductPaginatorDTO;
-use Crafium\AppNatively\App\DTO\Ecommerce\ProductFiltersDTO;
+use Crafium\AppNatively\App\DTO\Filter\FiltersDTO;
 use Crafium\AppNatively\App\DTO\Ecommerce\OrderDTO;
 use Crafium\AppNatively\App\DTO\Ecommerce\OrderPaginatorDTO;
 use Crafium\AppNatively\App\Integrations\Ecommerce\FluentCart\CartManager;
@@ -157,7 +157,7 @@ class FluentCart extends Provider {
     /**
      * Available product filters for the current context.
      */
-    public function products_filters( ?ProductFiltersDTO $product_filters, WP_REST_Request $request ): ProductFiltersDTO {
+    public function products_filters( ?FiltersDTO $product_filters, WP_REST_Request $request ): FiltersDTO {
         return $this->product_repository->filters( $request );
     }
 

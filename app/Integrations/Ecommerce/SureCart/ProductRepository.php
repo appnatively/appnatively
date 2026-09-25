@@ -7,12 +7,12 @@ defined( "ABSPATH" ) || exit;
 use Crafium\AppNatively\App\DTO\Ecommerce\CategoryDTO;
 use Crafium\AppNatively\App\DTO\Ecommerce\CategoryPaginatorDTO;
 use Crafium\AppNatively\App\DTO\Ecommerce\ProductDTO;
-use Crafium\AppNatively\App\DTO\Ecommerce\ProductFilterSourceDTO;
-use Crafium\AppNatively\App\DTO\Ecommerce\ProductFiltersDTO;
+use Crafium\AppNatively\App\DTO\Filter\FilterSourceDTO;
+use Crafium\AppNatively\App\DTO\Filter\FiltersDTO;
 use Crafium\AppNatively\App\DTO\Ecommerce\ProductImageDTO;
 use Crafium\AppNatively\App\DTO\Ecommerce\ProductPaginatorDTO;
 use Crafium\AppNatively\App\DTO\Ecommerce\ProductVariantDTO;
-use Crafium\AppNatively\App\Integrations\Ecommerce\Catalog\ProductQuery;
+use Crafium\AppNatively\App\Filtering\CatalogQuery;
 use Crafium\AppNatively\App\Integrations\Ecommerce\Concerns\EcommerceIntegrationHelpers;
 use Crafium\AppNatively\WpMVC\Exceptions\Exception;
 use Crafium\AppNatively\WpMVC\RequestValidator\Request;
@@ -28,11 +28,11 @@ class ProductRepository {
      */
     private const PRODUCT_EXPAND = [ 'prices', 'variants', 'variant_options', 'product_medias', 'product_media.media' ];
 
-    /** Product lists and filter facets (see ProductQuery). */
-    private ProductQuery $query;
+    /** Product lists and filter facets (see CatalogQuery). */
+    private CatalogQuery $query;
 
     public function __construct() {
-        $this->query = new ProductQuery( new SureCartCatalog() );
+        $this->query = new CatalogQuery( new SureCartCatalog() );
     }
 
     /**
@@ -172,14 +172,14 @@ class ProductRepository {
     /**
      * The filters available for the current context, with per-option counts.
      */
-    public function filters( ?ProductFiltersDTO $product_filters, Request $request ): ProductFiltersDTO {
+    public function filters( ?FiltersDTO $product_filters, Request $request ): FiltersDTO {
         return $this->query->filters( $request );
     }
 
     /**
      * What the app builder can offer as filter rows.
      *
-     * @return ProductFilterSourceDTO[]
+     * @return FilterSourceDTO[]
      */
     public function filter_sources(): array {
         return $this->query->filter_sources();

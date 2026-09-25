@@ -1,24 +1,23 @@
 <?php
 
-namespace Crafium\AppNatively\App\DTO\Ecommerce;
+namespace Crafium\AppNatively\App\DTO\Filter;
 
 defined( "ABSPATH" ) || exit;
 
 use Crafium\AppNatively\App\DTO\DTO;
 
 /**
- * One filterable dimension of the current product context. `id` names what it
- * filters and is what the client keys its selection by:
+ * One filterable dimension of the current list context. `id` names what it
+ * filters and is what the client keys its selection by (see CatalogQuery):
  *
- * - `price`, `rating`: ranges (`min` / `max`)
- * - `availability`: choice of `in_stock` / `on_sale`
- * - `terms:<taxonomy>`: product_cat, product_tag or any product taxonomy
- * - `attribute:<pa_*>`: a WooCommerce attribute taxonomy
- * - `meta:<key>`: an allow-listed custom field (choice, or range for numbers)
+ * - `category`, `tag`, `location`, `taxonomy:<name>`, `attribute:<name>`: term choices
+ * - `price`, `rating`, `distance`: ranges (`min` / `max`)
+ * - `availability` (products), `status` (listings): flag choices
+ * - `meta:<key>` (ACF), `field:<key>` (the plugin's own fields): custom fields
  *
  * `options`, `min` and `max` are only serialized when set.
  */
-class ProductFacetDTO extends DTO {
+class FacetDTO extends DTO {
     public const KIND_CHOICE = "choice";
     public const KIND_RANGE  = "range";
     public const KIND_TOGGLE = "toggle";
@@ -30,7 +29,7 @@ class ProductFacetDTO extends DTO {
     private string $kind;
 
     /**
-     * @var ProductFacetOptionDTO[]
+     * @var FacetOptionDTO[]
      */
     private array $options;
 
@@ -66,14 +65,14 @@ class ProductFacetDTO extends DTO {
     }
 
     /**
-     * @return ProductFacetOptionDTO[]
+     * @return FacetOptionDTO[]
      */
     public function get_options(): array {
         return $this->options;
     }
 
     /**
-     * @param ProductFacetOptionDTO[] $options
+     * @param FacetOptionDTO[] $options
      */
     public function set_options( array $options ): self {
         $this->options = $options;

@@ -1,6 +1,6 @@
 <?php
 
-namespace Crafium\AppNatively\App\DTO\Ecommerce;
+namespace Crafium\AppNatively\App\DTO\Filter;
 
 defined( "ABSPATH" ) || exit;
 
@@ -8,9 +8,9 @@ use Crafium\AppNatively\App\DTO\DTO;
 
 /**
  * One option of a choice facet: what the client sends back when it is picked
- * (a term slug or a meta value), its label, and how many products match.
+ * (a term slug or a meta value), its label, and how many posts match.
  */
-class ProductFacetOptionDTO extends DTO {
+class FacetOptionDTO extends DTO {
     private string $value;
 
     private string $label;

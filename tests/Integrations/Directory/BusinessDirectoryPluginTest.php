@@ -37,7 +37,6 @@ class BusinessDirectoryPluginTest extends DirectoryIntegrationTestCase {
                 "phone"          => "123",
                 "email"          => "business-directory@example.com",
                 "website"        => "https://example.com",
-                "_wpbdp[sticky]" => "1",
                 "price"          => "300",
                 "latitude"       => "23.7808875",
                 "longitude"      => "90.2792371",
@@ -45,12 +44,17 @@ class BusinessDirectoryPluginTest extends DirectoryIntegrationTestCase {
         );
         $related_id  = $this->create_listing( $this->post_type, "Business Directory Related" );
 
+        // Sticky (featured) listings are kept in the plugin's own table.
+        global $wpdb;
+        $wpdb->replace( "{$wpdb->prefix}wpbdp_listings", [ "listing_id" => $source_id, "is_sticky" => 1, "listing_status" => "complete" ] );
+
         $this->assign_terms( $source_id, $this->category_taxonomy, [$category_id] );
         $this->assign_terms( $source_id, $this->tag_taxonomy, [$tag_id] );
         $this->assign_terms( $related_id, $this->category_taxonomy, [$category_id] );
 
         $this->assert_provider_filter_surface( $this->integration );
         $this->assert_listing_collection( $this->integration, $source_id, $category_id );
+        $this->assert_featured_listing( $this->integration, $source_id );
         $this->assert_single_listing( $this->integration, $source_id, "Business Directory Source" );
         $this->assert_related_listings( $this->integration, $source_id, $related_id );
         $this->assert_categories( $this->integration, $category_id );

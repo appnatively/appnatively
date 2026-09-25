@@ -6,13 +6,15 @@ defined( "ABSPATH" ) || exit;
 
 use Crafium\AppNatively\App\DTO\Ecommerce\ProductDTO;
 use Crafium\AppNatively\App\DTO\Ecommerce\ProductPaginatorDTO;
-use Crafium\AppNatively\App\DTO\Ecommerce\ProductFiltersDTO;
 use Crafium\AppNatively\App\Http\Controllers\Controller;
+use Crafium\AppNatively\App\Http\Controllers\Concerns\ServesFilters;
 use Crafium\AppNatively\WpMVC\Exceptions\Exception;
 use Crafium\AppNatively\WpMVC\Routing\Response;
 use Crafium\AppNatively\WpMVC\RequestValidator\Request;
 
 class ProductController extends Controller {
+    use ServesFilters;
+
     /**
      * The allowed fields for the resource.
      *
@@ -50,28 +52,12 @@ class ProductController extends Controller {
     ];
 
     /**
-     * Validation rules shared by every action that accepts a product-filtering
-     * context — `index()` and `filters()` both narrow the same product set the
-     * same way (see Catalog\ProductQuery). Nested values are read as scalars
-     * and allow-listed by the store's catalog.
-     *
-     * - categories / tags: term ids from the page or list (categories include their children)
-     * - in_stock:          a list's own "in stock only" setting
-     * - values:            the filter selection, [facet id => value[]]
-     * - ranges:            the filter selection, [facet id => {min, max}]
+     * Rules for the params that narrow the product list and its filters (see ServesFilters).
      *
      * @return array
      */
     protected function context_filter_rules(): array {
-        return [
-            "search"      => "nullable|string",
-            "categories"  => "nullable|array",
-            "tags"        => "nullable|array",
-            "in_stock"    => "nullable|boolean",
-            "values"      => "nullable|array",
-            "ranges"      => "nullable|array",
-            "integration" => "required|string|" . craf_appna_in_rule( craf_appna_get_ecommerce_integrations() ),
-        ];
+        return $this->filter_context_rules( craf_appna_get_ecommerce_integrations(), [ "in_stock" ] );
     }
 
     /**
@@ -81,16 +67,7 @@ class ProductController extends Controller {
      * @return array
      */
     public function index( Request $request ): array {
-        $request->validate(
-            array_merge(
-                $this->context_filter_rules(),
-                [
-                    "page"     => "nullable|integer|min:1",
-                    "per_page" => "nullable|integer|min:1|max:100",
-                    "sort"     => "nullable|string|in:" . implode( ',', ProductFiltersDTO::SORT_TOKENS ),
-                ]
-            )
-        );
+        $request->validate( array_merge( $this->context_filter_rules(), $this->filter_list_rules() ) );
 
         $integration       = sanitize_text_field( $request->get_param( "integration" ) );
         $product_paginator = apply_filters( "craf_appna_ecommerce_{$integration}_products", null, $request, $this->allowed_fields );
@@ -110,16 +87,7 @@ class ProductController extends Controller {
      * @throws Exception
      */
     public function filters( Request $request ): array {
-        $request->validate( array_merge( $this->context_filter_rules(), [ "facets" => "nullable|array" ] ) );
-
-        $integration     = sanitize_text_field( $request->get_param( "integration" ) );
-        $product_filters = apply_filters( "craf_appna_ecommerce_{$integration}_products_filters", null, $request );
-
-        if ( ! $product_filters instanceof ProductFiltersDTO ) {
-            throw new Exception( esc_html__( "Products integration not found", 'appnatively' ) );
-        }
-
-        return Response::send( ["data" => $product_filters] );
+        return $this->send_filters( $request, $this->context_filter_rules(), "craf_appna_ecommerce_%s_products_filters" );
     }
 
     /**
@@ -130,16 +98,7 @@ class ProductController extends Controller {
      * @return array
      */
     public function filter_sources( Request $request ): array {
-        $request->validate(
-            [
-                "integration" => "required|string|" . craf_appna_in_rule( craf_appna_get_ecommerce_integrations() ),
-            ]
-        );
-
-        $integration = sanitize_text_field( $request->get_param( "integration" ) );
-        $sources     = apply_filters( "craf_appna_ecommerce_{$integration}_products_filter_sources", [], $request );
-
-        return Response::send( [ "data" => [ "sources" => is_array( $sources ) ? array_values( $sources ) : [] ] ] );
+        return $this->send_filter_sources( $request, craf_appna_get_ecommerce_integrations(), "craf_appna_ecommerce_%s_products_filter_sources" );
     }
 
     /**

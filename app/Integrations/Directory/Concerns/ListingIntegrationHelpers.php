@@ -4,12 +4,77 @@ namespace Crafium\AppNatively\App\Integrations\Directory\Concerns;
 
 defined( "ABSPATH" ) || exit;
 
+use Crafium\AppNatively\App\DTO\Directory\ListingPaginatorDTO;
 use Crafium\AppNatively\App\DTO\Directory\TermPaginatorDTO;
+use Crafium\AppNatively\App\DTO\Filter\FiltersDTO;
+use Crafium\AppNatively\App\Filtering\CatalogQuery;
+use Crafium\AppNatively\App\Integrations\Directory\Catalog\ListingCatalog;
 use Crafium\AppNatively\WpMVC\RequestValidator\Request;
 use WP_Comment;
 use WP_Post;
 
 trait ListingIntegrationHelpers {
+    /** Listing lists and filter facets (see CatalogQuery). */
+    private ?CatalogQuery $listing_query = null;
+
+    /**
+     * Where this plugin keeps its listing data.
+     */
+    abstract protected function catalog(): ListingCatalog;
+
+    private function listing_query(): CatalogQuery {
+        if ( $this->listing_query === null ) {
+            $this->listing_query = new CatalogQuery( $this->catalog() );
+        }
+        return $this->listing_query;
+    }
+
+    /**
+     * Answer the listing list, filters and filter-sources hooks of integration `$slug`.
+     */
+    private function register_listing_hooks( string $slug ): void {
+        add_filter( "craf_appna_directory_{$slug}_listings", [$this, "listings"], 10, 3 );
+        add_filter( "craf_appna_directory_{$slug}_listings_filters", [$this, "listings_filters"], 10, 2 );
+        add_filter( "craf_appna_directory_{$slug}_listings_filter_sources", [$this, "listings_filter_sources"], 10, 2 );
+    }
+
+    /**
+     * One page of the request's listings (context, filter selection and sort).
+     *
+     * @param ListingPaginatorDTO|null $listing_paginator
+     * @param Request                  $request
+     * @param array                    $fields The requested fields.
+     * @return ListingPaginatorDTO
+     */
+    public function listings( ?ListingPaginatorDTO $listing_paginator, Request $request, array $fields = [] ): ListingPaginatorDTO {
+        $page = $this->listing_query()->paginate( $request );
+        _prime_post_caches( $page["ids"] );
+
+        $items = [];
+        foreach ( $page["ids"] as $listing_id ) {
+            $listing = get_post( $listing_id );
+            if ( $listing instanceof WP_Post ) {
+                $items[] = $this->map_listing_to_dto( $listing, $fields );
+            }
+        }
+
+        return new ListingPaginatorDTO( $page["page"], $page["per_page"], $page["total"], $page["last_page"], $items );
+    }
+
+    /**
+     * Available listing filters for the current context.
+     */
+    public function listings_filters( ?FiltersDTO $filters, Request $request ): FiltersDTO {
+        return $this->listing_query()->filters( $request );
+    }
+
+    /**
+     * What the app builder can offer as listing filter rows.
+     */
+    public function listings_filter_sources( array $sources, Request $request ): array {
+        return $this->listing_query()->filter_sources();
+    }
+
     /**
      * Apply the_content filters to a listing post outside the main loop.
      *

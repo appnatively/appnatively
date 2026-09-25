@@ -10,6 +10,8 @@ use Crafium\AppNatively\App\DTO\Directory\ListingDTO;
 use Crafium\AppNatively\App\DTO\Directory\ListingPaginatorDTO;
 use Crafium\AppNatively\App\DTO\Directory\TermDTO;
 use Crafium\AppNatively\App\DTO\Directory\TermPaginatorDTO;
+use Crafium\AppNatively\App\Integrations\Directory\Catalog\BusinessDirectoryPluginCatalog;
+use Crafium\AppNatively\App\Integrations\Directory\Catalog\ListingCatalog;
 use Crafium\AppNatively\App\Integrations\Directory\Concerns\ListingIntegrationHelpers;
 use Crafium\AppNatively\WpMVC\Contracts\Provider;
 use Crafium\AppNatively\WpMVC\RequestValidator\Request;
@@ -19,6 +21,8 @@ use WP_Query;
 class BusinessDirectoryPlugin extends Provider {
     use ListingIntegrationHelpers;
 
+    private ?BusinessDirectoryPluginCatalog $catalog = null;
+
     public function register() {}
 
     public function boot(): void {
@@ -26,7 +30,7 @@ class BusinessDirectoryPlugin extends Provider {
             return;
         }
 
-        add_filter( "craf_appna_directory_business-directory-plugin_listings", [$this, "listings"], 10, 3 );
+        $this->register_listing_hooks( "business-directory-plugin" );
         add_filter( "craf_appna_directory_business-directory-plugin_listing", [$this, "listing"], 10, 3 );
         add_filter( "craf_appna_directory_business-directory-plugin_related_listings", [$this, "related_listings"], 10, 3 );
         add_filter( "craf_appna_directory_business-directory-plugin_reviews", [$this, "reviews"], 10, 2 );
@@ -35,39 +39,6 @@ class BusinessDirectoryPlugin extends Provider {
         add_filter( "craf_appna_directory_business-directory-plugin_tags", [$this, "tags"], 10, 3 );
         add_filter( "craf_appna_directory_business-directory-plugin_locations", [$this, "locations"], 10, 3 );
         add_filter( "craf_appna_directory_business-directory-plugin_location", [$this, "location"], 10, 3 );
-    }
-
-    public function listings( ?ListingPaginatorDTO $listing_paginator, Request $request, array $fields = [] ): ListingPaginatorDTO {
-        $page     = (int) $request->get_param( "page" ) ?: 1;
-        $per_page = (int) $request->get_param( "per_page" ) ?: 10;
-        $args     = [
-            "post_type"      => $this->post_type(),
-            "post_status"    => "publish",
-            "has_password"   => false,
-            "paged"          => $page,
-            "posts_per_page" => $per_page,
-            "s"              => sanitize_text_field( (string) $request->get_param( "search" ) ),
-        ];
-
-        $this->apply_sort_args( $args, (string) $request->get_param( "sort" ) );
-        $this->apply_tax_filters( $args, $request );
-
-        if ( filter_var( (string) $request->get_param( "isFeatured" ), FILTER_VALIDATE_BOOLEAN ) ) {
-            $args["meta_query"][] = [
-                "key"   => "_wpbdp[sticky]",
-                "value" => "1",
-            ];
-        }
-
-        $query = new WP_Query( $args );
-        $items = [];
-        foreach ( $query->posts as $post ) {
-            if ( $post instanceof WP_Post ) {
-                $items[] = $this->map_listing_to_dto( $post, $fields );
-            }
-        }
-
-        return new ListingPaginatorDTO( $page, $per_page, (int) $query->found_posts, max( 1, (int) $query->max_num_pages ), $items );
     }
 
     public function listing( ?ListingDTO $listing, Request $request, array $fields = [] ): ?ListingDTO {
@@ -154,20 +125,24 @@ class BusinessDirectoryPlugin extends Provider {
         return null;
     }
 
+    protected function catalog(): ListingCatalog {
+        return $this->catalog ??= new BusinessDirectoryPluginCatalog();
+    }
+
     private function is_loaded(): bool {
         return defined( "WPBDP_POST_TYPE" ) || function_exists( "wpbdp_get_listing" );
     }
 
     private function post_type(): string {
-        return defined( "WPBDP_POST_TYPE" ) ? WPBDP_POST_TYPE : "wpbdp_listing";
+        return $this->catalog()->post_types()[0];
     }
 
     private function category_taxonomy(): string {
-        return defined( "WPBDP_CATEGORY_TAX" ) ? WPBDP_CATEGORY_TAX : "wpbdp_category";
+        return $this->catalog()->category_taxonomy();
     }
 
     private function tag_taxonomy(): string {
-        return defined( "WPBDP_TAGS_TAX" ) ? WPBDP_TAGS_TAX : "wpbdp_tag";
+        return (string) $this->catalog()->tag_taxonomy();
     }
 
     private function get_listing_post( int $listing_id ): ?WP_Post {
@@ -177,39 +152,6 @@ class BusinessDirectoryPlugin extends Provider {
         }
 
         return $post;
-    }
-
-    private function apply_sort_args( array &$args, string $sort ): void {
-        $order_by = "date";
-        $order    = "DESC";
-        if ( "" !== $sort ) {
-            if ( 0 === strpos( $sort, "-" ) ) {
-                $order_by = ltrim( $sort, "-" );
-                $order    = "DESC";
-            } else {
-                $order_by = $sort;
-                $order    = "ASC";
-            }
-        }
-
-        $map             = ["date" => "date", "title" => "title", "name" => "name", "id" => "ID"];
-        $args["orderby"] = $map[$order_by] ?? "date";
-        $args["order"]   = $order;
-    }
-
-    private function apply_tax_filters( array &$args, Request $request ): void {
-        $tax_query = [];
-        foreach ( ["categories" => $this->category_taxonomy(), "tags" => $this->tag_taxonomy()] as $key => $taxonomy ) {
-            $ids = $this->positive_ids( $request->get_param( $key ) );
-            if ( empty( $ids ) || ! taxonomy_exists( $taxonomy ) ) {
-                continue;
-            }
-            $tax_query[] = ["taxonomy" => $taxonomy, "field" => "term_id", "terms" => $ids];
-        }
-        if ( ! empty( $tax_query ) ) {
-            //phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_tax_query -- filtering listings by taxonomy is the point of this query.
-            $args["tax_query"] = $tax_query;
-        }
     }
 
     private function map_listing_to_dto( WP_Post $post, array $fields ): ListingDTO {
@@ -267,7 +209,7 @@ class BusinessDirectoryPlugin extends Provider {
             $dto->set_favorite( false );
         }
         if ( in_array( "featured", $fields, true ) ) {
-            $dto->set_featured( (bool) $this->get_meta_value( $post->ID, ["_wpbdp[sticky]", "sticky", "_sticky"] ) );
+            $dto->set_featured( $this->is_sticky( (int) $post->ID ) );
         }
         if ( in_array( "new", $fields, true ) ) {
             $dto->set_new( false );
@@ -462,6 +404,15 @@ class BusinessDirectoryPlugin extends Provider {
             return [];
         }
         return array_map( fn( $term ): array => ["id" => (int) $term->term_id, "name" => (string) $term->name, "slug" => (string) $term->slug], $terms );
+    }
+
+    /**
+     * Whether a listing is sticky (featured), kept in the `wpbdp_listings` table.
+     */
+    private function is_sticky( int $post_id ): bool {
+        global $wpdb;
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- one indexed row.
+        return (bool) $wpdb->get_var( $wpdb->prepare( "SELECT is_sticky FROM {$wpdb->prefix}wpbdp_listings WHERE listing_id = %d", $post_id ) );
     }
 
     private function get_meta_value( int $post_id, array $keys ): string {

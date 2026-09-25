@@ -71,6 +71,7 @@ class ClassifiedListingTest extends DirectoryIntegrationTestCase {
 
         $this->assert_provider_filter_surface( $this->integration );
         $this->assert_listing_collection( $this->integration, $source_id, $category_id );
+        $this->assert_featured_listing( $this->integration, $source_id );
         $this->assert_single_listing( $this->integration, $source_id, "Classified Listing Source" );
         $this->assert_related_listings( $this->integration, $source_id, $related_id );
         $this->assert_categories( $this->integration, $category_id );
