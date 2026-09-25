@@ -35,8 +35,8 @@ Route::group(
 );
 
 Route::group(
-    'blog', function() {
-        require __DIR__ . '/blog.php';
+    'post-types', function() {
+        require __DIR__ . '/post-types.php';
     }
 );
 

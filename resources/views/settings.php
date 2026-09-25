@@ -8,6 +8,7 @@
  * @var int    $active_tokens
  * @var int    $token_days
  * @var bool   $permalink_ok
+ * @var array  $content_types Effective content-type selections keyed by Studio app id.
  * @var string $notice
  */
 
@@ -141,6 +142,49 @@ use Crafium\AppNatively\App\Providers\Admin\MenuServiceProvider;
         <?php wp_nonce_field( MenuServiceProvider::NONCE ); ?>
         <?php submit_button( __( 'Issue a new key', 'appnatively' ), 'secondary', 'submit', false ); ?>
     </form>
+
+    <hr>
+
+    <h2><?php esc_html_e( 'Exposed content', 'appnatively' ); ?></h2>
+    <p class="description" style="max-width: 48em;">
+        <?php esc_html_e( 'Blog posts are always available to the app. Other post types and custom fields are chosen in AppNatively Studio and listed here. Anyone can read them through the API, the same as your website.', 'appnatively' ); ?>
+    </p>
+    <?php
+    $craf_appna_exposed = [];
+    foreach ( $content_types as $craf_appna_selections ) {
+        // Several apps can share this site; what is exposed is their union.
+        foreach ( $craf_appna_selections as $craf_appna_selection ) {
+            $craf_appna_type = $craf_appna_selection['postType'];
+            if ( isset( $craf_appna_exposed[ $craf_appna_type ] ) ) {
+                $craf_appna_selection['taxonomies'] = array_merge( $craf_appna_exposed[ $craf_appna_type ]['taxonomies'], $craf_appna_selection['taxonomies'] );
+                $craf_appna_selection['fields']     = array_merge( $craf_appna_exposed[ $craf_appna_type ]['fields'], $craf_appna_selection['fields'] );
+            }
+            $craf_appna_exposed[ $craf_appna_type ] = $craf_appna_selection;
+        }
+    }
+    ?>
+    <?php if ( empty( $craf_appna_exposed ) ) : ?>
+        <p><?php esc_html_e( 'No custom post types are exposed.', 'appnatively' ); ?></p>
+    <?php else : ?>
+        <table class="widefat striped" style="max-width: 48em;">
+            <thead>
+                <tr>
+                    <th><?php esc_html_e( 'Post type', 'appnatively' ); ?></th>
+                    <th><?php esc_html_e( 'Taxonomies', 'appnatively' ); ?></th>
+                    <th><?php esc_html_e( 'Custom fields', 'appnatively' ); ?></th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php foreach ( $craf_appna_exposed as $craf_appna_selection ) : ?>
+                    <tr>
+                        <td><?php echo esc_html( $craf_appna_selection['label'] ); ?> <code><?php echo esc_html( $craf_appna_selection['postType'] ); ?></code></td>
+                        <td><?php echo esc_html( implode( ', ', array_unique( array_column( $craf_appna_selection['taxonomies'], 'label' ) ) ) ?: '—' ); ?></td>
+                        <td><?php echo esc_html( implode( ', ', array_unique( array_column( $craf_appna_selection['fields'], 'label' ) ) ) ?: '—' ); ?></td>
+                    </tr>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
+    <?php endif; ?>
 
     <hr>
 

@@ -1,18 +1,19 @@
 <?php
 
-namespace Crafium\AppNatively\App\Http\Controllers\Blog;
+namespace Crafium\AppNatively\App\Http\Controllers\PostType;
 
 defined( "ABSPATH" ) || exit;
 
-use Crafium\AppNatively\App\DTO\Blog\PostCategoryDTO;
-use Crafium\AppNatively\App\DTO\Blog\PostCategoryPaginatorDTO;
+use Crafium\AppNatively\App\DTO\PostType\PostTypeTermDTO;
+use Crafium\AppNatively\App\DTO\PostType\PostTypeTermPaginatorDTO;
 use Crafium\AppNatively\App\Http\Controllers\Controller;
+use Crafium\AppNatively\App\Support\ContentTypes;
 use Crafium\AppNatively\WpMVC\Exceptions\Exception;
 use Crafium\AppNatively\WpMVC\Routing\Response;
 use Crafium\AppNatively\WpMVC\RequestValidator\Request;
 use WP_Term;
 
-class CategoryController extends Controller {
+class TermController extends Controller {
     /**
      * The allowed fields for the resource.
      *
@@ -36,13 +37,16 @@ class CategoryController extends Controller {
     public function index( Request $request ): array {
         $request->validate(
             [
-                "page"     => "nullable|integer|min:1",
-                "per_page" => "nullable|integer|min:1|max:100",
-                "search"   => "nullable|string",
-                "sort"     => "nullable|string",
+                "page"      => "nullable|integer|min:1",
+                "per_page"  => "nullable|integer|min:1|max:100",
+                "search"    => "nullable|string",
+                "sort"      => "nullable|string",
+                "post_type" => "nullable|string",
+                "taxonomy"  => "nullable|string",
             ]
         );
 
+        $taxonomy = $this->resolve_taxonomy( $request );
         $page     = (int) $request->get_param( "page" ) ?: 1;
         $per_page = (int) $request->get_param( "per_page" ) ?: 10;
         $search   = sanitize_text_field( (string) $request->get_param( "search" ) );
@@ -69,7 +73,7 @@ class CategoryController extends Controller {
         ];
 
         $term_args = [
-            "taxonomy"   => "category",
+            "taxonomy"   => $taxonomy,
             "hide_empty" => false,
             "number"     => $per_page,
             "offset"     => ( $page - 1 ) * $per_page,
@@ -99,7 +103,7 @@ class CategoryController extends Controller {
             }
         }
 
-        $category_paginator = new PostCategoryPaginatorDTO(
+        $category_paginator = new PostTypeTermPaginatorDTO(
             $page,
             $per_page,
             $total,
@@ -120,12 +124,14 @@ class CategoryController extends Controller {
     public function show( Request $request ): array {
         $request->validate(
             [
-                "id" => "required|numeric",
+                "id"        => "required|numeric",
+                "post_type" => "nullable|string",
+                "taxonomy"  => "nullable|string",
             ]
         );
 
         $id   = (int) craf_appna_route_param( $request, "id" );
-        $term = get_term( $id, "category" );
+        $term = get_term( $id, $this->resolve_taxonomy( $request ) );
 
         if ( ! $term instanceof WP_Term ) {
             throw new Exception( esc_html__( "Category not found", "appnatively" ) );
@@ -139,13 +145,35 @@ class CategoryController extends Controller {
     }
 
     /**
-     * Map a WP_Term to a PostCategoryDTO.
+     * The requested taxonomy of the requested post type (`post` by default),
+     * falling back to the type's primary taxonomy — `category` for posts.
+     *
+     * Reported as not found when the app may not read it, the same as a
+     * missing category.
+     *
+     * @param Request $request The REST request.
+     * @return string
+     * @throws Exception
+     */
+    private function resolve_taxonomy( Request $request ): string {
+        $post_type = sanitize_key( (string) $request->get_param( "post_type" ) ) ?: ContentTypes::DEFAULT_POST_TYPE;
+        $taxonomy  = sanitize_key( (string) $request->get_param( "taxonomy" ) ) ?: (string) ContentTypes::primary_taxonomy( $post_type );
+
+        if ( ! ContentTypes::is_allowed_post_type( $post_type ) || ! in_array( $taxonomy, ContentTypes::allowed_taxonomies( $post_type ), true ) ) {
+            throw new Exception( esc_html__( "Category not found", "appnatively" ) );
+        }
+
+        return $taxonomy;
+    }
+
+    /**
+     * Map a WP_Term to a PostTypeTermDTO.
      *
      * @param WP_Term $term The term.
-     * @return PostCategoryDTO
+     * @return PostTypeTermDTO
      */
-    private function map_term_to_dto( WP_Term $term ): PostCategoryDTO {
-        return ( new PostCategoryDTO() )
+    private function map_term_to_dto( WP_Term $term ): PostTypeTermDTO {
+        return ( new PostTypeTermDTO() )
             ->set_id( (int) $term->term_id )
             ->set_name( (string) $term->name )
             ->set_slug( (string) $term->slug )

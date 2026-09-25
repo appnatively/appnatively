@@ -1,16 +1,16 @@
 <?php
 
-namespace Crafium\AppNatively\App\DTO\Blog;
+namespace Crafium\AppNatively\App\DTO\PostType;
 
 defined( "ABSPATH" ) || exit;
 
 use Crafium\AppNatively\App\DTO\PaginatorDTO;
 
-class PostCategoryPaginatorDTO extends PaginatorDTO {
+class PostTypeTermPaginatorDTO extends PaginatorDTO {
     /**
      * The items for the current page.
      *
-     * @var PostCategoryDTO[]
+     * @var PostTypeTermDTO[]
      */
     protected $items;
 
@@ -22,7 +22,7 @@ class PostCategoryPaginatorDTO extends PaginatorDTO {
     /**
      * Get the value of items.
      *
-     * @return PostCategoryDTO[]
+     * @return PostTypeTermDTO[]
      */
     public function get_items(): array {
         return $this->items;
@@ -31,7 +31,7 @@ class PostCategoryPaginatorDTO extends PaginatorDTO {
     /**
      * Set the value of items.
      *
-     * @param PostCategoryDTO[] $items
+     * @param PostTypeTermDTO[] $items
      *
      * @return self
      */

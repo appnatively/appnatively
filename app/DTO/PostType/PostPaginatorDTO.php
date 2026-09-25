@@ -1,6 +1,6 @@
 <?php
 
-namespace Crafium\AppNatively\App\DTO\Blog;
+namespace Crafium\AppNatively\App\DTO\PostType;
 
 defined( "ABSPATH" ) || exit;
 

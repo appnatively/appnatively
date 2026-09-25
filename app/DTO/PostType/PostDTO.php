@@ -1,6 +1,6 @@
 <?php
 
-namespace Crafium\AppNatively\App\DTO\Blog;
+namespace Crafium\AppNatively\App\DTO\PostType;
 
 defined( "ABSPATH" ) || exit;
 
@@ -23,12 +23,53 @@ class PostDTO extends DTO {
 
     private array $thumbnail = [];
 
-    /**
-     * @var array
-     */
-    private array $categories = [];
-
     private string $date;
+
+    private string $post_type;
+
+    /**
+     * Terms of every exposed taxonomy, keyed by taxonomy name.
+     *
+     * @var array<string, array[]>
+     */
+    private array $terms;
+
+    /**
+     * Exposed custom field values as `{type, value}`, keyed by field key.
+     *
+     * @var array<string, array>
+     */
+    private array $custom_fields;
+
+    public function get_post_type(): string {
+        return $this->post_type;
+    }
+
+    public function set_post_type( string $post_type ): self {
+        $this->post_type = $post_type;
+        return $this;
+    }
+
+    public function get_terms(): array {
+        return $this->terms;
+    }
+
+    public function set_terms( array $terms ): self {
+        $this->terms = $terms;
+        return $this;
+    }
+
+    /**
+     * @return array|object An empty list serializes as `{}` so clients always see an object.
+     */
+    public function get_custom_fields() {
+        return empty( $this->custom_fields ) ? (object) [] : $this->custom_fields;
+    }
+
+    public function set_custom_fields( array $custom_fields ): self {
+        $this->custom_fields = $custom_fields;
+        return $this;
+    }
 
     public function get_id(): int {
         return $this->id;
@@ -99,21 +140,6 @@ class PostDTO extends DTO {
 
     public function set_thumbnail( array $thumbnail ): self {
         $this->thumbnail = $thumbnail;
-        return $this;
-    }
-
-    /**
-     * @return array
-     */
-    public function get_categories(): array {
-        return $this->categories;
-    }
-
-    /**
-     * @param array $categories
-     */
-    public function set_categories( array $categories ): self {
-        $this->categories = $categories;
         return $this;
     }
 

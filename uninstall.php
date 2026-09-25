@@ -22,6 +22,7 @@ $craf_appna_options = [
     'craf_appna_api_enabled',
     'craf_appna_site_key',
     'craf_appna_trusted_proxies',
+    'craf_appna_content_types',
     'craf_appna_migrations',
 ];
 

@@ -5,6 +5,7 @@ namespace Crafium\AppNatively\App\Providers\Admin;
 defined( 'ABSPATH' ) || exit;
 
 use Crafium\AppNatively\App\Support\Auth;
+use Crafium\AppNatively\App\Support\ContentTypes;
 use Crafium\AppNatively\App\Support\Settings;
 use Crafium\AppNatively\WpMVC\Contracts\Provider;
 use Crafium\AppNatively\WpMVC\View\View;
@@ -61,6 +62,7 @@ class MenuServiceProvider extends Provider
                 'active_tokens'  => Auth::count_all_active(),
                 'token_days'     => (int) round( Auth::get_ttl() / DAY_IN_SECONDS ),
                 'permalink_ok'   => Settings::uses_postname_permalinks(),
+                'content_types'  => ContentTypes::all(),
                 'notice'         => $this->current_notice(),
             ]
         );

@@ -136,6 +136,7 @@ class Settings {
     public static function delete_all(): void {
         delete_option( self::OPTION_ENABLED );
         delete_option( self::OPTION_SITE_KEY );
+        delete_option( ContentTypes::OPTION );
 
         // Legacy option from the removed reverse-proxy feature; still cleaned
         // up here for sites that had it set before it was removed.

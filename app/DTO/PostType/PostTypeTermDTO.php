@@ -1,12 +1,12 @@
 <?php
 
-namespace Crafium\AppNatively\App\DTO\Blog;
+namespace Crafium\AppNatively\App\DTO\PostType;
 
 defined( "ABSPATH" ) || exit;
 
 use Crafium\AppNatively\App\DTO\DTO;
 
-class PostCategoryDTO extends DTO {
+class PostTypeTermDTO extends DTO {
     private int $id;
 
     private string $name;
