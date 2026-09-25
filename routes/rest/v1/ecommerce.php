@@ -13,6 +13,10 @@ Route::group(
     'products', function() {
         Route::get( '/', [ProductController::class, 'index'] );
         Route::get( '/filters', [ProductController::class, 'filters'] );
+        // Builder-only: which taxonomies, attributes and custom fields exist to
+        // build filter rows from. Names the site's custom fields, so it needs the
+        // connection key like `plugins`.
+        Route::get( '/filter-sources', [ProductController::class, 'filter_sources'] )->middleware( 'app' );
         Route::get( '/{id}/reviews', [ProductController::class, 'reviews'] );
         Route::get( '/{id}/related', [ProductController::class, 'related'] )->where( 'id', '\d+' );
         Route::get( '/{id}', [ProductController::class, 'show'] );

@@ -12,6 +12,7 @@ use Crafium\AppNatively\App\DTO\Ecommerce\CategoryDTO;
 use Crafium\AppNatively\App\DTO\Ecommerce\CategoryPaginatorDTO;
 use Crafium\AppNatively\App\DTO\Ecommerce\ProductDTO;
 use Crafium\AppNatively\App\DTO\Ecommerce\ProductPaginatorDTO;
+use Crafium\AppNatively\App\DTO\Ecommerce\ProductFiltersDTO;
 use Crafium\AppNatively\App\DTO\Ecommerce\OrderDTO;
 use Crafium\AppNatively\App\DTO\Ecommerce\OrderPaginatorDTO;
 use Crafium\AppNatively\App\Integrations\Ecommerce\FluentCart\CartManager;
@@ -56,6 +57,8 @@ class FluentCart extends Provider {
 
         add_filter( "craf_appna_ecommerce_fluent-cart_products", [ $this, "products" ], 10, 3 );
         add_filter( "craf_appna_ecommerce_fluent-cart_wishlist", [ $this, "wishlist" ], 10, 3 );
+        add_filter( "craf_appna_ecommerce_fluent-cart_products_filters", [ $this, "products_filters" ], 10, 2 );
+        add_filter( "craf_appna_ecommerce_fluent-cart_products_filter_sources", [ $this, "products_filter_sources" ], 10, 2 );
         add_filter( "craf_appna_ecommerce_fluent-cart_product", [ $this, "product" ], 10, 3 );
         add_filter( "craf_appna_ecommerce_fluent-cart_related_products", [ $this, "related_products" ], 10, 3 );
         add_filter( "craf_appna_ecommerce_fluent-cart_product_reviews", [ $this, "product_reviews" ], 10, 2 );
@@ -149,6 +152,20 @@ class FluentCart extends Provider {
      */
     public function order_get( ?OrderDTO $order_dto, $id, Request $request ): ?OrderDTO {
         return $this->order_repository->order_get( $order_dto, $id, $request );
+    }
+
+    /**
+     * Available product filters for the current context.
+     */
+    public function products_filters( ?ProductFiltersDTO $product_filters, WP_REST_Request $request ): ProductFiltersDTO {
+        return $this->product_repository->filters( $request );
+    }
+
+    /**
+     * What the app builder can offer as filter rows.
+     */
+    public function products_filter_sources( array $sources, WP_REST_Request $request ): array {
+        return $this->product_repository->filter_sources();
     }
 
     /**

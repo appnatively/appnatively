@@ -143,7 +143,7 @@ class SurecartTest extends \WP_UnitTestCase
         update_post_meta( $other_id, 'product', [ 'id' => 'prod_other', 'name' => 'Other SureCart Product' ] );
 
         $surecart = new SureCart();
-        $request  = $this->build_request( [ 'page' => 1, 'per_page' => 10, 'categoryId' => $this->category_id ] );
+        $request  = $this->build_request( [ 'page' => 1, 'per_page' => 10, 'categories' => [ $this->category_id ] ] );
 
         $paginator = $surecart->products( null, $request, [ 'id' ] );
         $ids       = array_map( fn( $dto ) => $dto->get_id(), $paginator->get_items() );
@@ -190,14 +190,17 @@ class SurecartTest extends \WP_UnitTestCase
         $this->assertEquals( '25.00', $variants[0]->get_price() );
     }
 
-    public function test_products_filters_returns_reduced_shape() {
+    public function test_products_filters_reports_supported_sorts() {
         $surecart = new SureCart();
-        $filters  = $surecart->products_filters( null, $this->build_request() );
+        $filters  = $surecart->products_filters( null, $this->build_request( [ 'facets' => [ 'availability' ] ] ) );
+        $sorts    = $surecart->products_filters( null, $this->build_request() );
 
-        $this->assertNull( $filters->get_price() );
-        $this->assertNull( $filters->get_rating() );
-        $this->assertSame( [], $filters->get_attributes() );
-        $this->assertSame( [], $filters->get_sort_options() );
+        $this->assertSame( [], $sorts->get_facets() );
+
+        $this->assertContains( 'price_low', $filters->get_sort_options() );
+        $this->assertContains( 'rating', $filters->get_sort_options() );
+        $this->assertNotContains( 'popularity', $filters->get_sort_options() );
+        $this->assertSame( 'availability', $filters->get_facets()[0]->get_id() );
     }
 
     public function test_categories_returns_seeded_category() {

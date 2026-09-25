@@ -12,47 +12,32 @@ use Crafium\AppNatively\App\DTO\Ecommerce\ProductDimensionDTO;
 use Crafium\AppNatively\App\DTO\Ecommerce\ProductImageDTO;
 use Crafium\AppNatively\App\DTO\Ecommerce\ProductPaginatorDTO;
 use Crafium\AppNatively\App\DTO\Ecommerce\ProductVariantDTO;
+use Crafium\AppNatively\App\DTO\Ecommerce\ProductFilterSourceDTO;
+use Crafium\AppNatively\App\DTO\Ecommerce\ProductFiltersDTO;
+use Crafium\AppNatively\App\Integrations\Ecommerce\Catalog\ProductQuery;
 use Crafium\AppNatively\App\Integrations\Ecommerce\Concerns\EcommerceIntegrationHelpers;
 use Crafium\AppNatively\WpMVC\Exceptions\Exception;
 use FluentCart\App\Helpers\Helper;
 
 // FluentCart Classes
 use FluentCart\App\Models\Product;
-use FluentCart\App\Services\Filter\ProductFilter;
-use FluentCart\Framework\Http\Request\Request;
 
 class ProductRepository {
     use EcommerceIntegrationHelpers;
 
-    /**
-     * Bridge WP_REST_Request to FluentCart Request.
-     *
-     * @param WP_REST_Request $request
-     * @return Request
-     */
-    private function bridge_request( WP_REST_Request $request ): Request {
-        $params = $request->get_params();
-        $sort   = $request->get_param( 'sort' );
+    /** Product lists and filter facets (see ProductQuery). */
+    private ProductQuery $query;
 
-        if ( $sort ) {
-            if ( str_starts_with( $sort, '-' ) ) {
-                $params['sort_by']   = ltrim( $sort, '-' );
-                $params['sort_type'] = 'desc';
-            } else {
-                $params['sort_by']   = $sort;
-                $params['sort_type'] = 'asc';
-            }
-        }
-
-        return new Request(
-            \FluentCart\App\App::getInstance(),
-            $params,
-            $request->get_body_params()
-        );
+    public function __construct() {
+        $this->query = new ProductQuery( new FluentCartCatalog() );
     }
 
     /**
-     * Get products paginator.
+     * Get products paginated: the page context, the shopper's filter selection and sort.
+     *
+     * Lists through ProductQuery rather than FluentCart's admin ProductFilter: that
+     * filter lists every status (drafts, private, password-protected) and would take
+     * admin-only params (views, advanced filters, selects) straight from the request.
      *
      * @param mixed           $data    The current data.
      * @param WP_REST_Request $request The request object.
@@ -61,25 +46,42 @@ class ProductRepository {
      * @return ProductPaginatorDTO|null
      */
     public function products( $data, WP_REST_Request $request, array $fields ): ?ProductPaginatorDTO {
-        $fc_request = $this->bridge_request( $request );
+        $page = $this->query->paginate( $request );
 
-        // Use native filter to handle searching and pagination
-        $paginator = ProductFilter::fromRequest( $fc_request )->paginate(
-            $request->get_param( 'per_page' ) ?: 10
-        );
-
-        $products = [];
-        foreach ( $paginator->getCollection() as $product ) {
-            $products[] = $this->map_to_product_dto( $product, $fields );
+        $by_id = [];
+        if ( ! empty( $page['ids'] ) ) {
+            foreach ( Product::with( [ 'detail', 'variants' ] )->whereIn( 'ID', $page['ids'] )->get() as $product ) {
+                $by_id[ (int) $product->ID ] = $product;
+            }
         }
 
-        return new ProductPaginatorDTO(
-            $paginator->currentPage(),
-            $paginator->perPage(),
-            $paginator->total(),
-            $paginator->lastPage(),
-            $products
-        );
+        $products = [];
+        foreach ( $page['ids'] as $id ) {
+            if ( isset( $by_id[ $id ] ) ) {
+                $products[] = $this->map_to_product_dto( $by_id[ $id ], $fields );
+            }
+        }
+
+        return new ProductPaginatorDTO( $page['page'], $page['per_page'], $page['total'], $page['last_page'], $products );
+    }
+
+    /**
+     * The filters available for the current context, with per-option counts.
+     *
+     * @param WP_REST_Request $request The request object.
+     * @return ProductFiltersDTO
+     */
+    public function filters( WP_REST_Request $request ): ProductFiltersDTO {
+        return $this->query->filters( $request );
+    }
+
+    /**
+     * What the app builder can offer as filter rows.
+     *
+     * @return ProductFilterSourceDTO[]
+     */
+    public function filter_sources(): array {
+        return $this->query->filter_sources();
     }
 
     /**
@@ -97,7 +99,7 @@ class ProductRepository {
         $per_page   = (int) $request->get_param( 'per_page' ) ?: 10;
         $tax_query  = [ 'relation' => 'OR' ];
 
-        foreach ( [ 'product-categories', 'product-brands', 'product-tags' ] as $taxonomy ) {
+        foreach ( [ FluentCartCatalog::CATEGORY_TAXONOMY, FluentCartCatalog::BRAND_TAXONOMY, 'product-tags' ] as $taxonomy ) {
             if ( ! taxonomy_exists( $taxonomy ) ) {
                 continue;
             }
@@ -212,7 +214,7 @@ class ProductRepository {
         $search   = sanitize_text_field( $request->get_param( "search" ) );
 
         $args = [
-            'taxonomy'   => 'product-categories',
+            'taxonomy'   => FluentCartCatalog::CATEGORY_TAXONOMY,
             'hide_empty' => false,
             'number'     => $per_page,
             'offset'     => ( $page - 1 ) * $per_page,
@@ -220,7 +222,7 @@ class ProductRepository {
         ];
 
         $terms            = get_terms( $args );
-        $total_categories = wp_count_terms( 'product-categories' ); //TODO: need to add search
+        $total_categories = wp_count_terms( FluentCartCatalog::CATEGORY_TAXONOMY ); //TODO: need to add search
 
         if ( empty( $terms ) || is_wp_error( $terms ) ) {
             return new CategoryPaginatorDTO( $page, $per_page, 0, 0, [] );
@@ -256,7 +258,7 @@ class ProductRepository {
             return null;
         }
 
-        $term = get_term( $id, 'product-categories' );
+        $term = get_term( $id, FluentCartCatalog::CATEGORY_TAXONOMY );
 
         if ( ! $term || is_wp_error( $term ) ) {
             throw new Exception( esc_html__( "Category not found.", "appnatively" ), 404 );
@@ -312,20 +314,30 @@ class ProductRepository {
                 $dto->set_type( $detail->variation_type );
             }
 
+            // The default variation carries the price shown for the product and its sale price.
+            $default_variation = null;
+            foreach ( $product->variants ?? [] as $variation ) {
+                if ( $default_variation === null || (int) $variation->id === (int) $detail->default_variation_id ) {
+                    $default_variation = $variation;
+                }
+            }
+            $compare_price = $default_variation ? (int) $default_variation->compare_price : 0;
+
             if ( in_array( "price", $fields ) ) {
                 $dto->set_price( $this->format_amount( $detail->min_price ) );
             }
 
             if ( in_array( "compare_at_price", $fields ) ) {
-                $dto->set_compare_at_price( $this->format_amount( $detail->max_price ) );
+                $dto->set_compare_at_price( $this->format_amount( $compare_price ) );
             }
 
             if ( in_array( "on_sale", $fields ) ) {
-                $dto->set_on_sale( $detail->min_price < $detail->max_price );
+                $dto->set_on_sale( $default_variation !== null && $compare_price > (int) $default_variation->item_price );
             }
 
-            if ( in_array( "inventory_status", $fields ) ) {
-                $dto->set_inventory_status( $detail->stock_availability ? "in_stock" : "out_of_stock" );
+            if ( in_array( "stock_status", $fields ) || in_array( "inventory_status", $fields ) ) {
+                // The app's StockStatus uses WooCommerce's spelling.
+                $dto->set_inventory_status( $detail->stock_availability === Helper::IN_STOCK ? "instock" : "outofstock" );
             }
 
             if ( in_array( "manage_stock", $fields ) ) {
@@ -333,7 +345,11 @@ class ProductRepository {
             }
 
             if ( in_array( "stock_quantity", $fields ) ) {
-                $dto->set_stock_quantity( (int) $detail->stock_availability );
+                $available = 0;
+                foreach ( $product->variants ?? [] as $variation ) {
+                    $available += (int) $variation->available;
+                }
+                $dto->set_stock_quantity( $available );
             }
 
             // Logistics Mapping
@@ -406,7 +422,7 @@ class ProductRepository {
                     ->set_name( (string) $variation->variation_title )
                     ->set_price( $this->format_amount( $variation->item_price ) )
                     ->set_compare_at_price( $this->format_amount( $variation->compare_price ) )
-                    ->set_inventory_status( (string) $variation->stock_status )
+                    ->set_inventory_status( $variation->stock_status === Helper::IN_STOCK ? "instock" : "outofstock" )
                     ->set_manage_stock( (bool) $variation->manage_stock )
                     ->set_stock_quantity( (int) $variation->available );
 

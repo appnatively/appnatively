@@ -51,21 +51,25 @@ class ProductController extends Controller {
 
     /**
      * Validation rules shared by every action that accepts a product-filtering
-     * context (category, search, price, availability, rating, attributes) —
-     * `index()` and `filters()` both narrow the same product set the same way.
+     * context — `index()` and `filters()` both narrow the same product set the
+     * same way (see Catalog\ProductQuery). Nested values are read as scalars
+     * and allow-listed by the store's catalog.
+     *
+     * - categories / tags: term ids from the page or list (categories include their children)
+     * - in_stock:          a list's own "in stock only" setting
+     * - values:            the filter selection, [facet id => value[]]
+     * - ranges:            the filter selection, [facet id => {min, max}]
      *
      * @return array
      */
     protected function context_filter_rules(): array {
         return [
             "search"      => "nullable|string",
-            "categoryId"  => "nullable|integer",
-            "price_min"   => "nullable|numeric|min:0",
-            "price_max"   => "nullable|numeric|min:0",
-            "on_sale"     => "nullable|boolean",
+            "categories"  => "nullable|array",
+            "tags"        => "nullable|array",
             "in_stock"    => "nullable|boolean",
-            "rating_min"  => "nullable|numeric|min:0|max:5",
-            "attributes"  => "nullable|array",
+            "values"      => "nullable|array",
+            "ranges"      => "nullable|array",
             "integration" => "required|string|" . craf_appna_in_rule( craf_appna_get_ecommerce_integrations() ),
         ];
     }
@@ -106,7 +110,7 @@ class ProductController extends Controller {
      * @throws Exception
      */
     public function filters( Request $request ): array {
-        $request->validate( $this->context_filter_rules() );
+        $request->validate( array_merge( $this->context_filter_rules(), [ "facets" => "nullable|array" ] ) );
 
         $integration     = sanitize_text_field( $request->get_param( "integration" ) );
         $product_filters = apply_filters( "craf_appna_ecommerce_{$integration}_products_filters", null, $request );
@@ -116,6 +120,26 @@ class ProductController extends Controller {
         }
 
         return Response::send( ["data" => $product_filters] );
+    }
+
+    /**
+     * List what the app builder can offer as filter rows (taxonomies,
+     * attributes, custom fields) for the active integration.
+     *
+     * @param Request $request The REST request instance.
+     * @return array
+     */
+    public function filter_sources( Request $request ): array {
+        $request->validate(
+            [
+                "integration" => "required|string|" . craf_appna_in_rule( craf_appna_get_ecommerce_integrations() ),
+            ]
+        );
+
+        $integration = sanitize_text_field( $request->get_param( "integration" ) );
+        $sources     = apply_filters( "craf_appna_ecommerce_{$integration}_products_filter_sources", [], $request );
+
+        return Response::send( [ "data" => [ "sources" => is_array( $sources ) ? array_values( $sources ) : [] ] ] );
     }
 
     /**

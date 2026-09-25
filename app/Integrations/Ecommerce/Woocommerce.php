@@ -63,6 +63,7 @@ class Woocommerce extends Provider {
         add_filter( "craf_appna_ecommerce_woocommerce_products", [$this, "products"], 10, 3 );
         add_filter( "craf_appna_ecommerce_woocommerce_wishlist", [$this, "wishlist"], 10, 3 );
         add_filter( "craf_appna_ecommerce_woocommerce_products_filters", [$this, "products_filters"], 10, 2 );
+        add_filter( "craf_appna_ecommerce_woocommerce_products_filter_sources", [$this, "products_filter_sources"], 10, 2 );
         add_filter( "craf_appna_ecommerce_woocommerce_product", [$this, "product"], 10, 3 );
         add_filter( "craf_appna_ecommerce_woocommerce_related_products", [$this, "related_products"], 10, 3 );
         add_filter( "craf_appna_ecommerce_woocommerce_product_reviews", [$this, "product_reviews"], 10, 2 );
@@ -200,6 +201,13 @@ class Woocommerce extends Provider {
      */
     public function products_filters( ?ProductFiltersDTO $product_filters, Request $request ): ProductFiltersDTO {
         return $this->product_repository->filters( $product_filters, $request );
+    }
+
+    /**
+     * What the app builder can offer as filter rows.
+     */
+    public function products_filter_sources( array $sources, Request $request ): array {
+        return $this->product_repository->filter_sources();
     }
 
     /**

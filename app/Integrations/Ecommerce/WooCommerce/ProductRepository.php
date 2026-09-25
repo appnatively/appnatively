@@ -14,9 +14,9 @@ use Crafium\AppNatively\App\DTO\Ecommerce\ProductPaginatorDTO;
 use Crafium\AppNatively\App\DTO\Ecommerce\ProductVariantDTO;
 use Crafium\AppNatively\App\DTO\Ecommerce\CategoryDTO;
 use Crafium\AppNatively\App\DTO\Ecommerce\CategoryPaginatorDTO;
-use Crafium\AppNatively\App\DTO\Ecommerce\AttributeFacetDTO;
-use Crafium\AppNatively\App\DTO\Ecommerce\AttributeFacetOptionDTO;
+use Crafium\AppNatively\App\DTO\Ecommerce\ProductFilterSourceDTO;
 use Crafium\AppNatively\App\DTO\Ecommerce\ProductFiltersDTO;
+use Crafium\AppNatively\App\Integrations\Ecommerce\Catalog\ProductQuery;
 use Crafium\AppNatively\App\Integrations\Ecommerce\Concerns\EcommerceIntegrationHelpers;
 use Crafium\AppNatively\WpMVC\Database\Query\Builder;
 use Crafium\AppNatively\WpMVC\RequestValidator\Request;
@@ -25,17 +25,15 @@ use Crafium\AppNatively\WpMVC\Exceptions\Exception;
 class ProductRepository {
     use EcommerceIntegrationHelpers;
 
-    /**
-     * Memoized result of `wc_get_attribute_taxonomy_names()` — a single filters
-     * request can otherwise trigger this call a dozen+ times (once per
-     * `apply_context_filters()` call, once per taxonomy in `build_attribute_facets()`).
-     *
-     * @var string[]|null
-     */
-    private ?array $attribute_taxonomies = null;
+    /** Product lists and filter facets (see ProductQuery). */
+    private ProductQuery $query;
+
+    public function __construct() {
+        $this->query = new ProductQuery( new WooCommerceCatalog() );
+    }
 
     /**
-     * Get products paginated.
+     * Get products paginated: the page context, the shopper's filter selection and sort.
      *
      * @param ProductPaginatorDTO|null $product_paginator The product paginator DTO.
      * @param Request $request The REST request instance.
@@ -43,40 +41,12 @@ class ProductRepository {
      * @return ProductPaginatorDTO
      */
     public function products( ?ProductPaginatorDTO $product_paginator, Request $request, array $fields = [] ): ProductPaginatorDTO {
-        $page     = (int) $request->get_param( "page" ) ?: 1;
-        $per_page = (int) $request->get_param( "per_page" ) ?: 10;
-        $sort     = (string) ( $request->get_param( "sort" ) ?: "relevance" );
+        $page  = $this->query->paginate( $request );
+        $items = array_map( fn( int $id ) => $this->map_product_to_dto( $id, $fields ), $page['ids'] );
 
-        $query = $this->base_product_query();
-
-        $needs_lookup = $this->apply_context_filters( $query, $request );
-
-        [$sort_column, $sort_direction, $sort_needs_lookup] = $this->resolve_sort( $sort );
-        if ( $sort_needs_lookup ) {
-            $this->join_meta_lookup( $query );
-        }
-
-        // SQL select optimization
-        $columns = $this->get_columns_from_fields( $fields );
-        $query->select( $columns );
-
-        $query->order_by( $sort_column, $sort_direction );
-
-        $paginator = $query->paginate( $page, $per_page, 1 );
-
-        $items = [];
-        foreach ( $paginator->items() as $post ) {
-            $items[] = $this->map_post_to_product_dto( $post, $fields );
-        }
-
-        return new ProductPaginatorDTO(
-            $page,
-            $per_page,
-            $paginator->total(),
-            $paginator->last_page(),
-            $items
-        );
+        return new ProductPaginatorDTO( $page['page'], $page['per_page'], $page['total'], $page['last_page'], $items );
     }
+
 
     /**
      * Get published products sharing a category or tag with the requested product.
@@ -112,21 +82,23 @@ class ProductRepository {
             return new ProductPaginatorDTO( $page, $per_page, 0, 1, [] );
         }
 
-        $query = $this->base_product_query()
+        // Listed like any product list: hidden-from-catalog products stay out.
+        $query = $this->query->base()
             ->where( 'posts.ID', '!=', $product_id )
             ->where_has(
                 'terms', function( $q ) use ( $term_ids ) {
                     $q->where_in( 'term_id', array_unique( $term_ids ) );
                 }
             )
-            ->select( $this->get_columns_from_fields( $fields ) )
-            ->order_by( 'post_date', 'desc' );
+            ->select( [ 'posts.ID' ] )
+            ->order_by( 'posts.post_date', 'desc' )
+            ->order_by( 'posts.ID', 'desc' );
 
         $paginator = $query->paginate( $page, $per_page, 1 );
         $items     = [];
 
         foreach ( $paginator->items() as $post ) {
-            $items[] = $this->map_post_to_product_dto( $post, $fields );
+            $items[] = $this->map_product_to_dto( (int) $post->ID, $fields );
         }
 
         return new ProductPaginatorDTO(
@@ -163,65 +135,35 @@ class ProductRepository {
 
         $items = [];
         foreach ( $posts as $post ) {
-            $items[] = $this->map_post_to_product_dto( $post, $fields );
+            $items[] = $this->map_product_to_dto( (int) $post->ID, $fields );
         }
 
         return new ProductPaginatorDTO( 1, count( $items ), count( $items ), 1, $items );
     }
 
     /**
-     * Describe the filters available for the current context (category / search /
-     * already-applied filters) with per-option counts, so the client can render the
-     * drawer purely from what the backend says is available.
+     * The filters available for the current context, with per-option counts.
      *
      * @param ProductFiltersDTO|null $product_filters
      * @param Request $request The REST request instance.
      * @return ProductFiltersDTO
      */
     public function filters( ?ProductFiltersDTO $product_filters, Request $request ): ProductFiltersDTO {
-        $dto = new ProductFiltersDTO();
-        $dto->set_sort_options( ProductFiltersDTO::SORT_TOKENS );
-
-        // Price bounds across every filter currently in effect (including attributes).
-        $price_query = $this->base_product_query();
-        $this->apply_context_filters( $price_query, $request );
-        $this->join_meta_lookup( $price_query );
-
-        $min_price = $price_query->min( "wc_product_meta_lookup.min_price" );
-        $max_price = $price_query->max( "wc_product_meta_lookup.max_price" );
-        $dto->set_price( $min_price !== null && $max_price !== null ? ["min" => (string) $min_price, "max" => (string) $max_price] : null );
-
-        // Rating: the drawer only needs to know whether a star-picker is worth showing.
-        $rating_query = $this->base_product_query();
-        $this->apply_context_filters( $rating_query, $request );
-        $this->join_meta_lookup( $rating_query );
-        $rating_query->where( "wc_product_meta_lookup.rating_count", ">", 0 );
-        $dto->set_rating( $rating_query->exists() ? ["max" => 5] : null );
-
-        // Availability counts.
-        $in_stock_query = $this->base_product_query();
-        $this->apply_context_filters( $in_stock_query, $request );
-        $this->join_meta_lookup( $in_stock_query );
-        $in_stock_count = $in_stock_query->where( "wc_product_meta_lookup.stock_status", "instock" )->count();
-
-        $on_sale_query = $this->base_product_query();
-        $this->apply_context_filters( $on_sale_query, $request );
-        $this->join_meta_lookup( $on_sale_query );
-        $on_sale_count = $on_sale_query->where( "wc_product_meta_lookup.onsale", 1 )->count();
-
-        $dto->set_availability( ["inStockCount" => (int) $in_stock_count, "onSaleCount" => (int) $on_sale_count] );
-
-        // Attribute facets: each taxonomy's own option counts are computed with that
-        // taxonomy's own selection excluded from the context, so users can see what
-        // adding another option within the same facet would do (OR within a facet).
-        $dto->set_attributes( $this->build_attribute_facets( $request ) );
-
-        return $dto;
+        return $this->query->filters( $request );
     }
 
     /**
-     * A fresh, unfiltered query scoped to published products — the common starting
-     * point every product/filter query builds on.
+     * What the app builder can offer as filter rows.
+     *
+     * @return ProductFilterSourceDTO[]
+     */
+    public function filter_sources(): array {
+        return $this->query->filter_sources();
+    }
+
+    /**
+     * Published, unprotected products, without catalog visibility: single fetches and
+     * saved wishlists reach a product hidden from the catalog (lists use ProductQuery).
      *
      * @return Builder
      */
@@ -233,217 +175,6 @@ class ProductRepository {
         return Post::where( "post_type", "product" )
             ->where( "post_status", "publish" )
             ->where( "post_password", "" );
-    }
-
-    /**
-     * The taxonomies WooCommerce has registered as product attributes, memoized
-     * for the lifetime of this repository instance (a single filters request can
-     * otherwise call `wc_get_attribute_taxonomy_names()` a dozen+ times).
-     *
-     * @return string[]
-     */
-    private function get_attribute_taxonomies(): array {
-        if ( $this->attribute_taxonomies === null ) {
-            $this->attribute_taxonomies = wc_get_attribute_taxonomy_names();
-        }
-        return $this->attribute_taxonomies;
-    }
-
-    /**
-     * Apply the shared set of context filters (category, search, price, availability,
-     * rating, attributes) to a product query. Returns whether the query now needs the
-     * `wc_product_meta_lookup` join (already applied here when true).
-     *
-     * @param mixed $query A Post query builder instance.
-     * @param Request $request The REST request instance.
-     * @param string[] $exclude_attribute_taxonomies Attribute taxonomies to skip (used to compute that facet's own option counts without self-filtering).
-     * @return bool
-     */
-    private function apply_context_filters( $query, Request $request, array $exclude_attribute_taxonomies = [] ): bool {
-        $category_id = $request->get_param( "categoryId" );
-        $search      = $request->get_param( "search" );
-        $price_min   = $request->get_param( "price_min" );
-        $price_max   = $request->get_param( "price_max" );
-        $on_sale     = $request->get_param( "on_sale" );
-        $in_stock    = $request->get_param( "in_stock" );
-        $rating_min  = $request->get_param( "rating_min" );
-        $attributes  = $request->get_param( "attributes" );
-
-        if ( ! empty( $category_id ) ) {
-            $query->where_has(
-                'terms', function( $q ) use ( $category_id ) {
-                    $q->where( 'taxonomy', 'product_cat' )
-                        ->where( 'term_id', (int) $category_id );
-                }
-            );
-        }
-
-        if ( ! empty( $search ) ) {
-            global $wpdb;
-            $like = $wpdb->esc_like( $search );
-            $query->where( "post_title", "like", "%$like%" );
-        }
-
-        if ( is_array( $attributes ) ) {
-            $attribute_taxonomies = $this->get_attribute_taxonomies();
-
-            foreach ( $attributes as $taxonomy => $values ) {
-                $taxonomy = sanitize_key( (string) $taxonomy );
-
-                if ( in_array( $taxonomy, $exclude_attribute_taxonomies, true ) ) {
-                    continue;
-                }
-
-                // Only ever trust taxonomies WooCommerce itself registered as product attributes.
-                if ( ! in_array( $taxonomy, $attribute_taxonomies, true ) ) {
-                    continue;
-                }
-
-                $slugs = array_values( array_filter( array_map( 'sanitize_title', (array) $values ) ) );
-                if ( empty( $slugs ) ) {
-                    continue;
-                }
-
-                $term_ids = get_terms(
-                    [
-                        'taxonomy'   => $taxonomy,
-                        'slug'       => $slugs,
-                        'fields'     => 'ids',
-                        'hide_empty' => false,
-                    ]
-                );
-
-                if ( is_wp_error( $term_ids ) || empty( $term_ids ) ) {
-                    // The requested option(s) don't exist — this can never match anything.
-                    $query->where( 'posts.ID', '=', 0 );
-                    continue;
-                }
-
-                $query->where_has(
-                    'terms', function( $q ) use ( $taxonomy, $term_ids ) {
-                        $q->where( 'taxonomy', $taxonomy )
-                            ->where_in( 'term_id', $term_ids );
-                    }
-                );
-            }
-        }
-
-        $needs_lookup = $price_min !== null || $price_max !== null || ! empty( $on_sale ) || ! empty( $in_stock ) || $rating_min !== null;
-
-        if ( $needs_lookup ) {
-            $this->join_meta_lookup( $query );
-
-            if ( $price_min !== null && $price_min !== '' ) {
-                $query->where( 'wc_product_meta_lookup.max_price', '>=', (float) $price_min );
-            }
-            if ( $price_max !== null && $price_max !== '' ) {
-                $query->where( 'wc_product_meta_lookup.min_price', '<=', (float) $price_max );
-            }
-            if ( ! empty( $on_sale ) ) {
-                $query->where( 'wc_product_meta_lookup.onsale', '=', 1 );
-            }
-            if ( ! empty( $in_stock ) ) {
-                $query->where( 'wc_product_meta_lookup.stock_status', '=', 'instock' );
-            }
-            if ( $rating_min !== null && $rating_min !== '' ) {
-                $query->where( 'wc_product_meta_lookup.average_rating', '>=', (float) $rating_min );
-            }
-        }
-
-        return $needs_lookup;
-    }
-
-    /**
-     * Left-join `wc_product_meta_lookup` (WooCommerce's indexed, variation-aware price
-     * /stock/rating table) onto the product query, if it isn't already joined.
-     *
-     * @param mixed $query A Post query builder instance.
-     * @return void
-     */
-    private function join_meta_lookup( $query ): void {
-        foreach ( $query->joins as $join ) {
-            if ( $join->as === 'wc_product_meta_lookup' ) {
-                return;
-            }
-        }
-
-        $query->left_join( 'wc_product_meta_lookup', 'posts.ID', '=', 'wc_product_meta_lookup.product_id' );
-    }
-
-    /**
-     * Resolve a client-facing sort token into [column, direction, requiresLookupJoin].
-     *
-     * @param string $sort
-     * @return array{0: string, 1: string, 2: bool}
-     */
-    private function resolve_sort( string $sort ): array {
-        switch ( $sort ) {
-            case 'newest':
-                return ['post_date', 'desc', false];
-            case 'oldest':
-                return ['post_date', 'asc', false];
-            case 'price_low':
-                return ['wc_product_meta_lookup.min_price', 'asc', true];
-            case 'price_high':
-                return ['wc_product_meta_lookup.min_price', 'desc', true];
-            case 'rating':
-                return ['wc_product_meta_lookup.average_rating', 'desc', true];
-            case 'popularity':
-                return ['wc_product_meta_lookup.total_sales', 'desc', true];
-            case 'name_az':
-                return ['post_title', 'asc', false];
-            case 'name_za':
-                return ['post_title', 'desc', false];
-            case 'relevance':
-            default:
-                return ['post_date', 'desc', false];
-        }
-    }
-
-    /**
-     * Build the attribute facet list: one entry per registered WooCommerce product
-     * attribute taxonomy that has at least one option in the current context.
-     *
-     * @param Request $request The REST request instance.
-     * @return AttributeFacetDTO[]
-     */
-    private function build_attribute_facets( Request $request ): array {
-        $facets = [];
-
-        foreach ( $this->get_attribute_taxonomies() as $taxonomy ) {
-            $query = $this->base_product_query();
-            // Exclude this taxonomy's own selection so its counts reflect "if I also picked this".
-            $this->apply_context_filters( $query, $request, [$taxonomy] );
-
-            $query->join( 'term_relationships', 'posts.ID', '=', 'term_relationships.object_id' )
-                ->join( 'term_taxonomy', 'term_relationships.term_taxonomy_id', '=', 'term_taxonomy.term_taxonomy_id' )
-                ->join( 'terms', 'term_taxonomy.term_id', '=', 'terms.term_id' )
-                ->where( 'term_taxonomy.taxonomy', $taxonomy )
-                ->select( ['terms.slug as value', 'terms.name as label', 'COUNT(DISTINCT posts.ID) as product_count'] )
-                ->group_by( ['terms.term_id', 'terms.slug', 'terms.name'] );
-
-            $rows = $query->get();
-            if ( empty( $rows ) ) {
-                continue;
-            }
-
-            $options = [];
-            foreach ( $rows as $row ) {
-                $option = new AttributeFacetOptionDTO();
-                $option->set_value( (string) $row->value )
-                    ->set_label( (string) $row->label )
-                    ->set_count( (int) $row->product_count );
-                $options[] = $option;
-            }
-
-            $facet = new AttributeFacetDTO();
-            $facet->set_taxonomy( $taxonomy )
-                ->set_label( wc_attribute_label( $taxonomy ) )
-                ->set_options( $options );
-            $facets[] = $facet;
-        }
-
-        return $facets;
     }
 
     /**
@@ -470,7 +201,7 @@ class ProductRepository {
             throw new Exception( esc_html__( "Product not found.", "appnatively" ), 404 );
         }
 
-        return $this->map_post_to_product_dto( $post, $fields );
+        return $this->map_product_to_dto( (int) $post->ID, $fields );
     }
 
     /**
@@ -516,22 +247,22 @@ class ProductRepository {
     }
 
     /**
-     * Map Post model to ProductDTO.
+     * Map a product to ProductDTO.
      *
-     * @param Post $post The post model instance.
+     * @param int $id The product id.
      * @param array $fields The requested fields.
      * @return ProductDTO
      */
-    private function map_post_to_product_dto( Post $post, array $fields ): ProductDTO {
+    private function map_product_to_dto( int $id, array $fields ): ProductDTO {
         $dto     = new ProductDTO();
-        $product = wc_get_product( $post->ID );
+        $product = wc_get_product( $id );
 
         if ( ! $product ) {
             return $dto; // Should not happen for valid products
         }
 
         if ( in_array( "id", $fields ) ) {
-            $dto->set_id( $post->ID );
+            $dto->set_id( $id );
         }
         if ( in_array( "name", $fields ) ) {
             $dto->set_name( $product->get_name() );
@@ -552,7 +283,7 @@ class ProductRepository {
             $dto->set_short_description( $this->parse_content( (string) $product->get_short_description() ) );
         }
         if ( in_array( "url", $fields ) ) {
-            $dto->set_url( get_permalink( $post->ID ) );
+            $dto->set_url( get_permalink( $id ) );
         }
 
         // Financials
@@ -577,7 +308,7 @@ class ProductRepository {
         if ( in_array( "sku", $fields ) ) {
             $dto->set_sku( (string) $product->get_sku() );
         }
-        if ( in_array( "inventory_status", $fields ) ) {
+        if ( in_array( "stock_status", $fields ) || in_array( "inventory_status", $fields ) ) {
             $dto->set_inventory_status( $product->get_stock_status() );
         }
         if ( in_array( "manage_stock", $fields ) ) {
@@ -611,12 +342,12 @@ class ProductRepository {
         if ( in_array( "images", $fields ) ) {
             $image_ids = array_merge( [$product->get_image_id()], $product->get_gallery_image_ids() );
             $images    = [];
-            foreach ( array_filter( $image_ids ) as $id ) {
+            foreach ( array_filter( $image_ids ) as $image_id ) {
                 $img_dto = new ProductImageDTO();
-                $img_dto->set_id( (int) $id )
-                    ->set_src( (string) wp_get_attachment_url( $id ) )
-                    ->set_alt( (string) get_post_meta( $id, "_wp_attachment_image_alt", true ) )
-                    ->set_title( (string) get_the_title( $id ) );
+                $img_dto->set_id( (int) $image_id )
+                    ->set_src( (string) wp_get_attachment_url( $image_id ) )
+                    ->set_alt( (string) get_post_meta( $image_id, "_wp_attachment_image_alt", true ) )
+                    ->set_title( (string) get_the_title( $image_id ) );
                 $images[] = $img_dto;
             }
             $dto->set_images( $images );

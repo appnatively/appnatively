@@ -7,10 +7,12 @@ defined( "ABSPATH" ) || exit;
 use Crafium\AppNatively\App\DTO\Ecommerce\CategoryDTO;
 use Crafium\AppNatively\App\DTO\Ecommerce\CategoryPaginatorDTO;
 use Crafium\AppNatively\App\DTO\Ecommerce\ProductDTO;
+use Crafium\AppNatively\App\DTO\Ecommerce\ProductFilterSourceDTO;
 use Crafium\AppNatively\App\DTO\Ecommerce\ProductFiltersDTO;
 use Crafium\AppNatively\App\DTO\Ecommerce\ProductImageDTO;
 use Crafium\AppNatively\App\DTO\Ecommerce\ProductPaginatorDTO;
 use Crafium\AppNatively\App\DTO\Ecommerce\ProductVariantDTO;
+use Crafium\AppNatively\App\Integrations\Ecommerce\Catalog\ProductQuery;
 use Crafium\AppNatively\App\Integrations\Ecommerce\Concerns\EcommerceIntegrationHelpers;
 use Crafium\AppNatively\WpMVC\Exceptions\Exception;
 use Crafium\AppNatively\WpMVC\RequestValidator\Request;
@@ -20,66 +22,38 @@ class ProductRepository {
     use EcommerceIntegrationHelpers;
 
     /**
-     * The taxonomy SureCart syncs its product collections to.
-     *
-     * @var string
-     */
-    private const COLLECTION_TAXONOMY = 'sc_collection';
-
-    /**
      * Relations to expand on the live single-product fetch.
      *
      * @var string[]
      */
     private const PRODUCT_EXPAND = [ 'prices', 'variants', 'variant_options', 'product_medias', 'product_media.media' ];
 
+    /** Product lists and filter facets (see ProductQuery). */
+    private ProductQuery $query;
+
+    public function __construct() {
+        $this->query = new ProductQuery( new SureCartCatalog() );
+    }
+
     /**
-     * Get products paginator.
+     * Get products paginated: the page context, the shopper's filter selection and sort.
      *
      * Reads from the sc_product WP-mirrored posts (fast, gives real integer
      * ids, no per-item network calls) rather than the live SureCart API —
      * see plan for why single-product detail still refreshes from the API.
      */
     public function products( ?ProductPaginatorDTO $product_paginator, Request $request, array $fields = [] ): ProductPaginatorDTO {
-        $page     = (int) $request->get_param( 'page' ) ?: 1;
-        $per_page = (int) $request->get_param( 'per_page' ) ?: 10;
-        $search   = sanitize_text_field( (string) $request->get_param( 'search' ) );
-        $category = (int) $request->get_param( 'categoryId' );
-
-        $args = [
-            'post_type'      => 'sc_product',
-            'post_status'    => 'publish',
-            'has_password'   => false,
-            'posts_per_page' => $per_page,
-            'paged'          => $page,
-        ];
-
-        if ( $search ) {
-            $args['s'] = $search;
-        }
-
-        if ( $category ) {
-            //phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_tax_query -- filtering products by category is the point of this query.
-            $args['tax_query'] = [
-                [
-                    'taxonomy' => self::COLLECTION_TAXONOMY,
-                    'field'    => 'term_id',
-                    'terms'    => $category,
-                ],
-            ];
-        }
-
-        $query = new \WP_Query( $args );
-
+        $page     = $this->query->paginate( $request );
         $products = [];
-        foreach ( $query->posts as $post ) {
-            $product = sc_get_product( $post );
+        foreach ( $page['ids'] as $id ) {
+            $post    = get_post( $id );
+            $product = $post ? sc_get_product( $post ) : null;
             if ( $product ) {
                 $products[] = $this->map_to_product_dto( $product, $post->ID, $fields );
             }
         }
 
-        return new ProductPaginatorDTO( $page, $per_page, (int) $query->found_posts, (int) $query->max_num_pages, $products );
+        return new ProductPaginatorDTO( $page['page'], $page['per_page'], $page['total'], $page['last_page'], $products );
     }
 
     /**
@@ -89,7 +63,7 @@ class ProductRepository {
         $product_id = (int) craf_appna_route_param( $request, 'id' );
         $page       = (int) $request->get_param( 'page' ) ?: 1;
         $per_page   = (int) $request->get_param( 'per_page' ) ?: 10;
-        $term_ids   = $product_id ? wp_get_post_terms( $product_id, self::COLLECTION_TAXONOMY, [ 'fields' => 'ids' ] ) : [];
+        $term_ids   = $product_id ? wp_get_post_terms( $product_id, SureCartCatalog::COLLECTION_TAXONOMY, [ 'fields' => 'ids' ] ) : [];
 
         if ( is_wp_error( $term_ids ) || empty( $term_ids ) ) {
             return new ProductPaginatorDTO( $page, $per_page, 0, 1, [] );
@@ -107,7 +81,7 @@ class ProductRepository {
                 //phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_tax_query -- filtering products by collection is the point of this query.
                 'tax_query'      => [
                     [
-                        'taxonomy' => self::COLLECTION_TAXONOMY,
+                        'taxonomy' => SureCartCatalog::COLLECTION_TAXONOMY,
                         'field'    => 'term_id',
                         'terms'    => array_map( 'intval', $term_ids ),
                     ],
@@ -196,22 +170,19 @@ class ProductRepository {
     }
 
     /**
-     * Available product filters for the current context.
-     *
-     * SureCart's products REST filter only supports query/archived/recurring/
-     * product_collection_ids/product_group_ids/ids — no server-side price
-     * range, rating, in-stock, attribute-facet, or sort support like
-     * WooCommerce/FluentCart have. All ProductFiltersDTO fields are nullable
-     * or default to empty, so this degrades cleanly.
+     * The filters available for the current context, with per-option counts.
      */
     public function filters( ?ProductFiltersDTO $product_filters, Request $request ): ProductFiltersDTO {
-        $dto = new ProductFiltersDTO();
+        return $this->query->filters( $request );
+    }
 
-        return $dto->set_price( null )
-            ->set_rating( null )
-            ->set_availability( [ 'inStockCount' => 0, 'onSaleCount' => 0 ] )
-            ->set_attributes( [] )
-            ->set_sort_options( [] );
+    /**
+     * What the app builder can offer as filter rows.
+     *
+     * @return ProductFilterSourceDTO[]
+     */
+    public function filter_sources(): array {
+        return $this->query->filter_sources();
     }
 
     /**
@@ -225,7 +196,7 @@ class ProductRepository {
 
         $terms = get_terms(
             [
-                'taxonomy'   => self::COLLECTION_TAXONOMY,
+                'taxonomy'   => SureCartCatalog::COLLECTION_TAXONOMY,
                 'hide_empty' => false,
                 'number'     => $per_page,
                 'offset'     => ( $page - 1 ) * $per_page,
@@ -233,7 +204,7 @@ class ProductRepository {
             ]
         );
 
-        $total = (int) wp_count_terms( self::COLLECTION_TAXONOMY );
+        $total = (int) wp_count_terms( SureCartCatalog::COLLECTION_TAXONOMY );
 
         if ( empty( $terms ) || is_wp_error( $terms ) ) {
             return new CategoryPaginatorDTO( $page, $per_page, 0, 0, [] );
@@ -252,7 +223,7 @@ class ProductRepository {
      */
     public function category( ?CategoryDTO $category_dto, Request $request, array $fields = [] ): ?CategoryDTO {
         $id   = (int) craf_appna_route_param( $request, 'id' );
-        $term = $id ? get_term( $id, self::COLLECTION_TAXONOMY ) : null;
+        $term = $id ? get_term( $id, SureCartCatalog::COLLECTION_TAXONOMY ) : null;
 
         if ( ! $term || is_wp_error( $term ) ) {
             throw new Exception( esc_html__( 'Category not found.', 'appnatively' ), 404 );
@@ -323,7 +294,8 @@ class ProductRepository {
 
         if ( in_array( 'stock_status', $fields, true ) || in_array( 'inventory_status', $fields, true ) ) {
             $in_stock = $product->in_stock ?? true;
-            $dto->set_inventory_status( $in_stock ? 'in_stock' : 'out_of_stock' );
+            // The app's StockStatus uses WooCommerce's spelling.
+            $dto->set_inventory_status( $in_stock ? 'instock' : 'outofstock' );
         }
 
         if ( in_array( 'images', $fields, true ) ) {
@@ -342,7 +314,7 @@ class ProductRepository {
 
         if ( in_array( 'categories', $fields, true ) ) {
             $categories = [];
-            $terms      = wp_get_post_terms( $post_id, self::COLLECTION_TAXONOMY );
+            $terms      = wp_get_post_terms( $post_id, SureCartCatalog::COLLECTION_TAXONOMY );
             if ( ! is_wp_error( $terms ) ) {
                 foreach ( $terms as $term ) {
                     $categories[] = $this->map_to_category_dto( $term );
@@ -366,7 +338,7 @@ class ProductRepository {
                     ->set_name( (string) ( $variant->name ?? $variant->sku ?? sprintf( 'Option %d', $index + 1 ) ) )
                     ->set_price( $this->format_amount( (int) ( $variant->amount ?? ( $price->amount ?? 0 ) ) ) )
                     ->set_compare_at_price( $this->format_amount( (int) ( $variant->scratch_amount ?? 0 ) ) )
-                    ->set_inventory_status( ( $variant->available ?? true ) ? 'in_stock' : 'out_of_stock' )
+                    ->set_inventory_status( ( $variant->available ?? true ) ? 'instock' : 'outofstock' )
                     ->set_attributes( [] );
                 $variant_dtos[] = $var_dto;
             }
