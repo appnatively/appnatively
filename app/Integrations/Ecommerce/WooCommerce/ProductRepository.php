@@ -47,7 +47,6 @@ class ProductRepository {
         return new ProductPaginatorDTO( $page['page'], $page['per_page'], $page['total'], $page['last_page'], $items );
     }
 
-
     /**
      * Get published products sharing a category or tag with the requested product.
      *

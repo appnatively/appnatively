@@ -33,13 +33,13 @@ class BusinessDirectoryPluginTest extends DirectoryIntegrationTestCase {
             "Business Directory Source",
             "publish",
             [
-                "address"        => "Business Directory address",
-                "phone"          => "123",
-                "email"          => "business-directory@example.com",
-                "website"        => "https://example.com",
-                "price"          => "300",
-                "latitude"       => "23.7808875",
-                "longitude"      => "90.2792371",
+                "address"   => "Business Directory address",
+                "phone"     => "123",
+                "email"     => "business-directory@example.com",
+                "website"   => "https://example.com",
+                "price"     => "300",
+                "latitude"  => "23.7808875",
+                "longitude" => "90.2792371",
             ]
         );
         $related_id  = $this->create_listing( $this->post_type, "Business Directory Related" );

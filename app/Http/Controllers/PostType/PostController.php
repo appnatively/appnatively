@@ -44,15 +44,15 @@ class PostController extends Controller {
     public function index( Request $request ): array {
         $request->validate(
             [
-                "page"           => "nullable|integer|min:1",
-                "per_page"       => "nullable|integer|min:1|max:100",
-                "search"         => "nullable|string",
-                "sort"           => "nullable|string",
-                "fields"         => "nullable|string",
-                "post_type"      => "nullable|string",
-                "taxonomy"       => "nullable|string",
-                "term_id"        => "nullable|integer",
-                "custom_fields"  => "nullable|string",
+                "page"          => "nullable|integer|min:1",
+                "per_page"      => "nullable|integer|min:1|max:100",
+                "search"        => "nullable|string",
+                "sort"          => "nullable|string",
+                "fields"        => "nullable|string",
+                "post_type"     => "nullable|string",
+                "taxonomy"      => "nullable|string",
+                "term_id"       => "nullable|integer",
+                "custom_fields" => "nullable|string",
             ]
         );
 
@@ -61,8 +61,8 @@ class PostController extends Controller {
         $page     = (int) $request->get_param( "page" ) ?: 1;
         $per_page = (int) $request->get_param( "per_page" ) ?: 10;
         $search   = sanitize_text_field( (string) $request->get_param( "search" ) );
-        $term_id = (int) $request->get_param( "term_id" );
-        $fields  = craf_appna_get_verified_fields( $request->get_param( "fields" ), $this->allowed_fields );
+        $term_id  = (int) $request->get_param( "term_id" );
+        $fields   = craf_appna_get_verified_fields( $request->get_param( "fields" ), $this->allowed_fields );
 
         $sort     = sanitize_text_field( (string) $request->get_param( "sort" ) );
         $order_by = "date";
@@ -85,19 +85,19 @@ class PostController extends Controller {
         ];
 
         $query_args = [
-            "post_type"      => $post_type,
-            "post_status"    => "publish",
+            "post_type"           => $post_type,
+            "post_status"         => "publish",
             // Password-protected posts keep the `publish` status. WP_Query only
             // drops them on its own for search queries, so ask explicitly.
-            "has_password"   => false,
+            "has_password"        => false,
             // Sticky posts are prepended by core on page 1 through a query that skips the
             // `has_password` and sort clauses above, so they are not asked for.
             "ignore_sticky_posts" => true,
-            "paged"          => $page,
-            "posts_per_page" => $per_page,
-            "s"              => $search,
-            "orderby"        => $sort_map[$order_by] ?? "date",
-            "order"          => $order,
+            "paged"               => $page,
+            "posts_per_page"      => $per_page,
+            "s"                   => $search,
+            "orderby"             => $sort_map[$order_by] ?? "date",
+            "order"               => $order,
         ];
 
         if ( $term_id ) {
@@ -159,16 +159,16 @@ class PostController extends Controller {
         $term_ids  = $taxonomy ? wp_get_object_terms( $id, $taxonomy, [ "fields" => "ids" ] ) : [];
 
         $query_args = [
-            "post_type"      => $post_type,
-            "post_status"    => "publish",
-            "has_password"   => false,
+            "post_type"           => $post_type,
+            "post_status"         => "publish",
+            "has_password"        => false,
             "ignore_sticky_posts" => true,
-            "paged"          => $page,
-            "posts_per_page" => $per_page,
+            "paged"               => $page,
+            "posts_per_page"      => $per_page,
             //phpcs:ignore WordPressVIPMinimum.Performance.WPQueryParams.PostNotIn_post__not_in -- small, bounded exclusion of the current post from its own "related" query.
-            "post__not_in"   => [$id],
-            "orderby"        => "date",
-            "order"          => "DESC",
+            "post__not_in"        => [$id],
+            "orderby"             => "date",
+            "order"               => "DESC",
         ];
 
         if ( $taxonomy && ! empty( $term_ids ) && ! is_wp_error( $term_ids ) ) {
