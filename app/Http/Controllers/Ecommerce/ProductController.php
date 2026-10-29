@@ -152,6 +152,59 @@ class ProductController extends Controller {
     }
 
     /**
+     * Resolve device-local history, retaining the caller's newest-first order.
+     */
+    public function recently_viewed( Request $request ): array {
+        $request->validate(
+            [
+                'integration' => 'required|string|' . craf_appna_in_rule( craf_appna_get_ecommerce_integrations() ),
+                'ids'         => [
+                    'bail', 'array', 'max:30',
+                    static function( $attribute, $value, $fail ) {
+                        foreach ( $value as $id ) {
+                            // Do not let intval silently accept decimals, booleans or overflow.
+                            if ( ( ! is_int( $id ) && ! is_string( $id ) )
+                                || ! ctype_digit( (string) $id )
+                                || false === filter_var( ltrim( (string) $id, '0' ), FILTER_VALIDATE_INT, [ 'options' => [ 'min_range' => 1 ] ] ) ) {
+                                $fail( __( 'Product IDs must be positive integers.', 'appnatively' ) );
+                                return;
+                            }
+                        }
+                    },
+                ],
+            ]
+        );
+
+        $integration = $request->get_param( 'integration' );
+        $hook        = "craf_appna_ecommerce_{$integration}_recently_viewed_products";
+        if ( ! has_filter( $hook ) ) {
+            throw new Exception( esc_html__( 'Recently viewed products integration unavailable.', 'appnatively' ), 503 );
+        }
+
+        $ids   = array_values( array_unique( array_map( 'intval', $request->get_param( 'ids' ) ?? [] ) ) );
+        $items = [];
+        if ( $ids ) {
+            $request->set_param( 'ids', $ids );
+            $paginator = apply_filters( $hook, null, $request, $this->allowed_fields );
+            if ( ! $paginator instanceof ProductPaginatorDTO ) {
+                throw new Exception( esc_html__( 'Recently viewed products integration unavailable.', 'appnatively' ), 503 );
+            }
+
+            $by_id = [];
+            foreach ( $paginator->get_items() as $product ) {
+                $by_id[ $product->get_id() ] = $product;
+            }
+            foreach ( $ids as $id ) {
+                if ( isset( $by_id[ $id ] ) ) {
+                    $items[] = $by_id[ $id ];
+                }
+            }
+        }
+
+        return Response::send( [ 'data' => new ProductPaginatorDTO( 1, count( $items ), count( $items ), 1, $items ) ] );
+    }
+
+    /**
      * Display related products for the specified resource.
      *
      * @param Request $request The REST request instance.

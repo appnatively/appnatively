@@ -57,6 +57,7 @@ class FluentCart extends Provider {
 
         add_filter( "craf_appna_ecommerce_fluent-cart_products", [ $this, "products" ], 10, 3 );
         add_filter( "craf_appna_ecommerce_fluent-cart_wishlist", [ $this, "wishlist" ], 10, 3 );
+        add_filter( "craf_appna_ecommerce_fluent-cart_recently_viewed_products", [ $this, "recently_viewed_products" ], 10, 3 );
         add_filter( "craf_appna_ecommerce_fluent-cart_products_filters", [ $this, "products_filters" ], 10, 2 );
         add_filter( "craf_appna_ecommerce_fluent-cart_products_filter_sources", [ $this, "products_filter_sources" ], 10, 2 );
         add_filter( "craf_appna_ecommerce_fluent-cart_product", [ $this, "product" ], 10, 3 );
@@ -205,6 +206,12 @@ class FluentCart extends Provider {
      */
     public function related_products( $data, WP_REST_Request $request, array $fields ): ?ProductPaginatorDTO {
         return $this->product_repository->related_products( $data, $request, $fields );
+    }
+
+    /** Resolve saved history using the same product lookup as wishlists. */
+    public function recently_viewed_products( ?ProductPaginatorDTO $data, \WP_REST_Request $request, array $fields = [] ): ProductPaginatorDTO {
+        $items = $this->product_repository->products_by_ids( $request->get_param( 'ids' ), $fields );
+        return new ProductPaginatorDTO( 1, count( $items ), count( $items ), 1, $items );
     }
 
     /**

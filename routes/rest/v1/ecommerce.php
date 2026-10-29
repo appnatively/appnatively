@@ -53,3 +53,5 @@ Route::get( 'orders', [OrderController::class, 'index'] )->middleware( 'auth' );
 Route::get( 'orders/{id}', [OrderController::class, 'show'] )->where( 'id', '\d+' );
 
 Route::get( 'wishlist', [WishlistController::class, 'index'] );
+
+Route::get( 'recently-viewed', [ProductController::class, 'recently_viewed'] );

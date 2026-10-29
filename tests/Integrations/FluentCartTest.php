@@ -298,4 +298,54 @@ class FluentCartTest extends \WP_UnitTestCase
         $order->delete();
         $customer->delete();
     }
+
+    public function test_recently_viewed_uses_saved_product_visibility_and_card_dtos(): void {
+        \Crafium\AppNatively\App\Support\Settings::set_api_enabled( true );
+        wp_set_current_user( 0 );
+        $source = get_post( $this->product_id );
+        $second = self::factory()->post->create(
+            [
+                'post_type'    => $source->post_type,
+                'post_status'  => 'publish',
+                'post_title'   => 'Second saved product',
+                'post_content' => 'Saved description',
+            ]
+        );
+        foreach ( get_post_meta( $source->ID ) as $key => $values ) {
+            foreach ( $values as $value ) {
+                add_post_meta( $second, $key, maybe_unserialize( $value ) );
+            }
+        }
+        $hidden = [];
+        foreach ( [ 'draft', 'private', 'trash' ] as $status ) {
+            $hidden[] = self::factory()->post->create( [ 'post_type' => $source->post_type, 'post_status' => $status ] );
+        }
+        $hidden[] = self::factory()->post->create( [ 'post_type' => $source->post_type, 'post_status' => 'publish', 'post_password' => 'secret' ] );
+        $hidden[] = self::factory()->post->create( [ 'post_type' => 'post', 'post_status' => 'publish' ] );
+        $request  = new \WP_REST_Request( 'GET', '/craf_appna/v1/ecommerce/recently-viewed' );
+        $request->set_query_params( [ 'integration' => 'fluent-cart', 'ids' => array_merge( [ $second ], $hidden, [ $source->ID, $second, PHP_INT_MAX ] ) ] );
+        $response = rest_do_request( $request );
+        $this->assertSame( 200, $response->get_status() );
+        $data = json_decode( wp_json_encode( $response->get_data() ), true )['data'];
+        $this->assertSame( [ $second, $source->ID ], array_column( $data['items'], 'id' ) );
+        $this->assertSame( 2, $data['total'] );
+        $this->assertSame( 2, $data['per_page'] );
+
+        // The saved-product batch uses the normal product card mapper.
+        $single = new \WP_REST_Request( 'GET', '/craf_appna/v1/ecommerce/products/' . $source->ID );
+        $single->set_query_params( [ 'integration' => 'fluent-cart' ] );
+        $single_response = rest_do_request( $single );
+        $this->assertSame( 200, $single_response->get_status() );
+        $card = json_decode( wp_json_encode( $single_response->get_data() ), true )['data'];
+        foreach ( [ 'id', 'name', 'price', 'images', 'stock_status', 'average_rating', 'rating_count' ] as $field ) {
+            $this->assertSame( $card[ $field ] ?? null, $data['items'][1][ $field ] ?? null, $field );
+        }
+
+        $wishlist = new \WP_REST_Request( 'GET', '/craf_appna/v1/ecommerce/wishlist' );
+        $wishlist->set_query_params( [ 'integration' => 'fluent-cart', 'ids' => [ $source->ID, $second ] ] );
+        $wishlist_response = rest_do_request( $wishlist );
+        $this->assertSame( 200, $wishlist_response->get_status() );
+        $wishlist_data = json_decode( wp_json_encode( $wishlist_response->get_data() ), true )['data'];
+        $this->assertEqualsCanonicalizing( [ $source->ID, $second ], array_column( $wishlist_data['items'], 'id' ) );
+    }
 }

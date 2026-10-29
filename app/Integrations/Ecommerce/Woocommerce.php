@@ -62,6 +62,7 @@ class Woocommerce extends Provider {
 
         add_filter( "craf_appna_ecommerce_woocommerce_products", [$this, "products"], 10, 3 );
         add_filter( "craf_appna_ecommerce_woocommerce_wishlist", [$this, "wishlist"], 10, 3 );
+        add_filter( "craf_appna_ecommerce_woocommerce_recently_viewed_products", [$this, "recently_viewed_products"], 10, 3 );
         add_filter( "craf_appna_ecommerce_woocommerce_products_filters", [$this, "products_filters"], 10, 2 );
         add_filter( "craf_appna_ecommerce_woocommerce_products_filter_sources", [$this, "products_filter_sources"], 10, 2 );
         add_filter( "craf_appna_ecommerce_woocommerce_product", [$this, "product"], 10, 3 );
@@ -187,6 +188,12 @@ class Woocommerce extends Provider {
      */
     public function related_products( ?ProductPaginatorDTO $product_paginator, Request $request, array $fields = [] ): ProductPaginatorDTO {
         return $this->product_repository->related_products( $product_paginator, $request, $fields );
+    }
+
+    /** Resolve saved history using the same product lookup as wishlists. */
+    public function recently_viewed_products( ?ProductPaginatorDTO $data, \WP_REST_Request $request, array $fields = [] ): ProductPaginatorDTO {
+        $items = $this->product_repository->products_by_ids( $request->get_param( 'ids' ), $fields );
+        return new ProductPaginatorDTO( 1, count( $items ), count( $items ), 1, $items );
     }
 
     /**

@@ -181,22 +181,36 @@ class ProductRepository {
      * @return ProductPaginatorDTO
      */
     public function wishlist( $data, WP_REST_Request $request, array $fields ): ProductPaginatorDTO {
-        $ids = (array) $request->get_param( 'ids' );
-        $ids = array_values( array_filter( array_map( 'intval', $ids ) ) );
+        $ids   = array_values( array_filter( array_map( 'intval', (array) $request->get_param( 'ids' ) ) ) );
+        $items = $this->products_by_ids( $ids, $fields );
+        return new ProductPaginatorDTO( 1, count( $items ), count( $items ), 1, $items );
+    }
 
+    /**
+     * Resolve saved product IDs with the same visibility and DTOs as single reads.
+     *
+     * @return ProductDTO[]
+     */
+    public function products_by_ids( array $ids, array $fields = [] ): array {
         if ( empty( $ids ) ) {
-            return new ProductPaginatorDTO( 1, 0, 0, 1, [] );
+            return [];
+        }
+
+        $by_id = [];
+        foreach ( Product::with( [ 'detail', 'variants' ] )->whereIn( 'ID', $ids )->get() as $product ) {
+            if ( $product->post_status === 'publish' && '' === (string) $product->post_password ) {
+                $by_id[ (int) $product->ID ] = $product;
+            }
         }
 
         $products = [];
         foreach ( $ids as $id ) {
-            $product = Product::with( [ 'detail', 'variants' ] )->find( $id );
-            if ( $product && $product->post_status === 'publish' && '' === (string) $product->post_password ) {
-                $products[] = $this->map_to_product_dto( $product, $fields );
+            if ( isset( $by_id[ $id ] ) ) {
+                $products[] = $this->map_to_product_dto( $by_id[ $id ], $fields );
             }
         }
 
-        return new ProductPaginatorDTO( 1, count( $products ), count( $products ), 1, $products );
+        return $products;
     }
 
     /**
@@ -392,7 +406,7 @@ class ProductRepository {
 
         if ( in_array( "categories", $fields ) ) {
             $categories = [];
-            foreach ( $product->getCategories() as $category ) {
+            foreach ( $product->getCategories() ?: [] as $category ) {
                 $cat_dto = new CategoryDTO();
                 $cat_dto->set_id( (int) $category->term_id )
                     ->set_name( (string) $category->name )
