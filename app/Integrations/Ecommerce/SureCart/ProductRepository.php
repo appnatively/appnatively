@@ -140,11 +140,19 @@ class ProductRepository {
      * (reads from the sc_product WP-mirrored posts, same as products()).
      */
     public function wishlist( ?ProductPaginatorDTO $product_paginator, Request $request, array $fields = [] ): ProductPaginatorDTO {
-        $ids = (array) $request->get_param( 'ids' );
-        $ids = array_values( array_filter( array_map( 'intval', $ids ) ) );
+        $ids   = array_values( array_filter( array_map( 'intval', (array) $request->get_param( 'ids' ) ) ) );
+        $items = $this->products_by_ids( $ids, $fields );
+        return new ProductPaginatorDTO( 1, count( $items ), count( $items ), 1, $items );
+    }
 
+    /**
+     * Resolve saved product IDs with the same visibility and DTOs as single reads.
+     *
+     * @return ProductDTO[]
+     */
+    public function products_by_ids( array $ids, array $fields = [] ): array {
         if ( empty( $ids ) ) {
-            return new ProductPaginatorDTO( 1, 0, 0, 1, [] );
+            return [];
         }
 
         $query = new \WP_Query(
@@ -161,12 +169,15 @@ class ProductRepository {
         $products = [];
         foreach ( $query->posts as $post ) {
             $product = sc_get_product( $post );
+            if ( is_wp_error( $product ) ) {
+                throw new Exception( esc_html__( 'Product lookup failed. Please try again.', 'appnatively' ), 503 );
+            }
             if ( $product ) {
                 $products[] = $this->map_to_product_dto( $product, $post->ID, $fields );
             }
         }
 
-        return new ProductPaginatorDTO( 1, count( $products ), count( $products ), 1, $products );
+        return $products;
     }
 
     /**

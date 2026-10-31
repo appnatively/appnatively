@@ -28,7 +28,7 @@ class ApiCacheProtectionTest extends \WP_UnitTestCase {
             ['/ecommerce/products/filter-sources'], ['/directory/listings/filter-sources'],
             ['/auth/login'], ['/auth/register'], ['/auth/forgot-password'], ['/auth/me'],
             ['/ecommerce/cart'], ['/ecommerce/cart/add'], ['/ecommerce/orders'], ['/ecommerce/orders/1'],
-            ['/ecommerce/wishlist'], ['/directory/wishlist'], ['/connection'],
+            ['/ecommerce/wishlist'], ['/ecommerce/recently-viewed'], ['/directory/wishlist'], ['/connection'],
         ];
     }
 

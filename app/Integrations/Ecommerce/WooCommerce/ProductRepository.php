@@ -119,11 +119,19 @@ class ProductRepository {
      * @return ProductPaginatorDTO
      */
     public function wishlist( ?ProductPaginatorDTO $product_paginator, Request $request, array $fields = [] ): ProductPaginatorDTO {
-        $ids = (array) $request->get_param( "ids" );
-        $ids = array_values( array_filter( array_map( 'intval', $ids ) ) );
+        $ids   = array_values( array_filter( array_map( 'intval', (array) $request->get_param( 'ids' ) ) ) );
+        $items = $this->products_by_ids( $ids, $fields );
+        return new ProductPaginatorDTO( 1, count( $items ), count( $items ), 1, $items );
+    }
 
+    /**
+     * Resolve saved product IDs with the same visibility and DTOs as single reads.
+     *
+     * @return ProductDTO[]
+     */
+    public function products_by_ids( array $ids, array $fields = [] ): array {
         if ( empty( $ids ) ) {
-            return new ProductPaginatorDTO( 1, 0, 0, 1, [] );
+            return [];
         }
 
         $columns = $this->get_columns_from_fields( $fields );
@@ -137,7 +145,7 @@ class ProductRepository {
             $items[] = $this->map_product_to_dto( (int) $post->ID, $fields );
         }
 
-        return new ProductPaginatorDTO( 1, count( $items ), count( $items ), 1, $items );
+        return $items;
     }
 
     /**
