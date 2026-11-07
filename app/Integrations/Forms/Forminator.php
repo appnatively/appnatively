@@ -377,6 +377,9 @@ class Forminator extends Form {
 
                 $mail_sender = new \Forminator_CForm_Front_Mail();
                 $mail_sender->process_mail( $form_model, $entry );
+                if ( $entry_id ) {
+                    \Crafium\AppNatively\App\Support\NotificationFormEvents::accepted( 'forminator', (string) $form_id, (string) $entry_id );
+                }
             }
         }
     }

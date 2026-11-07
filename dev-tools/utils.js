@@ -1,6 +1,6 @@
 const path = require( 'path' );
 const fs = require( 'fs' ).promises;
-const normalizePath = require( 'normalize-path' );
+const normalizePath = ( value ) => value.split( path.sep ).join( '/' );
 
 const pluginRootFile = 'appnatively';
 const rootDir = path.dirname( __dirname );
@@ -49,9 +49,11 @@ const buildFiles = [
 	'enqueues',
 	'languages',
 	'resources/views',
+	'resources/js',
 	'routes',
 	'vendor',
 	'readme.txt',
+	'uninstall.php',
 	`${ pluginRootFile }.php`,
 ].map( transformBuildPaths );
 
@@ -99,6 +101,7 @@ const buildIgnoreFiles = [
 ].map( ( file_path ) => `${ dist }/zip/${ pluginRootFile }/${ file_path }` );
 
 module.exports = {
+	normalizePath,
 	pluginRootFile,
 	getPluginInfo,
 	buildFiles,

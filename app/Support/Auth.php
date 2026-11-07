@@ -73,7 +73,8 @@ class Auth {
         $secret = bin2hex( random_bytes( 32 ) );
         $now    = time();
 
-        $tokens = self::get_tokens( $user_id );
+        $tokens   = self::get_tokens( $user_id );
+        $previous = $tokens;
 
         $tokens[ hash( 'sha256', $secret ) ] = [
             'issued'  => $now,
@@ -91,7 +92,9 @@ class Auth {
             $tokens = array_slice( $tokens, 0, self::MAX_TOKENS, true );
         }
 
-        update_user_meta( $user_id, self::META_KEY, $tokens );
+        if ( false !== update_user_meta( $user_id, self::META_KEY, $tokens ) ) {
+            do_action( 'craf_appna_auth_tokens_changed', $user_id, $previous, $tokens );
+        }
 
         return $user_id . '.' . $secret;
     }
@@ -205,7 +208,10 @@ class Auth {
      * @return void
      */
     public static function revoke_all( int $user_id ): void {
-        delete_user_meta( $user_id, self::META_KEY );
+        $previous = self::get_tokens( $user_id );
+        if ( delete_user_meta( $user_id, self::META_KEY ) ) {
+            do_action( 'craf_appna_auth_tokens_changed', $user_id, $previous, [] );
+        }
     }
 
     /**
@@ -281,12 +287,21 @@ class Auth {
         }
 
         //phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.SlowDBQuery.slow_db_query_meta_key -- bulk-revoking every issued token by this plugin's own meta key, not a WP_Query arg.
-        $wpdb->delete( $wpdb->usermeta, [ 'meta_key' => self::META_KEY ], [ '%s' ] );
+        $previous = $wpdb->get_results(
+            $wpdb->prepare( "SELECT user_id, meta_value FROM {$wpdb->usermeta} WHERE meta_key = %s", self::META_KEY ), ARRAY_A
+        );
+        $deleted  = $wpdb->delete( $wpdb->usermeta, [ 'meta_key' => self::META_KEY ], [ '%s' ] );
 
         // wp_cache_flush_group() is not implemented by every object-cache
         // drop-in, so clear each entry explicitly instead.
         foreach ( $user_ids as $user_id ) {
             wp_cache_delete( (int) $user_id, 'user_meta' );
+        }
+        if ( $deleted ) {
+            foreach ( (array) $previous as $row ) {
+                $tokens = maybe_unserialize( $row['meta_value'] );
+                do_action( 'craf_appna_auth_tokens_changed', (int) $row['user_id'], is_array( $tokens ) ? $tokens : [], [] );
+            }
         }
 
         return count( $user_ids );
@@ -331,14 +346,19 @@ class Auth {
             return;
         }
 
+        $previous = $tokens;
         unset( $tokens[ $hash ] );
 
         if ( empty( $tokens ) ) {
-            delete_user_meta( $user_id, self::META_KEY );
+            if ( delete_user_meta( $user_id, self::META_KEY ) ) {
+                do_action( 'craf_appna_auth_tokens_changed', $user_id, $previous, [] );
+            }
             return;
         }
 
-        update_user_meta( $user_id, self::META_KEY, $tokens );
+        if ( false !== update_user_meta( $user_id, self::META_KEY, $tokens ) ) {
+            do_action( 'craf_appna_auth_tokens_changed', $user_id, $previous, $tokens );
+        }
     }
 
     /**

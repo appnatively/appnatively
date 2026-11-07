@@ -397,6 +397,7 @@ class EverestForms extends Form {
 
         if ( $entry_id && ! is_wp_error( $entry_id ) ) {
             evf()->task->entry_email( $entry_fields, $entry, $form_data, $entry_id );
+            \Crafium\AppNatively\App\Support\NotificationFormEvents::accepted( 'everest-forms', (string) $form_id, (string) $entry_id );
         }
     }
 

@@ -4,7 +4,7 @@ Tags: mobile app, app builder, native app, woocommerce mobile app, headless
 Requires at least: 6.5
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 0.0.9
+Stable tag: 0.0.10
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -61,7 +61,15 @@ Whether you run an online store, collect leads through forms, or publish a direc
 
 === External Services ===
 
-This plugin does not send your data anywhere on its own. It publishes REST endpoints on your own site that your mobile app and [AppNatively Studio](https://appnatively.com/studio) read from. You choose when to connect Studio by giving it the connection key from the settings screen, and you can revoke that key at any time.
+AppNatively provides REST endpoints read by your mobile app and [AppNatively Studio](https://appnatively.com/studio). Notification delivery uses the configured AppNatively notification service.
+
+The notification sending preference defaults to On, but no notification pairing or delivery is permitted until an administrator explicitly accepts the disclosure under **Settings → AppNatively Notifications** and saves. Then use **Check Connection** in Studio. The acknowledgement is initially unchecked. Turning sending off stops new notification requests and cancels queued work; an in-flight request may finish. The API switch also stops notification delivery.
+
+After consent and pairing, WordPress and supported plugin hooks queue order, listing and form submission IDs/statuses, related user IDs, account roles and login-session revocations. Authenticated service requests can read names and email addresses for audience display. Built-in form events do not include submitted field values. Raw login tokens and passwords are never sent. Custom event emitters control their own payloads and must disclose any additional data they send.
+
+WpMVC Queue performs background delivery using AppNatively-prefixed WordPress queue storage and cron/loopback requests. Native user records, cookie sessions, orders and listings are not modified by notification listeners. Business events expire after 24 hours. Session revocation jobs expire with their source session; other account events expire after 30 days. Successfully processed jobs are removed. HTTP configuration errors pause the affected source/channel for manual retry, and expired paused jobs are removed by the queue health check. Credentials are encrypted locally and removed on uninstall. Notification capture failures do not fail native actions; transient events may be lost when local queue storage fails.
+
+Service links: [AppNatively](https://appnatively.com/), [Privacy Policy](https://appnatively.com/privacy-policy), [Terms of Service](https://appnatively.com/terms-and-conditions).
 
 == Installation ==
 
@@ -109,7 +117,7 @@ Directorist, GeoDirectory, HivePress, Business Directory Plugin, Classified List
 Open **AppNatively** in your dashboard and copy the connection key, then go to [AppNatively Studio](https://appnatively.com/studio), open your app, and visit **Settings &rarr; Website Connection**. Select **WordPress**, enter your site URL, paste the key, click **Check Connection**, and save.
 
 = What is the connection key for? =
-It authorizes AppNatively Studio to read which of your plugins are active, so it can offer you the right integrations. Without it that list is not exposed to anyone. Treat it like a password. You can issue a new one at any time from the settings screen — Studio will need the new key pasted in before it can read your site again.
+It authorizes AppNatively Studio to read which of your plugins are active and, after your separate notification acknowledgement, to pair notification delivery. Without it that list is not exposed to anyone. Treat it like a password. You can issue a new one at any time from the settings screen — Studio will need the new key pasted in before it can read your site again.
 
 = How do I turn the API off? =
 Open **AppNatively** in your dashboard and uncheck **Answer requests from the mobile app**. Every endpoint stops responding immediately and your settings are kept, so you can switch it back on without reconfiguring anything.
@@ -130,6 +138,11 @@ Yes. Use the `craf_appna_integrated_plugins` filter to register your own plugin 
 The source code and public repository for this plugin is available on GitHub at [AppNatively](https://github.com/appnatively/appnatively).
 
 == Changelog ==
+= 0.0.10 - 07 Nov 2026 =
+* Add consent-controlled notification delivery using WpMVC Queue.
+* Preserve native authentication, form errors, and source data while listening to events.
+* Add notification cleanup and correct release validation.
+
 = 0.0.9 - 11 Oct 2026 =
 * Support bearer authentication for Studio connection keys while retaining legacy header support.
 

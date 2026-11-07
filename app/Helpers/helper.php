@@ -289,3 +289,8 @@ function craf_appna_route_param( $request, string $name ) {
 
     return array_key_exists( $name, $url_params ) ? $url_params[ $name ] : $request->get_param( $name );
 }
+
+/** Emit a declared notification event from a custom plugin or server hook. */
+function craf_appna_emit_event( string $type, array $data, array $context = [] ): ?string {
+    return \Crafium\AppNatively\App\Support\NotificationEvents::emit( $type, $data, $context );
+}

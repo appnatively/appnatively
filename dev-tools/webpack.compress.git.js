@@ -1,8 +1,7 @@
 const FileManagerPlugin = require( 'filemanager-webpack-plugin' );
-const normalizePath = require( 'normalize-path' );
 const path = require( 'path' );
 
-const { pluginRootFile, buildFiles, buildIgnoreFiles } = require( './utils' );
+const { normalizePath, pluginRootFile, buildFiles, buildIgnoreFiles } = require( './utils' );
 
 const rootDir = path.dirname( __dirname );
 const dist = normalizePath( path.join( rootDir, '__build' ) );

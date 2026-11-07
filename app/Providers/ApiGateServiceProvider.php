@@ -80,7 +80,7 @@ class ApiGateServiceProvider extends Provider {
         $private = (bool) preg_match(
             '#^/(?:connection|plugins|post-types/(?:available|selection)|ecommerce/products/filter-sources|directory/listings/filter-sources)/?$#i',
             $path
-        ) || (bool) preg_match( '#^/(?:auth|ecommerce/(?:cart|orders|wishlist)|directory/wishlist)(?:/|$)#i', $path );
+        ) || (bool) preg_match( '#^/(?:auth|notifications|ecommerce/(?:cart|orders|wishlist)|directory/wishlist)(?:/|$)#i', $path );
 
         foreach ( ['Authorization', 'X-AppNatively-Key', 'X-Cart-Id', 'X-WC-Session'] as $header ) {
             if ( null !== $request->get_header( $header ) ) {

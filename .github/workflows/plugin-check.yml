@@ -1,7 +1,7 @@
 name: Plugin Check (PCP)
 
 on:
-  pull_request_target:
+  pull_request:
     branches:
       - master
       - development
@@ -9,6 +9,9 @@ on:
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
   cancel-in-progress: true
+
+permissions:
+  contents: read
 
 jobs:
   pcp:

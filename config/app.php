@@ -80,6 +80,7 @@ return [
     'providers'                   => [
         //Core
         AuthServiceProvider::class,
+        \Crafium\AppNatively\App\Providers\NotificationEventServiceProvider::class,
         ApiGateServiceProvider::class,
 
         // Ecommerce Integrations
