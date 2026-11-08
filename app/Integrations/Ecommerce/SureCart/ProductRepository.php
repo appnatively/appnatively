@@ -26,7 +26,13 @@ class ProductRepository {
      *
      * @var string[]
      */
-    private const PRODUCT_EXPAND = [ 'prices', 'variants', 'variant_options', 'product_medias', 'product_media.media' ];
+    private const PRODUCT_EXPAND = [
+        'prices',
+        'variants',
+        'variant_options',
+        'product_medias',
+        'product_media.media'
+    ];
 
     /** Product lists and filter facets (see CatalogQuery). */
     private CatalogQuery $query;

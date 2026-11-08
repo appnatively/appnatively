@@ -3,7 +3,6 @@
 namespace Crafium\AppNatively\App\Integrations\Directory;
 
 defined( "ABSPATH" ) || exit;
-
 use Crafium\AppNatively\App\DTO\Directory\CategoryDTO;
 use Crafium\AppNatively\App\DTO\Directory\CategoryPaginatorDTO;
 use Crafium\AppNatively\App\DTO\Directory\ListingDTO;
@@ -18,19 +17,19 @@ use Crafium\AppNatively\WpMVC\RequestValidator\Request;
 use WP_Comment;
 use WP_Post;
 use WP_Query;
-
-class HivePress extends Provider {
+class HivePress extends Provider
+{
     use ListingIntegrationHelpers;
 
     private ?HivePressCatalog $catalog = null;
 
-    public function register() {}
+    public function register() {
+    }
 
     public function boot(): void {
         if ( ! $this->is_loaded() ) {
             return;
         }
-
         $this->register_listing_hooks( "hivepress" );
         add_filter( "craf_appna_directory_hivepress_listing", [$this, "listing"], 10, 3 );
         add_filter( "craf_appna_directory_hivepress_related_listings", [$this, "related_listings"], 10, 3 );
@@ -52,16 +51,13 @@ class HivePress extends Provider {
         $page       = (int) $request->get_param( "page" ) ?: 1;
         $per_page   = (int) $request->get_param( "per_page" ) ?: 10;
         $post       = $this->get_listing_post( $listing_id );
-
         if ( ! $post || ! taxonomy_exists( $this->catalog()->category_taxonomy() ) ) {
             return new ListingPaginatorDTO( $page, $per_page, 0, 1, [] );
         }
-
         $category_ids = wp_get_post_terms( $listing_id, $this->catalog()->category_taxonomy(), ["fields" => "ids"] );
         if ( is_wp_error( $category_ids ) || empty( $category_ids ) ) {
             return new ListingPaginatorDTO( $page, $per_page, 0, 1, [] );
         }
-
         $query = new WP_Query(
             [
                 "post_type"      => $this->catalog()->post_types()[0],
@@ -69,38 +65,33 @@ class HivePress extends Provider {
                 "has_password"   => false,
                 "paged"          => $page,
                 "posts_per_page" => $per_page,
-                //phpcs:ignore WordPressVIPMinimum.Performance.WPQueryParams.PostNotIn_post__not_in -- small, bounded exclusion of the current listing from its own "related" query.
+            //phpcs:ignore WordPressVIPMinimum.Performance.WPQueryParams.PostNotIn_post__not_in -- small, bounded exclusion of the current listing from its own "related" query.
                 "post__not_in"   => [$listing_id],
-                //phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_tax_query -- filtering listings by taxonomy is the point of this query.
-                "tax_query"      => [
-                    [
-                        "taxonomy" => $this->catalog()->category_taxonomy(),
-                        "field"    => "term_id",
-                        "terms"    => array_map( "intval", $category_ids ),
-                    ],
+            //phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_tax_query -- filtering listings by taxonomy is the point of this query.
+                "tax_query"      => [[
+                    "taxonomy" => $this->catalog()->category_taxonomy(),
+                    "field"    => "term_id",
+                    "terms"    => array_map( "intval", $category_ids )
+                ]
                 ],
                 "orderby"        => "date",
                 "order"          => "DESC",
             ]
         );
-
         $items = [];
         foreach ( $query->posts as $post ) {
             if ( $post instanceof WP_Post ) {
                 $items[] = $this->map_listing_to_dto( $post, $fields );
             }
         }
-
         return new ListingPaginatorDTO( $page, $per_page, (int) $query->found_posts, max( 1, (int) $query->max_num_pages ), $items );
     }
 
     public function reviews( ?array $reviews, Request $request ): ?array {
         $listing_id = (int) craf_appna_route_param( $request, "id" );
-
         if ( ! $this->get_listing_post( $listing_id ) ) {
             return null;
         }
-
         return $this->query_comment_reviews( $listing_id, $request );
     }
 
@@ -110,7 +101,7 @@ class HivePress extends Provider {
 
     public function category( ?CategoryDTO $category, Request $request, array $fields = [] ): ?CategoryDTO {
         $term = get_term( (int) craf_appna_route_param( $request, "id" ), $this->catalog()->category_taxonomy() );
-        return ( $term && ! is_wp_error( $term ) ) ? $this->map_category_to_dto( $term, $fields ) : null;
+        return $term && ! is_wp_error( $term ) ? $this->map_category_to_dto( $term, $fields ) : null;
     }
 
     public function tags( ?TermPaginatorDTO $tag_paginator, Request $request, array $fields = [] ): TermPaginatorDTO {
@@ -122,7 +113,6 @@ class HivePress extends Provider {
         if ( ! $taxonomy ) {
             return $this->empty_term_paginator( $request );
         }
-
         return $this->query_terms( $taxonomy, $request, $fields );
     }
 
@@ -131,9 +121,8 @@ class HivePress extends Provider {
         if ( ! $taxonomy ) {
             return null;
         }
-
         $term = get_term( (int) craf_appna_route_param( $request, "id" ), $taxonomy );
-        return ( $term && ! is_wp_error( $term ) ) ? $this->map_term_to_dto( $term, $fields ) : null;
+        return $term && ! is_wp_error( $term ) ? $this->map_term_to_dto( $term, $fields ) : null;
     }
 
     protected function catalog(): ListingCatalog {
@@ -149,13 +138,11 @@ class HivePress extends Provider {
         if ( ! $post instanceof WP_Post || $post->post_type !== $this->catalog()->post_types()[0] || "publish" !== $post->post_status || craf_appna_is_post_password_protected( $post ) ) {
             return null;
         }
-
         return $post;
     }
 
     private function map_listing_to_dto( WP_Post $post, array $fields ): ListingDTO {
         $dto = new ListingDTO();
-
         if ( in_array( "id", $fields, true ) ) {
             $dto->set_id( (int) $post->ID );
         }
@@ -184,31 +171,98 @@ class HivePress extends Provider {
             $dto->set_images( $this->get_listing_images( (int) $post->ID, in_array( "image", $fields, true ) ) );
         }
         if ( in_array( "views_count", $fields, true ) ) {
-            $dto->set_views_count( (int) $this->get_meta_value( $post->ID, ["hp_view_count", "_hp_view_count", "_view_count"] ) );
+            $dto->set_views_count(
+                (int) $this->get_meta_value(
+                    $post->ID, [
+                        "hp_view_count",
+                        "_hp_view_count",
+                        "_view_count"
+                    ]
+                )
+            );
         }
         if ( in_array( "address", $fields, true ) ) {
-            $dto->set_address( $this->get_meta_value( $post->ID, ["hp_address", "_hp_address", "address"] ) );
+            $dto->set_address(
+                $this->get_meta_value(
+                    $post->ID, [
+                        "hp_address",
+                        "_hp_address",
+                        "address"
+                    ]
+                )
+            );
         }
         if ( in_array( "latitude", $fields, true ) ) {
-            $dto->set_latitude( $this->normalize_coordinate( $this->get_meta_value( $post->ID, ["hp_latitude", "_hp_latitude", "latitude"] ), -90, 90 ) );
+            $dto->set_latitude(
+                $this->normalize_coordinate(
+                    $this->get_meta_value(
+                        $post->ID, [
+                            "hp_latitude",
+                            "_hp_latitude",
+                            "latitude"
+                        ]
+                    ), -90, 90
+                )
+            );
         }
         if ( in_array( "longitude", $fields, true ) ) {
-            $dto->set_longitude( $this->normalize_coordinate( $this->get_meta_value( $post->ID, ["hp_longitude", "_hp_longitude", "longitude"] ), -180, 180 ) );
+            $dto->set_longitude(
+                $this->normalize_coordinate(
+                    $this->get_meta_value(
+                        $post->ID, [
+                            "hp_longitude",
+                            "_hp_longitude",
+                            "longitude"
+                        ]
+                    ), -180, 180
+                )
+            );
         }
         if ( in_array( "phone", $fields, true ) ) {
-            $dto->set_phone( $this->get_meta_value( $post->ID, ["hp_phone", "_hp_phone", "phone"] ) );
+            $dto->set_phone(
+                $this->get_meta_value(
+                    $post->ID, [
+                        "hp_phone",
+                        "_hp_phone",
+                        "phone"
+                    ]
+                )
+            );
         }
         if ( in_array( "email", $fields, true ) ) {
-            $dto->set_email( $this->get_meta_value( $post->ID, ["hp_email", "_hp_email", "email"] ) );
+            $dto->set_email(
+                $this->get_meta_value(
+                    $post->ID, [
+                        "hp_email",
+                        "_hp_email",
+                        "email"
+                    ]
+                )
+            );
         }
         if ( in_array( "website", $fields, true ) ) {
-            $dto->set_website( $this->get_meta_value( $post->ID, ["hp_website", "_hp_website", "website"] ) );
+            $dto->set_website(
+                $this->get_meta_value(
+                    $post->ID, [
+                        "hp_website",
+                        "_hp_website",
+                        "website"
+                    ]
+                )
+            );
         }
         if ( in_array( "favorite", $fields, true ) ) {
             $dto->set_favorite( false );
         }
         if ( in_array( "featured", $fields, true ) ) {
-            $dto->set_featured( (bool) $this->get_meta_value( $post->ID, ["hp_featured", "_hp_featured"] ) );
+            $dto->set_featured(
+                (bool) $this->get_meta_value(
+                    $post->ID, [
+                        "hp_featured",
+                        "_hp_featured"
+                    ]
+                )
+            );
         }
         if ( in_array( "new", $fields, true ) ) {
             $dto->set_new( false );
@@ -219,9 +273,25 @@ class HivePress extends Provider {
         if ( in_array( "pricing", $fields, true ) ) {
             $dto->set_pricing(
                 [
-                    "price"       => $this->get_meta_value( $post->ID, ["hp_price", "_hp_price", "price"] ),
-                    "price_type"  => $this->get_meta_value( $post->ID, ["hp_price_type", "_hp_price_type"] ),
-                    "price_range" => $this->get_meta_value( $post->ID, ["hp_price_range", "_hp_price_range"] ),
+                    "price"       => $this->get_meta_value(
+                        $post->ID, [
+                            "hp_price",
+                            "_hp_price",
+                            "price"
+                        ]
+                    ),
+                    "price_type"  => $this->get_meta_value(
+                        $post->ID, [
+                            "hp_price_type",
+                            "_hp_price_type"
+                        ]
+                    ),
+                    "price_range" => $this->get_meta_value(
+                        $post->ID, [
+                            "hp_price_range",
+                            "_hp_price_range"
+                        ]
+                    )
                 ]
             );
         }
@@ -240,7 +310,6 @@ class HivePress extends Provider {
         }
         if ( in_array( "review_count", $fields, true ) || in_array( "rating_count", $fields, true ) ) {
             $review_count = $this->get_listing_review_count( (int) $post->ID );
-
             if ( in_array( "review_count", $fields, true ) ) {
                 $dto->set_review_count( $review_count );
             }
@@ -248,24 +317,20 @@ class HivePress extends Provider {
                 $dto->set_rating_count( $review_count );
             }
         }
-
         return $dto;
     }
 
     private function query_categories( Request $request, array $fields ): CategoryPaginatorDTO {
         $page     = (int) $request->get_param( "page" ) ?: 1;
         $per_page = (int) $request->get_param( "per_page" ) ?: 10;
-
         if ( ! taxonomy_exists( $this->catalog()->category_taxonomy() ) ) {
             return new CategoryPaginatorDTO( $page, $per_page, 0, 1, [] );
         }
-
         $terms = $this->get_terms_page( $this->catalog()->category_taxonomy(), $request, $page, $per_page );
         $items = [];
         foreach ( $terms["items"] as $term ) {
             $items[] = $this->map_category_to_dto( $term, $fields );
         }
-
         return new CategoryPaginatorDTO( $page, $per_page, $terms["total"], $terms["last_page"], $items );
     }
 
@@ -277,7 +342,7 @@ class HivePress extends Provider {
             "name"  => "name",
             "id"    => "term_id",
             "slug"  => "slug",
-            "count" => "count",
+            "count" => "count"
         ];
         $args  = [
             "taxonomy"   => $taxonomy,
@@ -286,11 +351,16 @@ class HivePress extends Provider {
             "offset"     => ( $page - 1 ) * $per_page,
             "search"     => sanitize_text_field( (string) $request->get_param( "search" ) ),
             "orderby"    => $map[$key] ?? "name",
-            "order"      => $desc ? "DESC" : "ASC",
+            "order"      => $desc ? "DESC" : "ASC"
         ];
         $items = get_terms( $args );
-        $total = wp_count_terms( ["taxonomy" => $taxonomy, "hide_empty" => false, "search" => $args["search"]] );
-
+        $total = wp_count_terms(
+            [
+                "taxonomy"   => $taxonomy,
+                "hide_empty" => false,
+                "search"     => $args["search"]
+            ]
+        );
         if ( is_wp_error( $items ) ) {
             $items = [];
         }
@@ -300,11 +370,10 @@ class HivePress extends Provider {
         if ( $pad_counts ) {
             $items = $this->pad_term_counts( $items, $taxonomy );
         }
-
         return [
             "items"     => $items,
             "total"     => (int) $total,
-            "last_page" => max( 1, (int) ceil( (int) $total / $per_page ) ),
+            "last_page" => max( 1, (int) ceil( (int) $total / $per_page ) )
         ];
     }
 
@@ -327,7 +396,6 @@ class HivePress extends Provider {
         if ( empty( $items ) || ! is_taxonomy_hierarchical( $taxonomy ) ) {
             return $items;
         }
-
         $children = [];
         $wanted   = [];
         foreach ( $items as $term ) {
@@ -341,23 +409,20 @@ class HivePress extends Provider {
         if ( empty( $wanted ) ) {
             return $items;
         }
-
         $descendants = get_terms(
             [
                 "taxonomy"   => $taxonomy,
                 "include"    => array_values( array_unique( $wanted ) ),
-                "hide_empty" => false,
+                "hide_empty" => false
             ]
         );
         if ( is_wp_error( $descendants ) ) {
             return $items;
         }
-
         $counts = [];
         foreach ( (array) $descendants as $descendant ) {
             $counts[(int) $descendant->term_id] = (int) $descendant->count;
         }
-
         $padded = [];
         foreach ( $items as $term ) {
             $sum = 0;
@@ -371,13 +436,11 @@ class HivePress extends Provider {
             }
             $padded[] = $term;
         }
-
         return $padded;
     }
 
     private function map_category_to_dto( $term, array $fields ): CategoryDTO {
         $dto = new CategoryDTO();
-
         if ( in_array( "id", $fields, true ) ) {
             $dto->set_id( (int) $term->term_id );
         }
@@ -399,13 +462,11 @@ class HivePress extends Provider {
         if ( in_array( "image", $fields, true ) ) {
             $dto->set_image( $this->get_term_image( (int) $term->term_id ) );
         }
-
         return $dto;
     }
 
     private function get_listing_image( int $post_id ): array {
         $image_id = $this->get_listing_image_id( $post_id );
-
         return $image_id ? $this->map_attachment_image( $image_id ) : [];
     }
 
@@ -415,10 +476,14 @@ class HivePress extends Provider {
             $cover_id  = $this->get_listing_image_id( $post_id );
             $image_ids = array_values( array_filter( $image_ids, fn( int $image_id ): bool => $image_id !== $cover_id ) );
         }
-
         return array_values(
             array_filter(
-                array_map( [$this, "map_attachment_image"], $image_ids )
+                array_map(
+                    [
+                        $this,
+                        "map_attachment_image"
+                    ], $image_ids
+                )
             )
         );
     }
@@ -428,57 +493,47 @@ class HivePress extends Provider {
         if ( $image_id > 0 ) {
             return $image_id;
         }
-
         $image_ids = $this->get_listing_image_ids( $post_id );
         return $image_ids ? (int) reset( $image_ids ) : 0;
     }
 
     private function get_listing_image_ids( int $post_id ): array {
         $image_ids = [];
-
         if ( class_exists( "HivePress\\Models\\Listing" ) ) {
             $listing = \HivePress\Models\Listing::query()->get_by_id( $post_id );
             if ( $listing && method_exists( $listing, "get_images__id" ) ) {
                 $image_ids = array_merge( $image_ids, $this->positive_ids( $listing->get_images__id() ) );
             }
         }
-
         foreach ( get_attached_media( "image", $post_id ) as $image ) {
             $parent_field = is_object( $image ) && isset( $image->hp_parent_field ) ? (string) $image->hp_parent_field : "";
             if ( "images" === $parent_field || "" === $parent_field ) {
                 $image_ids[] = (int) $image->ID;
             }
         }
-
         $thumbnail_id = (int) get_post_thumbnail_id( $post_id );
         if ( $thumbnail_id > 0 ) {
             array_unshift( $image_ids, $thumbnail_id );
         }
-
         return array_values( array_unique( array_filter( $image_ids ) ) );
     }
 
-    private function map_attachment_image( int $image_id ): array {
-        $src = wp_get_attachment_url( $image_id );
-
-        return $src ? [
-            "id"    => (int) $image_id,
-            "src"   => esc_url_raw( (string) $src ),
-            "alt"   => sanitize_text_field( (string) get_post_meta( $image_id, "_wp_attachment_image_alt", true ) ),
-            "title" => (string) get_the_title( $image_id ),
-        ] : [];
-    }
-
     private function get_term_image( int $term_id ): array {
-        foreach ( ["image", "thumbnail_id", "_thumbnail_id"] as $key ) {
+        foreach ( [
+            "image",
+            "thumbnail_id",
+            "_thumbnail_id"
+        ] as $key ) {
             $value = get_term_meta( $term_id, $key, true );
             $id    = is_numeric( $value ) ? (int) $value : 0;
             $src   = $id ? wp_get_attachment_url( $id ) : ( is_string( $value ) ? $value : "" );
             if ( $src && filter_var( $src, FILTER_VALIDATE_URL ) ) {
-                return ["id" => $id, "src" => esc_url_raw( $src )];
+                return [
+                    "id"  => $id,
+                    "src" => esc_url_raw( $src )
+                ];
             }
         }
-
         return [];
     }
 
@@ -490,24 +545,15 @@ class HivePress extends Provider {
         if ( empty( $terms ) || is_wp_error( $terms ) ) {
             return [];
         }
-
         return array_map(
-            function( $term ): array {
-                return ["id" => (int) $term->term_id, "name" => (string) $term->name, "slug" => (string) $term->slug];
-            },
-            $terms
+            function ( $term ): array {
+                return [
+                    "id"   => (int) $term->term_id,
+                    "name" => (string) $term->name,
+                    "slug" => (string) $term->slug
+                ];
+            }, $terms
         );
-    }
-
-    private function get_meta_value( int $post_id, array $keys ): string {
-        foreach ( $keys as $key ) {
-            $value = get_post_meta( $post_id, $key, true );
-            if ( "" !== $value && null !== $value ) {
-                return is_scalar( $value ) ? sanitize_text_field( (string) $value ) : "";
-            }
-        }
-
-        return "";
     }
 
     private function query_comment_reviews( int $listing_id, Request $request ): array {
@@ -515,24 +561,16 @@ class HivePress extends Provider {
             "post_id" => $listing_id,
             "status"  => "approve",
             "type"    => "hp_review",
-            "parent"  => 0,
+            "parent"  => 0
         ];
-        $query        = $this->query_directory_review_rows(
-            $base,
-            $request,
-            fn( WP_Comment $comment ): float => (float) $comment->comment_karma
-        );
+        $query        = $this->query_directory_review_rows( $base, $request, fn( WP_Comment $comment ): float => (float) $comment->comment_karma );
         $review_count = $this->get_listing_review_count( $listing_id );
-
-        $items = [];
-
+        $items        = [];
         foreach ( $query["rows"] as $row ) {
             $items[] = $this->map_review_comment( $row["comment"], $row["rating"] );
         }
-
         $rating_counts = $this->get_review_rating_counts( $listing_id );
         $average       = $this->calculate_average_rating( $rating_counts );
-
         return [
             "current_page"   => $query["current_page"],
             "per_page"       => $query["per_page"],
@@ -541,25 +579,38 @@ class HivePress extends Provider {
             "average_rating" => $this->get_listing_aggregate_rating( $listing_id, $average ),
             "review_count"   => $review_count,
             "rating_counts"  => $rating_counts,
-            "items"          => $items,
+            "items"          => $items
         ];
     }
 
     private function get_listing_review_count( int $listing_id ): int {
-        return (int) get_comments( ["post_id" => $listing_id, "status" => "approve", "type" => "hp_review", "parent" => 0, "count" => true] );
+        return (int) get_comments(
+            [
+                "post_id" => $listing_id,
+                "status"  => "approve",
+                "type"    => "hp_review",
+                "parent"  => 0,
+                "count"   => true
+            ]
+        );
     }
 
     private function get_review_rating_counts( int $listing_id ): array {
         $rating_counts = $this->empty_rating_counts();
-        $comments      = get_comments( ["post_id" => $listing_id, "status" => "approve", "type" => "hp_review", "parent" => 0] );
-
+        $comments      = get_comments(
+            [
+                "post_id" => $listing_id,
+                "status"  => "approve",
+                "type"    => "hp_review",
+                "parent"  => 0
+            ]
+        );
         foreach ( $comments as $comment ) {
             $rating = (float) $comment->comment_karma;
             if ( $rating > 0 ) {
                 $rating_counts[(string) max( 1, min( 5, (int) round( $rating ) ) )]++;
             }
         }
-
         return $rating_counts;
     }
 
@@ -580,7 +631,7 @@ class HivePress extends Provider {
             "review"       => wp_kses_post( (string) $comment->comment_content ),
             "rating"       => $rating,
             "date_created" => (string) get_comment_date( DATE_ATOM, $comment ),
-            "avatar_url"   => (string) get_avatar_url( $comment, ["size" => 96] ),
+            "avatar_url"   => (string) get_avatar_url( $comment, ["size" => 96] )
         ];
     }
 
@@ -590,7 +641,13 @@ class HivePress extends Provider {
     }
 
     private function empty_rating_counts(): array {
-        return ["1" => 0, "2" => 0, "3" => 0, "4" => 0, "5" => 0];
+        return [
+            "1" => 0,
+            "2" => 0,
+            "3" => 0,
+            "4" => 0,
+            "5" => 0
+        ];
     }
 
     private function location_taxonomy(): ?string {
@@ -602,17 +659,14 @@ class HivePress extends Provider {
         $per_page = (int) $request->get_param( "per_page" ) ?: 10;
         $terms    = $this->get_terms_page( $taxonomy, $request, $page, $per_page, true );
         $items    = [];
-
         foreach ( $terms["items"] as $term ) {
             $items[] = $this->map_term_to_dto( $term, $fields );
         }
-
         return new TermPaginatorDTO( $page, $per_page, $terms["total"], $terms["last_page"], $items );
     }
 
     private function map_term_to_dto( $term, array $fields ): TermDTO {
         $dto = new TermDTO();
-
         if ( in_array( "id", $fields, true ) ) {
             $dto->set_id( (int) $term->term_id );
         }
@@ -628,7 +682,6 @@ class HivePress extends Provider {
         if ( in_array( "image", $fields, true ) ) {
             $dto->set_image( [] );
         }
-
         return $dto;
     }
 }

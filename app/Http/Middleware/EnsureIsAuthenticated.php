@@ -10,6 +10,7 @@ namespace Crafium\AppNatively\App\Http\Middleware;
 defined( 'ABSPATH' ) || exit;
 
 use Crafium\AppNatively\App\Support\Auth;
+use Crafium\AppNatively\App\Support\AuthorizationStorageException;
 use Crafium\AppNatively\App\Support\Settings;
 use Crafium\AppNatively\WpMVC\Routing\Contracts\Middleware;
 use WP_REST_Request;
@@ -39,7 +40,12 @@ class EnsureIsAuthenticated implements Middleware {
             return Settings::api_disabled_error();
         }
 
-        if ( ! Auth::authenticate( $wp_rest_request ) ) {
+        try {
+            $user = Auth::authenticate( $wp_rest_request );
+        } catch ( AuthorizationStorageException $error ) {
+            return new WP_Error( 'craf_appna_auth_storage', $error->getMessage(), ['status' => 503] );
+        }
+        if ( ! $user ) {
             return new WP_Error(
                 'craf_appna_unauthorized',
                 __( 'A valid access token is required for this request.', 'appnatively' ),

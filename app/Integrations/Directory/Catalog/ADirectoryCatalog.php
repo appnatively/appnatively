@@ -54,7 +54,10 @@ class ADirectoryCatalog extends ListingCatalog {
 
     public function price_sql(): ?array {
         $price = $this->meta_number( '_price' );
-        return [ $price, $price ];
+        return [
+            $price,
+            $price
+        ];
     }
 
     /**
@@ -72,7 +75,10 @@ class ADirectoryCatalog extends ListingCatalog {
     }
 
     public function coordinates(): ?array {
-        return [ $this->meta_number( '_map_lat' ), $this->meta_number( '_map_lon' ) ];
+        return [
+            $this->meta_number( '_map_lat' ),
+            $this->meta_number( '_map_lon' )
+        ];
     }
 
     public function has_business_hours(): bool {

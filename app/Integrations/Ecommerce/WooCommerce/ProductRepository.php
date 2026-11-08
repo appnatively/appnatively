@@ -66,7 +66,10 @@ class ProductRepository {
         }
 
         $term_ids = [];
-        foreach ( [ 'product_cat', 'product_tag' ] as $taxonomy ) {
+        foreach ( [
+            'product_cat',
+            'product_tag'
+        ] as $taxonomy ) {
             if ( ! taxonomy_exists( $taxonomy ) ) {
                 continue;
             }
@@ -395,7 +398,7 @@ class ProductRepository {
                         ->set_stock_quantity( (int) $variation->get_stock_quantity() )
                         ->set_weight( (float) $variation->get_weight() )
                         ->set_attributes( $this->resolve_attributes_labels( $variation->get_attributes(), $product ) );
-                    
+
                     $var_img_id = $variation->get_image_id();
                     if ( $var_img_id ) {
                         $var_img = new ProductImageDTO();

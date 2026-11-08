@@ -182,7 +182,7 @@ class CartManager {
         foreach ( WC()->cart->get_cart() as $key => $cart_item ) {
             $item_dto = new CartItemDTO();
             $product  = $cart_item['data'];
-            
+
             $item_dto->set_key( $key )
                 ->set_product_id( $cart_item['product_id'] )
                 ->set_variation_id( $cart_item['variation_id'] )
@@ -193,7 +193,7 @@ class CartManager {
                 ->set_total( (string) $cart_item['line_total'] );
 
             $image_id = $product->get_image_id();
-            
+
             // Fallback to parent image if variation has no image
             if ( ! $image_id && $product->is_type( 'variation' ) ) {
                 $image_id = get_post_thumbnail_id( $product->get_parent_id() );
@@ -236,7 +236,7 @@ class CartManager {
      */
     public function cart_add( ?CartDTO $cart_dto, Request $request ): CartDTO {
         $this->ensure_cart_loaded( $request );
-        
+
         $items = $request->get_param( "items" );
         foreach ( (array) $items as $item ) {
             $product_id   = (int) ( $item['productId'] ?? 0 );
@@ -283,7 +283,7 @@ class CartManager {
                 wc_clear_notices();
 
                 $cart_item_key = WC()->cart->add_to_cart( $product_id, $quantity, $variation_id, $variations );
-                
+
                 if ( ! $cart_item_key ) {
                     $errors = wc_get_notices( 'error' );
                     wc_clear_notices();
@@ -313,7 +313,7 @@ class CartManager {
      */
     public function cart_update( ?CartDTO $cart_dto, Request $request ): CartDTO {
         $this->ensure_cart_loaded( $request );
-        
+
         $items = $request->get_param( "items" );
         foreach ( (array) $items as $item ) {
             $key      = sanitize_text_field( $item['itemId'] ?? '' );
@@ -322,7 +322,7 @@ class CartManager {
             if ( $key ) {
                 wc_clear_notices();
                 $status = WC()->cart->set_quantity( $key, $quantity );
-                
+
                 // set_quantity returns false or a WP_Error on failure, or does nothing if quantity is the same
                 if ( is_wp_error( $status ) ) {
                     throw new Exception( esc_html( wp_strip_all_tags( $status->get_error_message() ) ), 400 );
@@ -350,7 +350,7 @@ class CartManager {
      */
     public function cart_remove( ?CartDTO $cart_dto, Request $request ): CartDTO {
         $this->ensure_cart_loaded( $request );
-        
+
         $item_ids = $request->get_param( "itemIds" );
         foreach ( (array) $item_ids as $key ) {
             WC()->cart->remove_cart_item( sanitize_text_field( $key ) );

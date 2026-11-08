@@ -2,6 +2,8 @@
 
 namespace Crafium\AppNatively\App\Integrations\Directory\Catalog;
 
+use Crafium\AppNatively\App\Models\DatabaseRow;
+
 defined( "ABSPATH" ) || exit;
 
 use Crafium\AppNatively\App\Filtering\Field;
@@ -22,7 +24,19 @@ class BusinessDirectoryPluginCatalog extends ListingCatalog {
     ];
 
     /** Field tags read elsewhere (contact details, location), never offered as filters. */
-    private const CONTACT_TAGS = [ 'address', 'address2', 'city', 'state', 'country', 'zip', 'phone', 'fax', 'email', 'website', 'social' ];
+    private const CONTACT_TAGS = [
+        'address',
+        'address2',
+        'city',
+        'state',
+        'country',
+        'zip',
+        'phone',
+        'fax',
+        'email',
+        'website',
+        'social'
+    ];
 
     /** @var array<string, Field>|null */
     private ?array $fields = null;
@@ -55,7 +69,16 @@ class BusinessDirectoryPluginCatalog extends ListingCatalog {
         global $wpdb;
         $this->fields = [];
         // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- small table, read per request.
-        $rows = $wpdb->get_results( "SELECT id, label, field_type, display_flags, field_data, tag FROM {$wpdb->prefix}wpbdp_form_fields WHERE association = 'meta'" );
+        $rows = DatabaseRow::from_table( "wpbdp_form_fields" )->select(
+            [
+                "id",
+                "label",
+                "field_type",
+                "display_flags",
+                "field_data",
+                "tag"
+            ]
+        )->where( "association","meta" )->get()->all();
         foreach ( (array) $rows as $row ) {
             $type = (string) $row->field_type;
             if ( ! isset( self::FILTERABLE_TYPES[ $type ] ) || in_array( (string) $row->tag, self::CONTACT_TAGS, true ) ) {
@@ -69,7 +92,12 @@ class BusinessDirectoryPluginCatalog extends ListingCatalog {
                     $choices[ is_int( $value ) ? (string) $label : (string) $value ] = (string) $label;
                 }
             }
-            $multiple = in_array( $type, [ 'checkbox', 'multiselect' ], true );
+            $multiple = in_array(
+                $type, [
+                    'checkbox',
+                    'multiselect'
+                ], true
+            );
             $field    = Field::meta(
                 '_wpbdp[fields][' . (int) $row->id . ']',
                 (string) $row->label,

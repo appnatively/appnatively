@@ -41,7 +41,10 @@ class User extends Model {
      *
      * @var array
      */
-    protected array $hidden = ['user_pass', 'user_activation_key'];
+    protected array $hidden = [
+        'user_pass',
+        'user_activation_key'
+    ];
 
     /**
      * The attributes that are mass assignable.

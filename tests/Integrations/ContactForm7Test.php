@@ -74,7 +74,12 @@ class ContactForm7Test extends \WP_UnitTestCase {
     }
 
     public function test_get_form_excludes_unpublished_form() {
-        wp_update_post( [ 'ID' => $this->form_id, 'post_status' => 'draft' ] );
+        wp_update_post(
+            [
+                'ID'          => $this->form_id,
+                'post_status' => 'draft'
+            ]
+        );
 
         $cf7  = $this->get_integration_instance();
         $form = $cf7->expose_get_form( $this->form_id );
@@ -87,10 +92,22 @@ class ContactForm7Test extends \WP_UnitTestCase {
         $rules = $cf7->expose_get_validation_rules( $form );
 
         $expected_fields = [
-            'full_name', 'full_name_two', 'email', 'email_two',
-            'website', 'website_two', 'number', 'number_two',
-            'datetime', 'datetime_two', 'single_select', 'single_select_two',
-            'multiple_choice', 'multiple_choice_two', 'radio', 'radio_two',
+            'full_name',
+            'full_name_two',
+            'email',
+            'email_two',
+            'website',
+            'website_two',
+            'number',
+            'number_two',
+            'datetime',
+            'datetime_two',
+            'single_select',
+            'single_select_two',
+            'multiple_choice',
+            'multiple_choice_two',
+            'radio',
+            'radio_two',
         ];
         foreach ( $expected_fields as $field ) {
             $this->assertArrayHasKey( $field, $rules );
@@ -150,7 +167,7 @@ class ContactForm7Test extends \WP_UnitTestCase {
                     'status'      => $result['status'],
                     'posted_data' => $submission ? $submission->get_posted_data() : [],
                 ];
-            }, 10, 2 
+            }, 10, 2
         );
 
         $cf7->expose_submit( $request, $form );

@@ -67,15 +67,32 @@ final class TaxonomyTermSource implements TermSource {
             ->join( 'term_taxonomy', 'term_relationships.term_taxonomy_id', '=', 'term_taxonomy.term_taxonomy_id' )
             ->join( 'terms', 'term_taxonomy.term_id', '=', 'terms.term_id' )
             ->where( 'term_taxonomy.taxonomy', $this->taxonomy )
-            ->select( [ 'terms.term_id as term_id', 'terms.slug as value', 'terms.name as label', 'COUNT(DISTINCT posts.ID) as post_count' ] )
-            ->group_by( [ 'terms.term_id', 'terms.slug', 'terms.name' ] )
+            ->select(
+                [
+                    'terms.term_id as term_id',
+                    'terms.slug as value',
+                    'terms.name as label',
+                    'COUNT(DISTINCT posts.ID) as post_count'
+                ]
+            )
+            ->group_by(
+                [
+                    'terms.term_id',
+                    'terms.slug',
+                    'terms.name'
+                ]
+            )
             ->order_by( 'terms.name', 'asc' )
             ->limit( $limit )
             ->get();
 
         $terms = [];
         foreach ( $rows as $row ) {
-            $terms[ (int) $row->term_id ] = [ (string) $row->value, (string) $row->label, (int) $row->post_count ];
+            $terms[ (int) $row->term_id ] = [
+                (string) $row->value,
+                (string) $row->label,
+                (int) $row->post_count
+            ];
         }
 
         if ( ! empty( $terms ) && is_taxonomy_hierarchical( $this->taxonomy ) ) {
@@ -97,7 +114,11 @@ final class TaxonomyTermSource implements TermSource {
                 // A fresh, ungrouped query: Builder::count() counts groups once one is grouped.
                 $query = $fresh_query();
                 $this->where_has_terms( $query, $this->with_descendants( [ $parent_id ] ) );
-                $terms[ $parent_id ] = [ (string) $term->slug, (string) $term->name, (int) $query->count() ];
+                $terms[ $parent_id ] = [
+                    (string) $term->slug,
+                    (string) $term->name,
+                    (int) $query->count()
+                ];
             }
             uasort( $terms, fn( $a, $b ) => strcasecmp( $a[1], $b[1] ) );
         }

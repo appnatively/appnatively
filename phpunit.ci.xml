@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<phpunit bootstrap="tests/bootstrap.php" colors="true" failOnWarning="true">
+  <testsuites>
+    <testsuite name="Core">
+      <directory>tests/Unit</directory>
+      <file>tests/Integrations/UserTest.php</file>
+      <file>tests/Integrations/ConnectionAuthTest.php</file>
+      <file>tests/Integrations/ApiCacheProtectionTest.php</file>
+      <file>tests/Integrations/ContentTypesTest.php</file>
+      <file>tests/Integrations/NotificationEventsTest.php</file>
+    </testsuite>
+    <testsuite name="FormsA">
+      <file>tests/Integrations/FormGentTest.php</file>
+      <file>tests/Integrations/FluentFormTest.php</file>
+      <file>tests/Integrations/EverestFormTest.php</file>
+      <file>tests/Integrations/ContactForm7Test.php</file>
+      <file>tests/Integrations/FormidableTest.php</file>
+      <file>tests/Integrations/ForminatorTest.php</file>
+      <file>tests/Integrations/GutenaFormTest.php</file>
+    </testsuite>
+    <testsuite name="FormsB">
+      <file>tests/Integrations/HappyFormTest.php</file>
+      <file>tests/Integrations/SureFormsTest.php</file>
+      <file>tests/Integrations/WeFormsTest.php</file>
+      <file>tests/Integrations/WPFormsTest.php</file>
+      <file>tests/Integrations/BitFormTest.php</file>
+      <file>tests/Integrations/NinjaFormsTest.php</file>
+    </testsuite>
+    <testsuite name="Directory">
+      <directory>tests/Integrations/Directory</directory>
+    </testsuite>
+    <testsuite name="Commerce">
+      <file>tests/Integrations/WoocommerceTest.php</file>
+      <file>tests/Integrations/FluentCartTest.php</file>
+      <file>tests/Integrations/SurecartTest.php</file>
+    </testsuite>
+  </testsuites>
+</phpunit>

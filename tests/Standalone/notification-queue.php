@@ -17,16 +17,19 @@ Events::save_binding( fixture_binding() );
 $q = Events::queue( 'source', 'events' );
 check( $q instanceof Crafium\AppNatively\WpMVC\Queue\Sequence, 'Uses the actual bundled WpMVC queue' );
 check( get_option( 'craf_appna_notifications_enabled', 'yes' ) === 'yes', 'Sending preference defaults to On' );
-$consent = get_option( 'craf_appna_notification_consent' );
-delete_option( 'craf_appna_notification_consent' );
+check( Events::delivery_epoch() === '', 'New installations need no saved delivery epoch' );
 check(
     Events::emit(
         'custom.created', [], [
-            'id' => 'no-consent',
+            'id' => 'default-on',
         ]
-    ) === null && ! $q->is_queued(), 'Default On alone permits no capture or HTTP'
+    ) === 'default-on' && $q->is_queued() && ! $requests, 'Default On queues events without a separate sharing acknowledgement'
 );
-update_option( 'craf_appna_notification_consent', $consent );
+run_queue();
+check( ! $q->is_queued() && count( $requests ) === 1, 'Default On delivers without saved sharing settings' );
+$requests = [];
+update_option( 'craf_appna_notification_epoch', 'fixture-delivery' );
+check( Events::delivery_epoch() === 'fixture-delivery', 'Queue fencing uses the delivery epoch' );
 $wpdb->insert_id  = 123;
 $wpdb->last_query = 'native';
 $wpdb->last_error = 'native diagnostic';
@@ -114,10 +117,18 @@ Events::emit(
         'id' => 'cancel',
     ]
 );
-delete_option( 'craf_appna_notification_consent' );
+update_option( 'craf_appna_notifications_enabled', 'no' );
 $q->handle_cron_healthcheck();
-check( ! $q->is_queued(), 'Consent withdrawal discards old work' );
-update_option( 'craf_appna_notification_consent', $consent );
+check( ! $q->is_queued(), 'Sending Off discards old work' );
+update_option( 'craf_appna_notifications_enabled', 'yes' );
+Events::emit( 'custom.created', [], ['id' => 'old-epoch'] );
+update_option( 'craf_appna_notification_epoch', 'after-off' );
+$before = count( $requests );
+run_queue();
+check( ! $q->is_queued() && count( $requests ) === $before, 'Jobs from before Off are discarded after sending resumes' );
+Events::emit( 'custom.created', [], ['id' => 'new-epoch'] );
+run_queue();
+check( json_decode( end( $requests )[1]['body'], true )['id'] === 'new-epoch', 'New work is delivered after sending resumes' );
 $wpdb->fail = 'INSERT INTO options';
 check(
     Events::emit(

@@ -2,6 +2,8 @@
 
 namespace Crafium\AppNatively\App\Jobs;
 
+use Crafium\AppNatively\App\Models\DatabaseRow;
+
 defined( 'ABSPATH' ) || exit;
 use Crafium\AppNatively\App\Support\NotificationEvents as Events;
 use Crafium\AppNatively\WpMVC\Queue\Sequence;
@@ -35,14 +37,16 @@ class NotificationQueue extends Sequence
         if ( ! $this->kick_registered ) {
             $this->kick_registered = true;
             add_action(
-                'shutdown', function () {
-                    try {
-                        $this->dispatch();
-                    } catch ( \Throwable $error ) {
-                        Events::record_error( 'queue_dispatch_failed' );
-                    }
-                }
+                'shutdown', [$this, 'dispatch_at_shutdown']
             );
+        }
+    }
+
+    public function dispatch_at_shutdown(): void {
+        try {
+            $this->dispatch();
+        } catch ( \Throwable $error ) {
+            Events::record_error( 'queue_dispatch_failed' );
         }
     }
 
@@ -65,13 +69,52 @@ class NotificationQueue extends Sequence
         return $this->item;
     }
 
+    /** A failed checkpoint must escape the task: the parent's batch is now stale. */
+    protected function handle() {
+        try {
+            return parent::handle();
+        } catch ( NotificationCheckpointException $error ) {
+            Events::record_error( 'queue_checkpoint_failed' );
+            $this->defer( 60 );
+            $this->schedule_event();
+            // Keep the process lock until its normal expiry; a conflicting writer may own it.
+        }
+    }
+
+    /** Persist the exact prepared body before HTTP, while the framework holds its queue lock. */
+    private function checkpoint( array $original ): void {
+        try {
+            global $wpdb;
+            $batch = $this->get_batch();
+            $index = array_search( $original, $batch->data, true );
+            if ( false === $index ) {
+                throw new NotificationCheckpointException( 'Notification batch changed.' );
+            }
+            $previous            = maybe_serialize( $batch->data );
+            $batch->data[$index] = $this->item;
+            if ( is_multisite() ) {
+                $saved = $wpdb->query( $wpdb->prepare( 'UPDATE %i SET meta_value=%s WHERE site_id=%d AND meta_key=%s AND BINARY meta_value=BINARY %s', $wpdb->sitemeta, maybe_serialize( $batch->data ), get_current_network_id(), $batch->key, $previous ) );
+                wp_cache_delete( get_current_network_id() . ':' . $batch->key, 'site-options' );
+            } else {
+                $saved = $wpdb->query( $wpdb->prepare( "UPDATE %i SET option_value=%s,autoload='no' WHERE option_name=%s AND BINARY option_value=BINARY %s", $wpdb->options, maybe_serialize( $batch->data ), $batch->key, $previous ) );
+                wp_cache_delete( $batch->key, 'options' );
+                wp_cache_delete( 'alloptions', 'options' );
+            }
+            if ( 1 !== $saved ) {
+                throw new NotificationCheckpointException( 'Notification checkpoint unavailable or superseded.' );
+            }
+        } catch ( \Throwable $error ) {
+            // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Preserve the internal cause; never displayed to a website user.
+            throw new NotificationCheckpointException( 'Notification checkpoint failed.', 0, $error );
+        }
+    }
+
     protected function perform_sequence_task( $item ) {
         $this->item = is_array( $item ) ? $item : [];
         if ( ! Events::allowed() || empty( $this->item['event'] ) ) {
             return false;
         }
-        $consent = get_option( 'craf_appna_notification_consent', [] );
-        if ( ( $this->item['epoch'] ?? '' ) !== ( $consent['epoch'] ?? '' ) || (int) ( $this->item['expiresAt'] ?? 0 ) <= time() ) {
+        if ( ( $this->item['epoch'] ?? '' ) !== Events::delivery_epoch() || (int) ( $this->item['expiresAt'] ?? 0 ) <= time() ) {
             return false;
         }
         $binding = Events::bindings()[$this->source] ?? null;
@@ -90,7 +133,7 @@ class NotificationQueue extends Sequence
                 // A caller can roll back after a hook. Confirm removal against committed storage.
                 global $wpdb;
                 $wpdb->last_error = '';
-                $raw              = $wpdb->get_var( $wpdb->prepare( "SELECT meta_value FROM {$wpdb->usermeta} WHERE user_id=%d AND meta_key=%s ORDER BY umeta_id LIMIT 1", $check['user'], $check['key'] ) );
+                $raw              = DatabaseRow::value( DatabaseRow::from_table( "usermeta" )->where( "user_id",$check["user"] )->where( "meta_key",$check["key"] )->order_by( "umeta_id" ),"meta_value" );
                 if ( $wpdb->last_error ) {
                     return $this->defer( 60 );
                 }
@@ -103,7 +146,8 @@ class NotificationQueue extends Sequence
             if ( ! is_object( $event ) || ! isset( $event->type, $event->entity->id, $event->entity->type ) ) {
                 return false;
             }
-            if ( $event->type === 'system.subject.updated' ) {
+            $prepare = false;
+            if ( $event->type === 'system.subject.updated' && ! isset( $event->entity->version ) ) {
                 $subject = Events::subject_snapshot( (int) $event->entity->id );
                 if ( ! $subject ) {
                     return false;
@@ -115,6 +159,7 @@ class NotificationQueue extends Sequence
                 ];
                 // phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- established JSON event field.
                 $event->occurredAt = gmdate( 'Y-m-d\TH:i:s\Z' );
+                $prepare           = true;
             } elseif ( in_array(
                 $event->type, [
                     'commerce.order.status_changed',
@@ -126,11 +171,19 @@ class NotificationQueue extends Sequence
                     return $this->defer( 60 );
                 }
                 $event->entity->version = (string) $version;
+                $prepare                = true;
             }
-            $body                = wp_json_encode( $event );
-            $this->item['event'] = $body;
-            $response            = Events::request( $binding, $this->channel, [], $this->channel, $body );
-            $code                = is_wp_error( $response ) ? 0 : wp_remote_retrieve_response_code( $response );
+            if ( $prepare ) {
+                $body = wp_json_encode( $event );
+                if ( ! is_string( $body ) ) {
+                    throw new \RuntimeException( 'Notification serialization failed.' );
+                }
+                $this->item['event'] = $body;
+                $this->checkpoint( $item );
+            }
+            $body     = $this->item['event'];
+            $response = Events::request( $binding, $this->channel, [], $this->channel, $body );
+            $code     = is_wp_error( $response ) ? 0 : wp_remote_retrieve_response_code( $response );
             if ( $code >= 200 && $code < 300 ) {
                 delete_option( $this->identifier . '_retry_at' );
                 return false;
@@ -151,6 +204,8 @@ class NotificationQueue extends Sequence
                 return $this->defer( 0 );
             }
             return $this->defer( min( 3600, 30 * 2 ** min( 7, $this->item['attempts'] - 1 ) ) );
+        } catch ( NotificationCheckpointException $error ) {
+            throw $error;
         } catch ( \Throwable $error ) {
             Events::record_error( 'notification_worker_failed' );
             return $this->defer( 60 );

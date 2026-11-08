@@ -90,8 +90,11 @@
 		<severity>0</severity>
 	</rule>
 	<rule ref="Generic.WhiteSpace.DisallowTabIndent" />
+	<rule ref="Squiz.WhiteSpace.SuperfluousWhitespace" />
 	<rule ref="Generic.WhiteSpace.ScopeIndent" />
 	<rule ref="Generic.Arrays.DisallowLongArraySyntax.Found" />
+	<!-- Ignore Route:: arrays and condition/loop headers; keep hook callbacks compact and data arrays multiline. -->
+	<rule ref="./../CustomSniffs/Sniffs/Arrays/MultilineArraySniff.php" />
 	<rule ref="Generic.Arrays.ArrayIndent" />
 	<rule ref="Generic.Formatting.MultipleStatementAlignment" />
 	<rule ref="Generic.Formatting.SpaceAfterCast" />
@@ -108,6 +111,13 @@
 		</properties>
 	</rule>
 	<!-- <rule ref="PEAR.Functions.FunctionDeclaration"/> -->
+	<!-- Conditions and loops: braces, consistent elseif, and multiline block bodies. -->
+	<rule ref="Generic.ControlStructures.InlineControlStructure" />
+	<rule ref="PSR2.ControlStructures.ElseIfDeclaration" />
+	<rule ref="Squiz.WhiteSpace.ScopeClosingBrace" />
+	<!-- Keep the existing one-space header style; only enable block-spacing checks here. -->
+	<rule ref="Squiz.WhiteSpace.ControlStructureSpacing.SpacingAfterOpen" />
+	<rule ref="Squiz.WhiteSpace.ControlStructureSpacing.SpacingBeforeClose" />
 	<rule ref="PSR2.ControlStructures.ControlStructureSpacing">
 		<properties>
 			<property name="requiredSpacesAfterOpen" value="1" />
@@ -156,5 +166,6 @@
 	</rule>
 	<rule ref="./../CustomSniffs/Sniffs/Files/ABSPATHDefinedSniff.php">
 		<exclude-pattern>tests/*</exclude-pattern>
+		<exclude-pattern>CustomSniffs/*</exclude-pattern>
 	</rule>
 </ruleset>

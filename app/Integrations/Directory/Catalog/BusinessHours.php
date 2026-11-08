@@ -19,13 +19,27 @@ final class BusinessHours {
     private const DAY_MINUTES = 1440;
 
     private const DAY_NAMES = [
-        'sunday'    => 0, 'sun' => 0, 'su' => 0,
-        'monday'    => 1, 'mon' => 1, 'mo' => 1,
-        'tuesday'   => 2, 'tue' => 2, 'tu' => 2,
-        'wednesday' => 3, 'wed' => 3, 'we' => 3,
-        'thursday'  => 4, 'thu' => 4, 'th' => 4,
-        'friday'    => 5, 'fri' => 5, 'fr' => 5,
-        'saturday'  => 6, 'sat' => 6, 'sa' => 6,
+        'sunday'    => 0,
+        'sun'       => 0,
+        'su'        => 0,
+        'monday'    => 1,
+        'mon'       => 1,
+        'mo'        => 1,
+        'tuesday'   => 2,
+        'tue'       => 2,
+        'tu'        => 2,
+        'wednesday' => 3,
+        'wed'       => 3,
+        'we'        => 3,
+        'thursday'  => 4,
+        'thu'       => 4,
+        'th'        => 4,
+        'friday'    => 5,
+        'fri'       => 5,
+        'fr'        => 5,
+        'saturday'  => 6,
+        'sat'       => 6,
+        'sa'        => 6,
     ];
 
     private bool $always = false;
@@ -56,7 +70,10 @@ final class BusinessHours {
         $from  = self::minutes( $open );
         $to    = self::minutes( $close );
         if ( $index !== null && $from !== null && $to !== null ) {
-            $this->days[ $index ][] = [ $from, $to === 0 && $from > 0 ? self::DAY_MINUTES : $to ];
+            $this->days[ $index ][] = [
+                $from,
+                $to === 0 && $from > 0 ? self::DAY_MINUTES : $to
+            ];
         }
         return $this;
     }
@@ -67,7 +84,10 @@ final class BusinessHours {
     public function add_all_day( $day ): self {
         $index = self::day_index( $day );
         if ( $index !== null ) {
-            $this->days[ $index ][] = [ 0, self::DAY_MINUTES ];
+            $this->days[ $index ][] = [
+                0,
+                self::DAY_MINUTES
+            ];
         }
         return $this;
     }
@@ -87,10 +107,17 @@ final class BusinessHours {
             $from = self::minutes( $from );
             $to   = self::minutes( $to );
             if ( $from !== null && $to !== null ) {
-                $minutes[] = [ $from, $to ];
+                $minutes[] = [
+                    $from,
+                    $to
+                ];
             }
         }
-        $this->dates[ $date ] = $minutes ?: [ [ 0, self::DAY_MINUTES ] ];
+        $this->dates[ $date ] = $minutes ?: [ [
+            0,
+            self::DAY_MINUTES
+        ]
+        ];
         return $this;
     }
 

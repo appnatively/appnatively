@@ -41,7 +41,10 @@ class HappyForms extends Form
     }
 
     private function get_email_rules( array $part ): array {
-        return ['string', 'email'];
+        return [
+            'string',
+            'email'
+        ];
     }
 
     private function get_radio_rules( array $part ): array {
@@ -57,7 +60,10 @@ class HappyForms extends Form
     }
 
     private function get_url_rules( array $part ): array {
-        return ['string', 'url'];
+        return [
+            'string',
+            'url'
+        ];
     }
 
     private function get_date_time_picker_rules( array $part ): array {
@@ -247,11 +253,21 @@ class HappyForms extends Form
         $message_controller = happyforms_get_message_controller();
 
         if ( 1 === intval( $form['receive_email_alerts'] ) ) {
-            $this->call_private_method( $message_controller, 'email_owner_confirmation', [$form, $submission] );
+            $this->call_private_method(
+                $message_controller, 'email_owner_confirmation', [
+                    $form,
+                    $submission
+                ]
+            );
         }
 
         if ( 1 === intval( $form['send_confirmation_email'] ) ) {
-            $this->call_private_method( $message_controller, 'email_user_confirmation', [$form, $submission] );
+            $this->call_private_method(
+                $message_controller, 'email_user_confirmation', [
+                    $form,
+                    $submission
+                ]
+            );
         }
     }
 

@@ -138,7 +138,7 @@ class ProductController extends Controller {
                 'page'        => 'nullable|integer|min:1',
                 'per_page'    => 'nullable|integer|min:1|max:100',
                 'integration' => 'required|string|' . craf_appna_in_rule( craf_appna_get_ecommerce_integrations() )
-            ] 
+            ]
         );
 
         $integration = sanitize_text_field( $request->get_param( 'integration' ) );

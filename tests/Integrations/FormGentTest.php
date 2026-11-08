@@ -111,10 +111,26 @@ class FormGentTest extends \WP_UnitTestCase {
         $rules    = $formgent->expose_get_validation_rules( $form );
 
         $expected_fields = [
-            'full_name', 'full_name-1', 'email', 'email-1', 'number', 'number-1',
-            'website', 'website-1', 'radio', 'radio-1', 'single_select', 'single_select-1',
-            'multiple_choice', 'multiple_choice-1', 'rangeslider', 'rangeslider-1',
-            'rating', 'rating-1', 'datetime', 'datetime-1',
+            'full_name',
+            'full_name-1',
+            'email',
+            'email-1',
+            'number',
+            'number-1',
+            'website',
+            'website-1',
+            'radio',
+            'radio-1',
+            'single_select',
+            'single_select-1',
+            'multiple_choice',
+            'multiple_choice-1',
+            'rangeslider',
+            'rangeslider-1',
+            'rating',
+            'rating-1',
+            'datetime',
+            'datetime-1',
         ];
         foreach ( $expected_fields as $field ) {
             $this->assertArrayHasKey( $field, $rules );

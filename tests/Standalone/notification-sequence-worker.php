@@ -58,6 +58,7 @@ class SequenceConnection
 }
 try {
     $wpdb = new SequenceConnection( $config );
+    require dirname( __DIR__, 2 ) . '/app/Support/NotificationStore.php';
     require dirname( __DIR__, 2 ) . '/app/Support/NotificationEvents.php';
     $versions = [];
     for ( $index = 0; $index < 25; $index++ ) {

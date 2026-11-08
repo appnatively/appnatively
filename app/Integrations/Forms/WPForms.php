@@ -3,13 +3,14 @@
 namespace Crafium\AppNatively\App\Integrations\Forms;
 
 defined( "ABSPATH" ) || exit;
-
 use Crafium\AppNatively\App\DTO\Forms\FormDTO;
 use Crafium\AppNatively\App\DTO\Forms\FormFieldDTO;
 use Crafium\AppNatively\App\Support\Auth;
 use Crafium\AppNatively\WpMVC\RequestValidator\Request;
+class WPForms extends Form
+{
+    use Concerns\BuildsFieldValidation;
 
-class WPForms extends Form {
     public function get_key(): string {
         return 'wpforms';
     }
@@ -19,7 +20,7 @@ class WPForms extends Form {
             return;
         }
         parent::boot();
-        add_filter( "craf_appna_form_{$this->get_key()}_submit_errors", [ $this, 'get_submit_errors' ] );
+        add_filter( "craf_appna_form_{$this->get_key()}_submit_errors", [$this, 'get_submit_errors'] );
     }
 
     /**
@@ -28,25 +29,20 @@ class WPForms extends Form {
      */
     public function get_submit_errors() {
         $process = wpforms()->obj( 'process' );
-
         if ( ! empty( $process->errors ) ) {
             $messages = $this->collect_error_messages( $process->errors );
-
             if ( ! empty( $messages ) ) {
                 return implode( ' ', $messages );
             }
         }
-
         if ( ! empty( $process->spam_errors ) && empty( $process->entry_id ) ) {
             return __( 'Form submission was flagged as spam. Please try again.', 'appnatively' );
         }
-
         return null;
     }
 
     private function collect_error_messages( array $errors ): array {
         $messages = [];
-
         foreach ( $errors as $form_id => $error_data ) {
             if ( ! empty( $error_data['header'] ) ) {
                 $messages[] = $error_data['header'];
@@ -60,32 +56,32 @@ class WPForms extends Form {
             if ( ! empty( $error_data['footer_styled'] ) ) {
                 $messages[] = $error_data['footer_styled'];
             }
-
             foreach ( $error_data as $field_id => $field_message ) {
-                if ( is_string( $field_message ) && ! in_array( $field_id, [ 'header', 'footer', 'recaptcha', 'footer_styled' ], true ) ) {
+                if ( is_string( $field_message ) && ! in_array(
+                    $field_id, [
+                        'header',
+                        'footer',
+                        'recaptcha',
+                        'footer_styled'
+                    ], true
+                ) ) {
                     $messages[] = $field_message;
                 }
             }
         }
-
         return $messages;
     }
 
     protected function get_form( int $id ) {
         $form_post = wpforms()->obj( 'form' )->get( $id );
-
         if ( ! $form_post || $form_post->post_type !== 'wpforms' || $form_post->post_status !== 'publish' ) {
             return [];
         }
-
         $form_data = wpforms_decode( $form_post->post_content );
-
         if ( ! is_array( $form_data ) ) {
             return [];
         }
-
         $form_data['id'] = $form_post->ID;
-
         return $form_data;
     }
 
@@ -94,71 +90,33 @@ class WPForms extends Form {
     }
 
     private function get_text_rules( array $field ): array {
-        $rules = [ 'string' ];
-
+        $rules = ['string'];
         if ( ! empty( $field['limit_enabled'] ) && ! empty( $field['limit_count'] ) ) {
             $rules[] = 'max:' . absint( $field['limit_count'] );
         }
-
         return $rules;
-    }
-
-    private function get_number_rules( array $field ): array {
-        $rules = [ 'numeric' ];
-
-        if ( isset( $field['min'] ) && $field['min'] !== '' ) {
-            $rules[] = 'min:' . floatval( $field['min'] );
-        }
-
-        if ( isset( $field['max'] ) && $field['max'] !== '' ) {
-            $rules[] = 'max:' . floatval( $field['max'] );
-        }
-
-        return $rules;
-    }
-
-    private function get_email_rules( array $field ): array {
-        return [ 'string', 'email' ];
-    }
-
-    private function get_url_rules( array $field ): array {
-        return [ 'string', 'url' ];
-    }
-
-    private function get_password_rules( array $field ): array {
-        return [ 'string' ];
-    }
-
-    private function get_date_time_picker_rules( array $field ): array {
-        return [ 'string' ];
     }
 
     private function get_rating_rules( array $field ): array {
-        $rules = [ 'integer' ];
-
+        $rules = ['integer'];
         if ( ! empty( $field['rating_max'] ) ) {
             $rules[] = 'max:' . absint( $field['rating_max'] );
         }
-
         return $rules;
     }
 
-    private function get_gdpr_rules( array $field ): array {
-        // GDPR consent must always be affirmatively given, regardless of whether the
-        // plugin author happened to mark the field "required" in the form builder.
-        return [ 'integer', 'in:1', 'required' ];
-    }
-
-    private function get_checkbox_rules( array $field ): array {
-        return [ 'array' ];
-    }
-
     private function get_radio_rules( array $field ): array {
-        return [ 'string', 'max:255' ];
+        return [
+            'string',
+            'max:255'
+        ];
     }
 
     private function get_single_select_rules( array $field ): array {
-        return [ 'string', 'max:255' ];
+        return [
+            'string',
+            'max:255'
+        ];
     }
 
     private function get_range_rules( array $field ): array {
@@ -166,8 +124,7 @@ class WPForms extends Form {
         $slider_type = isset( $field['slider_type'] ) ? $field['slider_type'] : 'number';
         if ( 'number' === $slider_type ) {
             $rules[] = 'numeric';
-            if ( isset( $field['min'] ) && isset( $field['max'] )
-                 && is_numeric( $field['min'] ) && is_numeric( $field['max'] ) ) {
+            if ( isset( $field['min'] ) && isset( $field['max'] ) && is_numeric( $field['min'] ) && is_numeric( $field['max'] ) ) {
                 $rules[] = 'min:' . floatval( $field['min'] );
                 $rules[] = 'max:' . floatval( $field['max'] );
             }
@@ -181,22 +138,16 @@ class WPForms extends Form {
         if ( empty( $form['fields'] ) ) {
             return [];
         }
-
         $rules = [];
-
         foreach ( $form['fields'] as $field ) {
             if ( empty( $field['type'] ) || empty( $field['id'] ) ) {
                 continue;
             }
-
             $mapped_type = $this->map_field_type( $field['type'] );
-
             if ( ! $mapped_type ) {
                 continue;
             }
-
             $field_rules = [];
-
             switch ( $mapped_type ) {
                 case 'text':
                     $field_rules = $this->get_text_rules( $field );
@@ -237,16 +188,13 @@ class WPForms extends Form {
                 default:
                     continue 2;
             }
-
             if ( ! empty( $field['required'] ) && $field['required'] === '1' ) {
                 $field_rules[] = 'required';
             }
-
             if ( ! empty( $field_rules ) ) {
-                $rules[ $field['id'] ] = implode( '|', array_unique( $field_rules ) );
+                $rules[$field['id']] = implode( '|', array_unique( $field_rules ) );
             }
         }
-
         return $rules;
     }
 
@@ -254,83 +202,57 @@ class WPForms extends Form {
         if ( empty( $form['fields'] ) ) {
             return [];
         }
-
         $messages = [];
-
         foreach ( $form['fields'] as $field ) {
             if ( empty( $field['type'] ) || empty( $field['id'] ) ) {
                 continue;
             }
-
             $mapped_type = $this->map_field_type( $field['type'] );
-
             if ( ! $mapped_type ) {
                 continue;
             }
-
-            $field_id = (string) $field['id'];
-
-            $is_required = $mapped_type === 'gdpr' || ( ! empty( $field['required'] ) && $field['required'] === '1' );
-
+            $field_id    = (string) $field['id'];
+            $is_required = $mapped_type === 'gdpr' || ! empty( $field['required'] ) && $field['required'] === '1';
             if ( $is_required ) {
-                $messages["{$field_id}.required"] = wpforms_setting(
-                    'validation-required',
-                    __( 'This field is required.', 'appnatively' )
-                );
+                $messages["{$field_id}.required"] = wpforms_setting( 'validation-required', __( 'This field is required.', 'appnatively' ) );
             }
-
             if ( $mapped_type === 'email' ) {
-                $messages["{$field_id}.email"] = wpforms_setting(
-                    'validation-email',
-                    __( 'Please enter a valid email address.', 'appnatively' )
-                );
+                $messages["{$field_id}.email"] = wpforms_setting( 'validation-email', __( 'Please enter a valid email address.', 'appnatively' ) );
             }
-
             if ( $mapped_type === 'number' || $mapped_type === 'range' ) {
-                $messages["{$field_id}.numeric"] = wpforms_setting(
-                    'validation-number',
-                    __( 'Please enter a valid number.', 'appnatively' )
-                );
+                $messages["{$field_id}.numeric"] = wpforms_setting( 'validation-number', __( 'Please enter a valid number.', 'appnatively' ) );
             }
-
             if ( $mapped_type === 'gdpr' ) {
-                $gdpr_msg                        = wpforms_setting(
-                    'validation-required',
-                    __( 'This field is required.', 'appnatively' )
-                );
+                $gdpr_msg                        = wpforms_setting( 'validation-required', __( 'This field is required.', 'appnatively' ) );
                 $messages["{$field_id}.integer"] = $gdpr_msg;
                 $messages["{$field_id}.in"]      = $gdpr_msg;
             }
-
             if ( $mapped_type === 'text' && ! empty( $field['limit_enabled'] ) && ! empty( $field['limit_count'] ) ) {
-                $msg = wpforms_setting(
-                    'validation-character-limit',
-                    ''
-                );
+                $msg = wpforms_setting( 'validation-character-limit', '' );
                 if ( ! empty( $msg ) ) {
-                    $msg                         = str_replace( [ '{limit}', '{remaining}' ], [ ':max', '' ], $msg );
-                    $msg                         = trim( preg_replace( '/\s+/', ' ', $msg ), " \t\n\r\0\x0B," );
+                    $msg                         = str_replace(
+                        [
+                            '{limit}',
+                            '{remaining}'
+                        ], [
+                            ':max',
+                            ''
+                        ], $msg
+                    );
+                    $msg                         = trim( preg_replace( '/\s+/', ' ', $msg ), " \t\n\r\x00\v," );
                     $messages["{$field_id}.max"] = $msg;
                 }
             } else {
                 if ( $this->field_has_min_rule( $field, $mapped_type ) ) {
-                    $msg                         = wpforms_setting(
-                        'validation-min',
-                        __( 'Please enter a value greater than or equal to {value}.', 'appnatively' )
-                    );
+                    $msg                         = wpforms_setting( 'validation-min', __( 'Please enter a value greater than or equal to {value}.', 'appnatively' ) );
                     $messages["{$field_id}.min"] = str_replace( '{value}', ':min', $msg );
                 }
-
                 if ( $this->field_has_max_rule( $field, $mapped_type ) ) {
-                    $msg                         = wpforms_setting(
-                        'validation-max',
-                        __( 'Please enter a value less than or equal to {value}.', 'appnatively' )
-                    );
+                    $msg                         = wpforms_setting( 'validation-max', __( 'Please enter a value less than or equal to {value}.', 'appnatively' ) );
                     $messages["{$field_id}.max"] = str_replace( '{value}', ':max', $msg );
                 }
             }
         }
-
         return $messages;
     }
 
@@ -338,28 +260,34 @@ class WPForms extends Form {
         if ( ! isset( $field['min'] ) || $field['min'] === '' ) {
             return false;
         }
-
-        return in_array( $mapped_type, [ 'number', 'range' ], true );
+        return in_array(
+            $mapped_type, [
+                'number',
+                'range'
+            ], true
+        );
     }
 
     private function field_has_max_rule( array $field, string $mapped_type ): bool {
         if ( ! isset( $field['max'] ) || $field['max'] === '' ) {
             return false;
         }
-
-        return in_array( $mapped_type, [ 'number', 'range' ], true );
+        return in_array(
+            $mapped_type, [
+                'number',
+                'range'
+            ], true
+        );
     }
 
     protected function prepare_request_for_validation( Request $request, array $form ): void {
         if ( empty( $form['fields'] ) ) {
             return;
         }
-
         foreach ( $form['fields'] as $field ) {
             if ( empty( $field['type'] ) || empty( $field['id'] ) ) {
                 continue;
             }
-
             $mapped_type = $this->map_field_type( $field['type'] );
             if ( ! $mapped_type ) {
                 continue;
@@ -369,11 +297,9 @@ class WPForms extends Form {
             if ( $value === null ) {
                 continue;
             }
-
             if ( $mapped_type === 'range' && is_array( $value ) ) {
                 $request->set_param( $field['id'], isset( $value['max'] ) && $value['max'] !== '' ? (int) $value['max'] : 0 );
             }
-
             if ( $mapped_type === 'gdpr' ) {
                 $request->set_param( $field_name, (int) $value );
             }
@@ -383,9 +309,8 @@ class WPForms extends Form {
     protected function submit( Request $request, array $form ) {
         $entry = [
             'id'     => (int) $form['id'],
-            'fields' => [],
+            'fields' => []
         ];
-
         // WPForms' nonce guards against a browser being made to submit using
         // its owner's cookies. A Bearer-token request cannot be produced that
         // way, so supplying the nonce restores parity with a real submission.
@@ -394,37 +319,30 @@ class WPForms extends Form {
         if ( is_user_logged_in() && Auth::is_token_authenticated() ) {
             $entry['nonce'] = wp_create_nonce( "wpforms::form_{$form['id']}" );
         }
-
         foreach ( $form['fields'] as $field ) {
             if ( empty( $field['type'] ) || empty( $field['id'] ) ) {
                 continue;
             }
-
             $mapped_type = $this->map_field_type( $field['type'] );
             if ( ! $mapped_type ) {
                 continue;
             }
-
             $field_name = $field['id'];
             $value      = $request->get_param( $field_name );
             if ( $value !== null ) {
                 if ( $mapped_type === 'gdpr' ) {
                     if ( (int) $value ) {
-                        $consent = isset( $field['choices'][1] )
-                            ? $this->expected_choice_token( $field, (array) $field['choices'][1], 1 )
-                            : '1';
-
-                        $entry['fields'][ $field['id'] ] = $consent;
+                        $consent                       = isset( $field['choices'][1] ) ? $this->expected_choice_token( $field, (array) $field['choices'][1], 1 ) : '1';
+                        $entry['fields'][$field['id']] = $consent;
                     }
                 } else {
                     // Translate a label back to the token WPForms declared, so
                     // its choice-allowlist check passes for a real choice and
                     // still rejects anything off-list.
-                    $entry['fields'][ $field['id'] ] = $this->resolve_choice_submission( $field, $value );
+                    $entry['fields'][$field['id']] = $this->resolve_choice_submission( $field, $value );
                 }
             }
         }
-
         // WPForms identifies its own submissions by $_POST['action'] when AJAX
         // submission is enabled. A REST request has no such field, so it is set
         // for the duration of the call and restored afterwards.
@@ -434,7 +352,6 @@ class WPForms extends Form {
         //phpcs:ignore WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized, WordPress.Security.ValidatedSanitizedInput.MissingUnslash
         $original_action = $had_action ? $_POST['action'] : null;
         $_POST['action'] = 'wpforms_submit';
-
         // wpforms_process_anti_spam_direct_post_bypass is WPForms' own public
         // filter for integrations that submit outside the browser: its v3
         // anti-spam token is minted by JavaScript when the form is rendered,
@@ -442,16 +359,15 @@ class WPForms extends Form {
         // run and are surfaced to the caller via get_submit_errors(), and this
         // endpoint is throttled per client address before it is ever reached.
         add_filter( 'wpforms_process_anti_spam_direct_post_bypass', '__return_true' );
-
         try {
             wpforms()->obj( 'process' )->process( $entry );
         } finally {
             if ( $had_action ) {
                 $_POST['action'] = $original_action;
             } else {
-                unset( $_POST['action'] ); // phpcs:ignore WordPress.Security.NonceVerification.Missing
+                unset( $_POST['action'] );
+                // phpcs:ignore WordPress.Security.NonceVerification.Missing
             }
-
             remove_filter( 'wpforms_process_anti_spam_direct_post_bypass', '__return_true' );
         }
     }
@@ -474,15 +390,14 @@ class WPForms extends Form {
         if ( ! empty( $field['show_values'] ) && isset( $choice['value'] ) && '' !== $choice['value'] ) {
             return (string) $choice['value'];
         }
-
         if ( isset( $choice['label'] ) && '' !== $choice['label'] ) {
             return (string) $choice['label'];
         }
-
         // Must match the string WPForms builds, translation included, or the
         // allowlist comparison fails on a non-English site.
         /* translators: %s - choice number. */
-        return sprintf( __( 'Choice %s', 'appnatively' ), $key ); //phpcs:ignore WordPress.WP.I18n.TextDomainMismatch
+        return sprintf( __( 'Choice %s', 'appnatively' ), $key );
+        //phpcs:ignore WordPress.WP.I18n.TextDomainMismatch
     }
 
     /**
@@ -499,16 +414,13 @@ class WPForms extends Form {
         if ( empty( $field['choices'] ) || ! is_array( $field['choices'] ) ) {
             return $value;
         }
-
         if ( is_array( $value ) ) {
             return array_map(
                 function ( $single ) use ( $field ) {
                     return $this->resolve_single_choice( $field, $single );
-                },
-                $value
+                }, $value
             );
         }
-
         return $this->resolve_single_choice( $field, $value );
     }
 
@@ -523,63 +435,52 @@ class WPForms extends Form {
         if ( ! is_string( $single ) && ! is_numeric( $single ) ) {
             return $single;
         }
-
         $single   = (string) $single;
         $expected = [];
-
         foreach ( $field['choices'] as $key => $choice ) {
-            $expected[ $key ] = $this->expected_choice_token( $field, (array) $choice, $key );
+            $expected[$key] = $this->expected_choice_token( $field, (array) $choice, $key );
         }
-
         // Already the declared token — nothing to translate.
         if ( in_array( $single, $expected, true ) ) {
             return $single;
         }
-
         // Label or value next, then the choice key. Ordered so a label can
         // never be shadowed by another choice whose key happens to match it.
-        foreach ( [ 'label', 'value' ] as $property ) {
+        foreach ( [
+            'label',
+            'value'
+        ] as $property ) {
             foreach ( $field['choices'] as $key => $choice ) {
                 $choice = (array) $choice;
-
-                if ( isset( $choice[ $property ] ) && '' !== $choice[ $property ] && (string) $choice[ $property ] === $single ) {
-                    return $expected[ $key ];
+                if ( isset( $choice[$property] ) && '' !== $choice[$property] && (string) $choice[$property] === $single ) {
+                    return $expected[$key];
                 }
             }
         }
-
         foreach ( $field['choices'] as $key => $choice ) {
             if ( (string) $key === $single ) {
-                return $expected[ $key ];
+                return $expected[$key];
             }
         }
-
         return $single;
     }
 
     public function get_forms(): array {
-
         $forms = wpforms()->obj( 'form' )->get(
-            '', [ 
+            '', [
                 'post_type'   => 'wpforms',
-                'post_status' => 'publish', // Fetches active forms
-                'nopaging'    => true       // Ensures you fetch all forms, not just the first 10
-            ] 
+                'post_status' => 'publish',
+            // Fetches active forms
+                'nopaging'    => true,
+            ]
         );
-
         if ( ! $forms ) {
             return [];
         }
-
         $result = [];
-
         foreach ( $forms as $form_post ) {
-
-            $result[] = ( new FormDTO() )
-                ->set_id( (int) $form_post->ID )
-                ->set_title( $form_post->post_title );
+            $result[] = ( new FormDTO() )->set_id( (int) $form_post->ID )->set_title( $form_post->post_title );
         }
-
         return $result;
     }
 
@@ -598,44 +499,30 @@ class WPForms extends Form {
             'date-time'     => 'date_time_picker',
             'rating'        => 'rating',
             'file-upload'   => 'text',
-            'hidden'        => 'text',
+            'hidden'        => 'text'
         ];
-
         return $map[$native_type] ?? null;
     }
 
     protected function map_form_to_dto( array $raw_form, array $fields ): FormDTO {
         $dto = new FormDTO();
-
         if ( in_array( 'id', $fields, true ) ) {
             $dto->set_id( (int) $raw_form['id'] );
         }
-
         if ( in_array( 'title', $fields, true ) ) {
             $dto->set_title( $raw_form['title'] ?? '' );
         }
-
         if ( in_array( 'fields', $fields, true ) && ! empty( $raw_form['fields'] ) ) {
             $field_dtos = [];
-
             foreach ( $raw_form['fields'] as $field ) {
                 $std_type = $this->get_standardized_type( $field['type'] ?? '' );
-
                 if ( ! $std_type ) {
                     continue;
                 }
-
                 $fdto = new FormFieldDTO();
-                $fdto->set_id( (string) $field['id'] )
-                    ->set_type( $std_type )
-                    ->set_required( ! empty( $field['required'] ) && $field['required'] === '1' )
-                    ->set_label( $field['label'] ?? '' )
-                    ->set_placeholder( $field['placeholder'] ?? '' )
-                    ->set_field_name( (string) $field['id'] );
-
+                $fdto->set_id( (string) $field['id'] )->set_type( $std_type )->set_required( ! empty( $field['required'] ) && $field['required'] === '1' )->set_label( $field['label'] ?? '' )->set_placeholder( $field['placeholder'] ?? '' )->set_field_name( (string) $field['id'] );
                 if ( ! empty( $field['choices'] ) ) {
                     $items = [];
-
                     foreach ( $field['choices'] as $key => $choice ) {
                         $items[] = [
                             'id'          => (string) $key,
@@ -647,30 +534,21 @@ class WPForms extends Form {
                             'optionValue' => $this->expected_choice_token( $field, (array) $choice, $key ),
                         ];
                     }
-
                     $fdto->set_items( $items );
                 }
-
                 if ( $std_type === 'range' ) {
-                    $fdto->set_min_value( isset( $field['min'] ) ? (float) $field['min'] : null )
-                        ->set_max_value( isset( $field['max'] ) ? (float) $field['max'] : null );
+                    $fdto->set_min_value( isset( $field['min'] ) ? (float) $field['min'] : null )->set_max_value( isset( $field['max'] ) ? (float) $field['max'] : null );
                 }
-
                 if ( $std_type === 'rating' ) {
                     $fdto->set_rating_max( isset( $field['rating_max'] ) ? (int) $field['rating_max'] : 5 );
                 }
-
                 if ( $std_type === 'date_time_picker' ) {
-                    $fdto->set_picker_type( 'date' )
-                        ->set_date_format( 'YYYY-MM-DD' );
+                    $fdto->set_picker_type( 'date' )->set_date_format( 'YYYY-MM-DD' );
                 }
-
                 $field_dtos[] = $fdto;
             }
-
             $dto->set_fields( $field_dtos );
         }
-
         return $dto;
     }
 }

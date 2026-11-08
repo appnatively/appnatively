@@ -3,14 +3,14 @@
 namespace Crafium\AppNatively\App\Integrations\Forms;
 
 defined( "ABSPATH" ) || exit;
-
 use Crafium\AppNatively\App\Models\Post;
 use Crafium\AppNatively\App\DTO\Forms\FormDTO;
 use Crafium\AppNatively\App\DTO\Forms\FormFieldDTO;
 use Crafium\AppNatively\WpMVC\RequestValidator\Request;
-
 class SureForms extends Form
 {
+    use Concerns\BuildsFieldValidation;
+
     public function get_key(): string {
         return 'sureforms';
     }
@@ -24,22 +24,17 @@ class SureForms extends Form
 
     protected function get_form( int $id ) {
         $post = get_post( $id );
-
         if ( ! $post || $post->post_type !== 'sureforms_form' || $post->post_status !== 'publish' ) {
             return [];
         }
-
         $blocks = parse_blocks( $post->post_content );
         $fields = [];
-
         foreach ( $blocks as $block ) {
             if ( empty( $block['blockName'] ) || strpos( $block['blockName'], 'srfm/' ) !== 0 ) {
                 continue;
             }
-
             $block_type = str_replace( 'srfm/', '', $block['blockName'] );
             $attrs      = $block['attrs'] ?? [];
-
             $registered = \WP_Block_Type_Registry::get_instance()->get_registered( $block['blockName'] );
             if ( $registered && isset( $registered->attributes ) ) {
                 foreach ( $registered->attributes as $key => $definition ) {
@@ -48,7 +43,6 @@ class SureForms extends Form
                     }
                 }
             }
-
             $fields[] = [
                 'type'          => $block_type,
                 'label'         => $attrs['label'] ?? '',
@@ -60,17 +54,15 @@ class SureForms extends Form
                 'max'           => $attrs['maxValue'] ?? '',
                 'text_length'   => $attrs['textLength'] ?? '',
                 'placeholder'   => $attrs['placeholder'] ?? '',
-                'default_value' => $attrs['defaultValue'] ?? '',
+                'default_value' => $attrs['defaultValue'] ?? ''
             ];
         }
-
         if ( empty( $fields ) ) {
             return [];
         }
-
         return [
             'id'     => $post->ID,
-            'fields' => $fields,
+            'fields' => $fields
         ];
     }
 
@@ -86,25 +78,6 @@ class SureForms extends Form
         return $rules;
     }
 
-    private function get_email_rules( array $field ): array {
-        return ['string', 'email'];
-    }
-
-    private function get_number_rules( array $field ): array {
-        $rules = ['numeric'];
-        if ( isset( $field['min'] ) && $field['min'] !== '' ) {
-            $rules[] = 'min:' . floatval( $field['min'] );
-        }
-        if ( isset( $field['max'] ) && $field['max'] !== '' ) {
-            $rules[] = 'max:' . floatval( $field['max'] );
-        }
-        return $rules;
-    }
-
-    private function get_url_rules( array $field ): array {
-        return ['string', 'url'];
-    }
-
     private function get_checkbox_rules( array $field ): array {
         return ['string'];
     }
@@ -112,24 +85,21 @@ class SureForms extends Form
     private function get_gdpr_rules( array $field ): array {
         // GDPR consent must always be affirmatively given, regardless of whether the
         // plugin author happened to mark the field "required" in the form builder.
-        return ['string', 'required'];
+        return [
+            'string',
+            'required'
+        ];
     }
 
     private function get_single_select_rules( array $field ): array {
-        return ['string', 'max:255'];
-    }
-
-    private function get_radio_rules( array $field ): array {
-        return ['string'];
-    }
-
-    private function get_date_time_picker_rules( array $field ): array {
-        return ['string'];
+        return [
+            'string',
+            'max:255'
+        ];
     }
 
     private function build_sureforms_field_name( array $field, int &$dropdown_counter ): string {
         $type = $field['type'];
-
         if ( $type === 'dropdown' ) {
             $dropdown_counter++;
             $type_part = "dropdown-{$dropdown_counter}";
@@ -138,12 +108,10 @@ class SureForms extends Form
         } else {
             $type_part = $type;
         }
-
         $block_id     = $field['block_id'];
         $label        = ! empty( $field['label'] ) ? $field['label'] : $type;
         $base64_label = \SRFM\Inc\Helper::encrypt( $label );
         $block_slug   = $field['slug'];
-
         return "srfm-{$type_part}-{$block_id}-lbl-{$base64_label}-{$block_slug}";
     }
 
@@ -151,21 +119,16 @@ class SureForms extends Form
         if ( empty( $form['fields'] ) ) {
             return [];
         }
-
         $rules = [];
-
         foreach ( $form['fields'] as $field ) {
             if ( empty( $field['type'] ) || empty( $field['slug'] ) ) {
                 continue;
             }
-
             $mapped_type = $this->map_field_type( $field['type'] );
             if ( ! $mapped_type ) {
                 continue;
             }
-
             $field_rules = [];
-
             switch ( $mapped_type ) {
                 case 'text':
                     $field_rules = $this->get_text_rules( $field );
@@ -197,16 +160,13 @@ class SureForms extends Form
                 default:
                     continue 2;
             }
-
             if ( ! empty( $field['required'] ) ) {
                 $field_rules[] = 'required';
             }
-
             if ( ! empty( $field_rules ) ) {
                 $rules[$field['slug']] = implode( '|', array_unique( $field_rules ) );
             }
         }
-
         return $rules;
     }
 
@@ -224,51 +184,40 @@ class SureForms extends Form
         if ( empty( $form['fields'] ) ) {
             return [];
         }
-
         $messages = [];
-
         foreach ( $form['fields'] as $field ) {
             if ( empty( $field['type'] ) || empty( $field['slug'] ) ) {
                 continue;
             }
-
             $mapped_type = $this->map_field_type( $field['type'] );
             if ( ! $mapped_type ) {
                 continue;
             }
-
-            $slug = (string) $field['slug'];
-
+            $slug        = (string) $field['slug'];
             $is_required = $mapped_type === 'gdpr' || ! empty( $field['required'] );
-
             if ( $is_required ) {
                 $required_key = $this->get_required_message_key( $mapped_type, $field['type'] ?? '' );
                 if ( ! empty( $required_key ) ) {
                     $messages["{$slug}.required"] = \SRFM\Inc\Helper::get_default_dynamic_block_option( $required_key );
                 }
             }
-
             if ( $mapped_type === 'email' ) {
                 $messages["{$slug}.email"] = \SRFM\Inc\Helper::get_default_dynamic_block_option( 'srfm_valid_email' );
             }
-
             if ( $mapped_type === 'url' ) {
                 $messages["{$slug}.url"] = \SRFM\Inc\Helper::get_default_dynamic_block_option( 'srfm_valid_url' );
             }
-
             if ( $mapped_type === 'number' ) {
                 if ( isset( $field['min'] ) && $field['min'] !== '' ) {
                     $msg                     = \SRFM\Inc\Helper::get_default_dynamic_block_option( 'srfm_input_min_value' );
                     $messages["{$slug}.min"] = str_replace( '%s', ':min', $msg );
                 }
-
                 if ( isset( $field['max'] ) && $field['max'] !== '' ) {
                     $msg                     = \SRFM\Inc\Helper::get_default_dynamic_block_option( 'srfm_input_max_value' );
                     $messages["{$slug}.max"] = str_replace( '%s', ':max', $msg );
                 }
             }
         }
-
         return $messages;
     }
 
@@ -285,7 +234,6 @@ class SureForms extends Form
         if ( $native_type === 'multi-choice' ) {
             return 'srfm_multi_choice_block_required_text';
         }
-
         $map = [
             'text'          => 'srfm_input_block_required_text',
             'email'         => 'srfm_email_block_required_text',
@@ -293,9 +241,8 @@ class SureForms extends Form
             'url'           => 'srfm_url_block_required_text',
             'checkbox'      => 'srfm_checkbox_block_required_text',
             'gdpr'          => 'srfm_gdpr_block_required_text',
-            'single_select' => 'srfm_dropdown_block_required_text',
+            'single_select' => 'srfm_dropdown_block_required_text'
         ];
-
         return $map[$mapped_type] ?? null;
     }
 
@@ -303,27 +250,26 @@ class SureForms extends Form
         if ( empty( $form['fields'] ) ) {
             return;
         }
-
         foreach ( $form['fields'] as $field ) {
             if ( empty( $field['type'] ) || empty( $field['slug'] ) ) {
                 continue;
             }
-
             $mapped_type = $this->map_field_type( $field['type'] );
             if ( ! $mapped_type ) {
                 continue;
             }
-
             $value = $request->get_param( $field['slug'] );
-
             if ( $value === null ) {
                 continue;
             }
-
-            if ( in_array( $mapped_type, ['checkbox', 'gdpr'], true ) && is_array( $value ) ) {
+            if ( in_array(
+                $mapped_type, [
+                    'checkbox',
+                    'gdpr'
+                ], true
+            ) && is_array( $value ) ) {
                 $request->set_param( $field['slug'], ! empty( $value ) ? (string) reset( $value ) : '' );
             }
-
             if ( $mapped_type === 'checkbox' && $value === '0' ) {
                 $request->set_param( $field['slug'], '' );
             }
@@ -331,45 +277,28 @@ class SureForms extends Form
     }
 
     protected function submit( Request $request, array $form ) {
-        $form_data = [
-            'form-id' => $form['id'],
-        ];
-
+        $form_data        = ['form-id' => $form['id']];
         $dropdown_counter = 0;
-
         foreach ( $form['fields'] as $field ) {
             if ( empty( $field['slug'] ) || empty( $field['type'] ) ) {
                 continue;
             }
-
             $value = $request->get_param( $field['slug'] );
-
             if ( $value === null ) {
                 continue;
             }
-
             $field_name             = $this->build_sureforms_field_name( $field, $dropdown_counter );
             $form_data[$field_name] = $value;
         }
-
         \SRFM\Inc\Form_Submit::get_instance()->handle_form_entry( $form_data );
     }
 
     public function get_forms(): array {
-        $posts = Post::select( "ID", "post_title" )
-            ->where( 'post_type', 'sureforms_form' )
-            ->where( 'post_status', 'publish' )
-            ->get();
-
+        $posts  = Post::select( "ID", "post_title" )->where( 'post_type', 'sureforms_form' )->where( 'post_status', 'publish' )->get();
         $result = [];
-
         foreach ( $posts as $post ) {
-            $result[] = ( new FormDTO() )
-                ->set_id( (int) $post->ID )
-                ->set_title( $post->post_title )
-                ->set_exclude_to_array( ['fields'] );
+            $result[] = ( new FormDTO() )->set_id( (int) $post->ID )->set_title( $post->post_title )->set_exclude_to_array( ['fields'] );
         }
-
         return $result;
     }
 
@@ -386,79 +315,58 @@ class SureForms extends Form
             'radio'        => 'radio',
             'textarea'     => 'text',
             'phone'        => 'text',
-            'date'         => 'date_time_picker',
+            'date'         => 'date_time_picker'
         ];
-
         return $map[$native_type] ?? null;
     }
 
     protected function map_form_to_dto( array $raw_form, array $fields ): FormDTO {
         $dto = new FormDTO();
-
         if ( in_array( 'id', $fields, true ) ) {
             $dto->set_id( (int) ( $raw_form['id'] ?? 0 ) );
         }
-
         if ( in_array( 'title', $fields, true ) ) {
             $dto->set_title( $raw_form['title'] ?? '' );
         }
-
         if ( in_array( 'fields', $fields, true ) && ! empty( $raw_form['fields'] ) ) {
             $field_dtos = [];
-
             foreach ( $raw_form['fields'] as $field ) {
                 $std_type = $this->get_standardized_type( $field['type'] ?? '' );
-
                 if ( ! $std_type ) {
                     continue;
                 }
-
                 $fdto = new FormFieldDTO();
-                $fdto->set_id( $field['slug'] ?? '' )
-                    ->set_type( $std_type )
-                    ->set_required( ! empty( $field['required'] ) )
-                    ->set_label( $field['label'] ?? '' )
-                    ->set_placeholder( $field['placeholder'] ?? '' )
-                    ->set_field_name( $field['slug'] ?? '' );
-
+                $fdto->set_id( $field['slug'] ?? '' )->set_type( $std_type )->set_required( ! empty( $field['required'] ) )->set_label( $field['label'] ?? '' )->set_placeholder( $field['placeholder'] ?? '' )->set_field_name( $field['slug'] ?? '' );
                 if ( ! empty( $field['options'] ) ) {
                     $items = [];
-
                     foreach ( $field['options'] as $key => $option ) {
                         if ( is_string( $option ) ) {
                             $items[] = [
                                 'id'          => (string) $key,
                                 'optionLabel' => $option,
-                                'optionValue' => $option,
+                                'optionValue' => $option
                             ];
                         } elseif ( is_array( $option ) ) {
                             $option_label = $option['label'] ?? $option['optionTitle'] ?? '';
                             $items[]      = [
                                 'id'          => $option['value'] ?? (string) $key,
                                 'optionLabel' => $option_label,
-                                'optionValue' => $option['value'] ?? $option_label,
+                                'optionValue' => $option['value'] ?? $option_label
                             ];
                         }
                     }
-
                     $fdto->set_items( $items );
                 }
-
                 if ( $std_type === 'number' ) {
-                    $fdto->set_min_value( isset( $field['min'] ) && $field['min'] !== '' ? (float) $field['min'] : null )
-                        ->set_max_value( isset( $field['max'] ) && $field['max'] !== '' ? (float) $field['max'] : null );
+                    $fdto->set_min_value( isset( $field['min'] ) && $field['min'] !== '' ? (float) $field['min'] : null )->set_max_value( isset( $field['max'] ) && $field['max'] !== '' ? (float) $field['max'] : null );
                 }
-
                 if ( $std_type === 'text' && ! empty( $field['text_length'] ) ) {
                     $fdto->set_character_limit( (int) $field['text_length'] );
                 }
-
                 $field_dtos[] = $fdto;
             }
-
             $dto->set_fields( $field_dtos );
         }
-
         return $dto;
     }
 }

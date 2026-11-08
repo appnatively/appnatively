@@ -50,7 +50,10 @@ class DirectoristCatalog extends ListingCatalog {
 
     public function price_sql(): ?array {
         $price = $this->meta_number( '_price' );
-        return [ $price, $price ];
+        return [
+            $price,
+            $price
+        ];
     }
 
     public function rating_sql(): ?string {
@@ -66,7 +69,10 @@ class DirectoristCatalog extends ListingCatalog {
     }
 
     public function coordinates(): ?array {
-        return [ $this->meta_number( '_manual_lat' ), $this->meta_number( '_manual_lng' ) ];
+        return [
+            $this->meta_number( '_manual_lat' ),
+            $this->meta_number( '_manual_lng' )
+        ];
     }
 
     public function has_business_hours(): bool {
@@ -80,7 +86,14 @@ class DirectoristCatalog extends ListingCatalog {
      */
     protected function business_hours(): array {
         $hours = [];
-        foreach ( $this->meta_rows( [ '_bdbh', '_enable247hour', '_disable_bz_hour_listing', '_timezone' ] ) as $post_id => $meta ) {
+        foreach ( $this->meta_rows(
+            [
+                '_bdbh',
+                '_enable247hour',
+                '_disable_bz_hour_listing',
+                '_timezone'
+            ]
+        ) as $post_id => $meta ) {
             if ( ! empty( $meta['_disable_bz_hour_listing'] ) ) {
                 continue;
             }
@@ -147,7 +160,14 @@ class DirectoristCatalog extends ListingCatalog {
 
                 $this->fields[ $field_key ] = Field::meta(
                     '_' . $field_key,
-                    (string) ( $field['label'] ?? '' ) ?: ucwords( str_replace( [ '-', '_' ], ' ', $field_key ) ),
+                    (string) ( $field['label'] ?? '' ) ?: ucwords(
+                        str_replace(
+                            [
+                                '-',
+                                '_'
+                            ], ' ', $field_key
+                        )
+                    ),
                     self::FILTERABLE_WIDGETS[ $widget ],
                     $choices,
                     $widget === 'checkbox',
@@ -178,6 +198,14 @@ class DirectoristCatalog extends ListingCatalog {
      * @param mixed $value
      */
     private function truthy( $value ): bool {
-        return in_array( strtolower( (string) ( is_scalar( $value ) ? $value : '' ) ), [ '1', 'on', 'yes', 'true', 'close' ], true );
+        return in_array(
+            strtolower( (string) ( is_scalar( $value ) ? $value : '' ) ), [
+                '1',
+                'on',
+                'yes',
+                'true',
+                'close'
+            ], true
+        );
     }
 }

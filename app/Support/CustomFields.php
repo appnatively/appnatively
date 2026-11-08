@@ -124,7 +124,16 @@ class CustomFields {
                 return self::image( $raw );
 
             case 'gallery':
-                return array_values( array_filter( array_map( [ self::class, 'image' ], (array) $raw ) ) );
+                return array_values(
+                    array_filter(
+                        array_map(
+                            [
+                                self::class,
+                                'image'
+                            ], (array) $raw
+                        )
+                    )
+                );
 
             case 'file':
                 return self::file( $raw );

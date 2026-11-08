@@ -2,50 +2,35 @@
 
 namespace Crafium\AppNatively\App\Support;
 
+use Crafium\AppNatively\App\Models\DatabaseRow;
+
 defined( 'ABSPATH' ) || exit;
 use Crafium\AppNatively\App\Jobs\NotificationQueue;
 /** Hook payloads are sent exclusively by WpMVC Queue. */
 class NotificationEvents
 {
-    const SCHEMA_VERSION  = 5;
-    const CONSENT_VERSION = 1;
+    const SCHEMA_VERSION = 5;
 
     private static array $queues = [];
 
     public static function allowed(): bool {
-        $consent = get_option( 'craf_appna_notification_consent', [] );
-        return Settings::is_api_enabled() && 'yes' === get_option( 'craf_appna_notifications_enabled', 'yes' ) && is_array( $consent ) && ( $consent['version'] ?? 0 ) === self::CONSENT_VERSION && ! empty( $consent['epoch'] );
+        return Settings::is_api_enabled() && 'yes' === get_option( 'craf_appna_notifications_enabled', 'yes' );
+    }
+
+    /** Queue generation changes when notification sending is turned off. */
+    public static function delivery_epoch(): string {
+        $epoch = get_option( 'craf_appna_notification_epoch', '' );
+        return is_string( $epoch ) ? $epoch : '';
     }
 
     /** Called only by activation or explicit owner setup, never from native hooks. */
     public static function install(): void {
-        if ( (int) get_option( 'craf_appna_events_schema', 0 ) === self::SCHEMA_VERSION ) {
-            return;
-        }
-        global $wpdb;
-        require_once ABSPATH . 'wp-admin/includes/upgrade.php';
-        $charset = $wpdb->get_charset_collate();
-        $table   = self::bindings_table();
-        dbDelta( "CREATE TABLE {$table} (\n            source_id varchar(100) NOT NULL,\n            app_id varchar(100) NOT NULL,\n            storage_version bigint unsigned NOT NULL DEFAULT 1,\n            payload longtext NOT NULL,\n            PRIMARY KEY (source_id),\n            KEY app_bindings (app_id)\n        ) ENGINE=InnoDB {$charset};" );
-        $sequences = $wpdb->prefix . 'craf_appna_event_sequences';
-        dbDelta( "CREATE TABLE {$sequences} (\n            entity_type varchar(32) NOT NULL,\n            entity_id bigint unsigned NOT NULL,\n            version bigint unsigned NOT NULL,\n            PRIMARY KEY (entity_type,entity_id)\n        ) ENGINE=InnoDB {$charset};" );
-        if ( $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $table ) ) === $table && $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $sequences ) ) === $sequences ) {
-            update_option( 'craf_appna_events_schema', self::SCHEMA_VERSION, false );
-        } else {
-            delete_option( 'craf_appna_events_schema' );
-            self::record_error( 'notification_storage_unavailable' );
-        }
+        \Crafium\AppNatively\Database\Setup::install_notifications();
     }
 
     /** Sequence allocation runs in our REST endpoints or background workers only. */
     public static function next_version( string $type, int $id, int $minimum = 0 ): ?int {
-        global $wpdb;
-        $table  = $wpdb->prefix . 'craf_appna_event_sequences';
-        $result = $wpdb->query( $wpdb->prepare( "INSERT INTO %i (entity_type,entity_id,version) VALUES (%s,%d,LAST_INSERT_ID(%d))\n            ON DUPLICATE KEY UPDATE version=LAST_INSERT_ID(GREATEST(version,%d)+1)", $table, $type, $id, $minimum + 1, $minimum ) );
-        if ( false === $result ) {
-            return null;
-        }
-        return (int) $wpdb->get_var( 'SELECT LAST_INSERT_ID()' );
+        return NotificationStore::next_version( $type, $id, $minimum );
     }
 
     public static function queue( string $source, string $channel ): NotificationQueue {
@@ -67,7 +52,7 @@ class NotificationEvents
         foreach ( self::bindings() as $source => $binding ) {
             foreach ( [
                 'events',
-                'subjects',
+                'subjects'
             ] as $channel ) {
                 self::queue( $source, $channel )->discard();
             }
@@ -79,7 +64,7 @@ class NotificationEvents
             update_option(
                 'craf_appna_event_last_error', [
                     'code' => $code,
-                    'time' => time(),
+                    'time' => time()
                 ], false
             );
         } catch ( \Throwable $error ) {
@@ -90,25 +75,17 @@ class NotificationEvents
     /** Complete a signed handshake inside the owner's connection request. No outbox or cron. */
     public static function pair_now( array $binding ) {
         if ( ! self::allowed() ) {
-            return new \WP_Error(
-                'notification_consent_required', __( 'Confirm notification data sharing in WordPress settings first.', 'appnatively' ), [
-                    'status' => 403,
-                ]
-            );
+            return new \WP_Error( 'notifications_disabled', __( 'Enable Send notification events and the AppNatively API in WordPress settings first.', 'appnatively' ), ['status' => 403] );
         }
         self::install();
         $binding['pairing_ticket_hash'] = hash( 'sha256', $binding['ticket'] );
         $binding['provisioning']        = 'pairing';
         $bindings                       = self::bindings();
-        $previous                       = $bindings[$binding['sourceId']] ?? self::binding_metadata( $binding['sourceId'] );
+        $previous                       = $bindings[$binding['sourceId']] ?? NotificationStore::binding_metadata( $binding['sourceId'] );
         // Capture hooks during repair; business dispatch waits for provisioning=ready.
         $binding['enabled'] = ! empty( $previous['enabled'] );
         if ( ! self::save_binding( $binding, $previous ) ) {
-            return new \WP_Error(
-                'stale_binding', 'Event connection changed. Check connection again.', [
-                    'status' => 409,
-                ]
-            );
+            return new \WP_Error( 'stale_binding', 'Event connection changed. Check connection again.', ['status' => 409] );
         }
         $response = self::request(
             $binding, 'pair', [
@@ -119,19 +96,15 @@ class NotificationEvents
                     'events',
                     'identity',
                     'subjects',
-                    'subject-sequence-v1',
+                    'subject-sequence-v1'
                 ],
-                'definitions'  => self::definitions(),
+                'definitions'  => self::definitions()
             ]
         );
         $ready    = ! is_wp_error( $response ) && wp_remote_retrieve_response_code( $response ) === 200 && ( json_decode( wp_remote_retrieve_body( $response ), true )['paired'] ?? false ) === true;
         $bindings = self::bindings();
         if ( ( $bindings[$binding['sourceId']]['pairing_ticket_hash'] ?? '' ) !== $binding['pairing_ticket_hash'] ) {
-            return new \WP_Error(
-                'stale_binding', 'Event connection changed.', [
-                    'status' => 409,
-                ]
-            );
+            return new \WP_Error( 'stale_binding', 'Event connection changed.', ['status' => 409] );
         }
         $bindings[$binding['sourceId']]['enabled']      = $ready;
         $bindings[$binding['sourceId']]['provisioning'] = $ready ? 'ready' : 'failed';
@@ -139,151 +112,87 @@ class NotificationEvents
             unset( $bindings[$binding['sourceId']]['ticket'] );
         }
         if ( ! self::save_binding( $bindings[$binding['sourceId']] ) ) {
-            return new \WP_Error(
-                'stale_binding', 'Event connection changed.', [
-                    'status' => 409,
-                ]
-            );
+            return new \WP_Error( 'stale_binding', 'Event connection changed.', ['status' => 409] );
         }
         if ( ! $ready ) {
-            return new \WP_Error(
-                'pairing_failed', 'Signed pairing could not be completed. Check connection again to retry.', [
-                    'status' => 502,
-                ]
-            );
+            return new \WP_Error( 'pairing_failed', 'Signed pairing could not be completed. Check connection again to retry.', ['status' => 502] );
         }
         return true;
     }
 
     public static function bindings_table(): string {
-        global $wpdb;
-        return $wpdb->prefix . 'craf_appna_event_bindings';
-    }
-
-    private static function decode( $stored ): array {
-        if ( ! is_string( $stored ) || ! function_exists( 'openssl_decrypt' ) ) {
-            return [];
-        }
-        $binary = base64_decode( $stored, true );
-        if ( false === $binary || strlen( $binary ) < 29 ) {
-            return [];
-        }
-        $json  = openssl_decrypt( substr( $binary, 28 ), 'aes-256-gcm', hash( 'sha256', wp_salt( 'auth' ), true ), OPENSSL_RAW_DATA, substr( $binary, 0, 12 ), substr( $binary, 12, 16 ) );
-        $value = $json ? json_decode( $json, true ) : null;
-        return is_array( $value ) ? $value : [];
-    }
-
-    private static function encode( array $value ): string {
-        if ( ! function_exists( 'openssl_encrypt' ) ) {
-            throw new \RuntimeException( 'OpenSSL is required to store notification credentials securely.' );
-        }
-        unset( $value['_storage_version'] );
-        $iv        = random_bytes( 12 );
-        $tag       = '';
-        $encrypted = openssl_encrypt( wp_json_encode( $value ), 'aes-256-gcm', hash( 'sha256', wp_salt( 'auth' ), true ), OPENSSL_RAW_DATA, $iv, $tag );
-        if ( false === $encrypted ) {
-            throw new \RuntimeException( 'Notification credentials could not be encrypted.' );
-        }
-        return base64_encode( $iv . $tag . $encrypted );
+        return NotificationStore::bindings_table();
     }
 
     public static function bindings(): array {
-        if ( (int) get_option( 'craf_appna_events_schema', 0 ) !== self::SCHEMA_VERSION ) {
-            return [];
-        }
+        return NotificationStore::bindings();
+    }
+
+    /** One row per binding, fenced against a stale callback or dispatcher snapshot. */
+    public static function save_binding( array $binding, ?array $previous = null ): bool {
+        return NotificationStore::save_binding( $binding, $previous );
+    }
+
+    /** Reserve the resource sequence BEFORE bypassing cached role metadata. */
+    public static function subject_snapshot( int $id, bool $with_version = true ): ?array {
         global $wpdb;
         $state      = [
             'insert_id'  => $wpdb->insert_id,
             'last_error' => $wpdb->last_error,
-            'last_query' => $wpdb->last_query,
+            'last_query' => $wpdb->last_query
         ];
         $suppressed = $wpdb->suppress_errors( true );
-        $rows       = [];
         try {
-            $wpdb->last_error = '';
-            $rows             = $wpdb->get_results( $wpdb->prepare( 'SELECT source_id,app_id,payload,storage_version FROM %i', self::bindings_table() ), ARRAY_A );
-            if ( $wpdb->last_error ) {
-                throw new \RuntimeException( 'Notification storage unavailable.' );
+            $version = $with_version ? self::next_version( 'subject', $id ) : 0;
+            if ( null === $version ) {
+                throw new NotificationStorageException( 'Notification sequence unavailable.' );
             }
+            $wpdb->last_error = '';
+            $user             = ( DatabaseRow::rows(
+                DatabaseRow::from_table( "users" )->select(
+                    [
+                        "ID",
+                        "display_name",
+                        "user_email"
+                    ]
+                )->where( "ID",$id )->limit( 1 )
+            )[0] ?? null );
+            if ( $wpdb->last_error ) {
+                throw new NotificationStorageException( 'Notification user lookup unavailable.' );
+            }
+            if ( ! $user ) {
+                return null;
+            }
+            $wpdb->last_error = '';
+            $raw              = DatabaseRow::value( DatabaseRow::from_table( "usermeta" )->where( "user_id",$id )->where( "meta_key",$wpdb->get_blog_prefix() . "capabilities" )->order_by( "umeta_id" ),"meta_value" );
+            if ( $wpdb->last_error ) {
+                throw new NotificationStorageException( 'Notification membership lookup unavailable.' );
+            }
+            $caps  = maybe_unserialize( $raw );
+            $roles = [];
+            foreach ( is_array( $caps ) ? $caps : [] as $role => $enabled ) {
+                if ( $enabled && wp_roles()->is_role( $role ) ) {
+                    $roles[] = (string) $role;
+                }
+            }
+            return [
+                'id'         => (string) $id,
+                'version'    => (string) $version,
+                'attributes' => ['roles' => $roles],
+                'profile'    => [
+                    'displayName' => (string) $user['display_name'],
+                    'email'       => $user['user_email'] ?: null
+                ]
+            ];
         } catch ( \Throwable $error ) {
-            // The next explicit owner setup can repair our tables; native hooks never migrate.
-            delete_option( 'craf_appna_events_schema' );
-            self::record_error( 'notification_storage_unavailable' );
+            // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Internal cause; REST returns a fixed 503 and hooks catch this exception.
+            throw new NotificationStorageException( 'Notification subject storage unavailable.', 0, $error );
         } finally {
             $wpdb->suppress_errors( $suppressed );
             foreach ( $state as $name => $value ) {
                 $wpdb->{$name} = $value;
             }
         }
-        $bindings = [];
-        foreach ( $rows ?: [] as $row ) {
-            $binding = self::decode( $row['payload'] );
-            if ( ! $binding || ( $binding['sourceId'] ?? '' ) !== $row['source_id'] || ( $binding['appId'] ?? '' ) !== $row['app_id'] ) {
-                continue;
-            }
-            $binding['_storage_version'] = (int) $row['storage_version'];
-            $bindings[$row['source_id']] = $binding;
-        }
-        return $bindings;
-    }
-
-    /** Non-secret metadata permits a fenced repair after stored credentials become unreadable. */
-    private static function binding_metadata( string $source ): ?array {
-        global $wpdb;
-        $row = $wpdb->get_row( $wpdb->prepare( 'SELECT app_id,storage_version FROM %i WHERE source_id=%s', self::bindings_table(), $source ), ARRAY_A );
-        return $row ? [
-            'appId'            => $row['app_id'],
-            '_storage_version' => (int) $row['storage_version'],
-        ] : null;
-    }
-
-    /** One row per binding, fenced against a stale callback or dispatcher snapshot. */
-    public static function save_binding( array $binding, ?array $previous = null ): bool {
-        self::install();
-        global $wpdb;
-        $table  = self::bindings_table();
-        $source = $binding['sourceId'];
-        $app    = $binding['appId'] ?? '';
-        if ( ! $app || null !== $previous && ( $previous['appId'] ?? '' ) !== $app ) {
-            return false;
-        }
-        $version = $previous['_storage_version'] ?? $binding['_storage_version'] ?? null;
-        if ( null === $version ) {
-            return 1 === $wpdb->query( $wpdb->prepare( "INSERT IGNORE INTO %i (source_id,app_id,payload) VALUES (%s,%s,%s)", $table, $source, $app, self::encode( $binding ) ) );
-        }
-        return 1 === $wpdb->query( $wpdb->prepare( "UPDATE %i SET payload=%s,storage_version=storage_version+1 WHERE source_id=%s AND app_id=%s AND storage_version=%d", $table, self::encode( $binding ), $source, $app, $version ) );
-    }
-
-    /** Reserve the resource sequence BEFORE bypassing cached role metadata. */
-    public static function subject_snapshot( int $id, bool $with_version = true ): ?array {
-        global $wpdb;
-        $version = $with_version ? self::next_version( 'subject', $id ) : 0;
-        if ( null === $version ) {
-            return null;
-        }
-        $user = $wpdb->get_row( $wpdb->prepare( "SELECT ID,display_name,user_email FROM {$wpdb->users} WHERE ID=%d", $id ), ARRAY_A );
-        if ( ! $user ) {
-            return null;
-        }
-        $raw   = $wpdb->get_var( $wpdb->prepare( "SELECT meta_value FROM {$wpdb->usermeta} WHERE user_id=%d AND meta_key=%s ORDER BY umeta_id LIMIT 1", $id, $wpdb->get_blog_prefix() . 'capabilities' ) );
-        $caps  = maybe_unserialize( $raw );
-        $roles = [];
-        foreach ( is_array( $caps ) ? $caps : [] as $role => $enabled ) {
-            if ( $enabled && wp_roles()->is_role( $role ) ) {
-                $roles[] = (string) $role;
-            }
-        }
-        return [
-            'id'         => (string) $id,
-            'version'    => (string) $version,
-            'attributes' => [
-                'roles' => $roles,
-            ],
-            'profile'    => [
-                'displayName' => (string) $user['display_name'],
-                'email'       => $user['user_email'] ?: null,
-            ],
-        ];
     }
 
     public static function definitions(): array {
@@ -299,24 +208,20 @@ class NotificationEvents
             'directory.listing.published',
             'directory.listing.status_changed',
             'directory.listing.deleted',
-            'form.submitted',
+            'form.submitted'
         ];
         $definitions = [];
         foreach ( $types as $type ) {
             $definitions[] = [
                 'type'          => $type,
-                'fields'        => [
-                    'entity' => 'object',
-                ],
-                'relationships' => [
-                    strpos( $type, 'commerce.' ) === 0 ? 'customer' : ( strpos( $type, 'directory.' ) === 0 ? 'owner' : 'submitter' ),
-                ],
+                'fields'        => ['entity' => 'object'],
+                'relationships' => [strpos( $type, 'commerce.' ) === 0 ? 'customer' : ( strpos( $type, 'directory.' ) === 0 ? 'owner' : 'submitter' )],
                 'stateful'      => in_array(
                     $type, [
                         'commerce.order.status_changed',
-                        'directory.listing.status_changed',
+                        'directory.listing.status_changed'
                     ], true
-                ),
+                )
             ];
         }
         return (array) apply_filters( 'craf_appna_notification_event_definitions', $definitions );
@@ -329,7 +234,7 @@ class NotificationEvents
         foreach ( [
             'insert_id',
             'last_error',
-            'last_query',
+            'last_query'
         ] as $name ) {
             $state[$name] = $wpdb->{$name} ?? null;
         }
@@ -341,7 +246,7 @@ class NotificationEvents
             $id           = isset( $context['id'] ) ? (string) $context['id'] : wp_generate_uuid4();
             $entity       = $context['entity'] ?? [
                 'type' => 'custom',
-                'id'   => $id,
+                'id'   => $id
             ];
             $entity['id'] = (string) $entity['id'];
             $event        = [
@@ -351,14 +256,14 @@ class NotificationEvents
                 'occurredAt'    => $context['occurredAt'] ?? gmdate( 'Y-m-d\TH:i:s\Z' ),
                 'entity'        => $entity,
                 'relationships' => empty( $context['relationships'] ) ? (object) [] : $context['relationships'],
-                'data'          => empty( $data ) ? (object) [] : $data,
+                'data'          => empty( $data ) ? (object) [] : $data
             ];
             $event        = wp_json_encode( $event );
             if ( ! is_string( $event ) ) {
                 return null;
             }
             $channel = strpos( $type, 'system.' ) === 0 ? 'subjects' : 'events';
-            $consent = get_option( 'craf_appna_notification_consent', [] );
+            $epoch   = self::delivery_epoch();
             $queued  = false;
             foreach ( self::bindings() as $source => $binding ) {
                 if ( empty( $binding['enabled'] ) ) {
@@ -369,10 +274,10 @@ class NotificationEvents
                         'event'      => $event,
                         'appId'      => $binding['appId'],
                         'generation' => $binding['generation'],
-                        'epoch'      => $consent['epoch'],
+                        'epoch'      => $epoch,
                         'attempts'   => 0,
                         'expiresAt'  => $context['deliveryExpiresAt'] ?? time() + ( $channel === 'subjects' ? 30 * DAY_IN_SECONDS : DAY_IN_SECONDS ),
-                        'check'      => $context['check'] ?? null,
+                        'check'      => $context['check'] ?? null
                     ]
                 );
                 $queued = true;
@@ -405,9 +310,9 @@ class NotificationEvents
                     'Content-Type'            => 'application/json',
                     'X-AppNatively-Key-Id'    => $key['id'],
                     'X-AppNatively-Timestamp' => $timestamp,
-                    'X-AppNatively-Signature' => base64_encode( hash_hmac( 'sha256', $timestamp . '.' . $body, $key['secret'], true ) ),
+                    'X-AppNatively-Signature' => base64_encode( hash_hmac( 'sha256', $timestamp . '.' . $body, $key['secret'], true ) )
                 ],
-                'body'        => $body,
+                'body'        => $body
             ]
         );
     }
@@ -419,7 +324,7 @@ class NotificationEvents
         foreach ( self::bindings() as $source => $binding ) {
             foreach ( [
                 'events',
-                'subjects',
+                'subjects'
             ] as $channel ) {
                 self::queue( $source, $channel )->dispatch();
             }
@@ -436,7 +341,7 @@ class NotificationEvents
             }
             foreach ( [
                 'events',
-                'subjects',
+                'subjects'
             ] as $channel ) {
                 self::queue( $source, $channel )->retry();
             }
@@ -445,15 +350,13 @@ class NotificationEvents
 
     public static function revoke_session( int $user, string $ref, array $context = [] ): void {
         self::emit(
-            'system.session.revoked', [
-                'sessionRef' => $ref,
-            ], array_merge(
+            'system.session.revoked', ['sessionRef' => $ref], array_merge(
                 $context, [
                     'id'     => 'session.revoked:' . $user . ':' . $ref,
                     'entity' => [
                         'type' => 'user',
-                        'id'   => (string) $user,
-                    ],
+                        'id'   => (string) $user
+                    ]
                 ]
             )
         );
@@ -480,7 +383,7 @@ class NotificationEvents
         if ( ! $token || ! preg_match( '/^([1-9][0-9]*)\.([a-f0-9]{64})$/', $token, $parts ) ) {
             return null;
         }
-        $tokens = get_user_meta( (int) $parts[1], Auth::META_KEY, true );
+        $tokens = Auth::get_tokens( (int) $parts[1] );
         $meta   = is_array( $tokens ) ? $tokens[hash( 'sha256', $parts[2] )] ?? null : null;
         return is_array( $meta ) && ( $meta['expires'] ?? 0 ) > time() && get_userdata( (int) $parts[1] ) ? (int) $parts[1] : null;
     }
@@ -492,11 +395,11 @@ class NotificationEvents
                 return null;
             }
             [, $secret] = explode( '.', $token, 2 );
-            $meta       = get_user_meta( $user, Auth::META_KEY, true )[hash( 'sha256', $secret )] ?? null;
+            $meta       = Auth::get_tokens( $user )[hash( 'sha256', $secret )] ?? null;
             return $meta ? [
                 'sessionRef' => self::session_ref( $token ),
                 'issuedAt'   => (int) $meta['issued'] * 1000,
-                'expiresAt'  => (int) $meta['expires'] * 1000,
+                'expiresAt'  => (int) $meta['expires'] * 1000
             ] : null;
         }
         $token = wp_get_session_token();
@@ -507,7 +410,7 @@ class NotificationEvents
         return [
             'sessionRef' => self::session_ref( $token ),
             'issuedAt'   => (int) ( $meta['login'] ?? 0 ) * 1000,
-            'expiresAt'  => (int) $meta['expiration'] * 1000,
+            'expiresAt'  => (int) $meta['expiration'] * 1000
         ];
     }
 }

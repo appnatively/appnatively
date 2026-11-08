@@ -34,7 +34,15 @@ final class GeoDirectoryLocations implements TermSource {
     private const MAX_RESOLVED = 200;
 
     /** The columns a city row carries, under the locations table's alias. */
-    private const CITY_COLUMNS = [ 'l.location_id', 'l.country', 'l.region', 'l.city', 'l.city_slug', 'l.country_slug', 'l.region_slug' ];
+    private const CITY_COLUMNS = [
+        'l.location_id',
+        'l.country',
+        'l.region',
+        'l.city',
+        'l.city_slug',
+        'l.country_slug',
+        'l.region_slug'
+    ];
 
     /** The listing post type locations are counted for. */
     private string $post_type;
@@ -91,15 +99,32 @@ final class GeoDirectoryLocations implements TermSource {
         // otherwise all land in one empty group.
         $rows = $fresh_query()
             ->where_raw( "gd_detail.city IS NOT NULL AND gd_detail.city <> ''" )
-            ->select( [ 'gd_detail.country as country', 'gd_detail.region as region', 'gd_detail.city as city', 'COUNT(DISTINCT posts.ID) as post_count' ] )
-            ->group_by( [ 'gd_detail.country', 'gd_detail.region', 'gd_detail.city' ] )
+            ->select(
+                [
+                    'gd_detail.country as country',
+                    'gd_detail.region as region',
+                    'gd_detail.city as city',
+                    'COUNT(DISTINCT posts.ID) as post_count'
+                ]
+            )
+            ->group_by(
+                [
+                    'gd_detail.country',
+                    'gd_detail.region',
+                    'gd_detail.city'
+                ]
+            )
             ->order_by( 'gd_detail.city', 'asc' )
             ->limit( $limit )
             ->get();
 
         $tuples = [];
         foreach ( $rows as $row ) {
-            $tuples[] = [ (string) $row->country, (string) $row->region, (string) $row->city ];
+            $tuples[] = [
+                (string) $row->country,
+                (string) $row->region,
+                (string) $row->city
+            ];
         }
         $cities = $this->resolve_tuples( $tuples );
 
@@ -118,7 +143,11 @@ final class GeoDirectoryLocations implements TermSource {
                 $options[ $slug ][2] += (int) $row->post_count;
                 continue;
             }
-            $options[ $slug ] = [ $slug, (string) $city->city, (int) $row->post_count ];
+            $options[ $slug ] = [
+                $slug,
+                (string) $city->city,
+                (int) $row->post_count
+            ];
         }
 
         return array_values( $options );
@@ -239,7 +268,14 @@ final class GeoDirectoryLocations implements TermSource {
         $slugs = array_slice( array_keys( $slugs ), 0, self::MAX_RESOLVED );
 
         $rows = GeoDirectoryRow::from_table( self::table_name( GEODIR_LOCATION_SEO_TABLE ), 's' )
-            ->select( [ 's.city_slug', 's.country_slug', 's.region_slug', 's.image' ] )
+            ->select(
+                [
+                    's.city_slug',
+                    's.country_slug',
+                    's.region_slug',
+                    's.image'
+                ]
+            )
             ->where( 's.location_type', 'city' )
             ->where_in( 's.city_slug', $slugs )
             ->order_by( 's.seo_id' )
@@ -296,7 +332,11 @@ final class GeoDirectoryLocations implements TermSource {
         foreach ( $cities as $city ) {
             $city_name = (string) ( $city->city ?? '' );
             if ( '' !== trim( $city_name ) ) {
-                $wanted[ $this->tuple_key( (string) ( $city->country ?? '' ), (string) ( $city->region ?? '' ), $city_name ) ] = [ (string) ( $city->country ?? '' ), (string) ( $city->region ?? '' ), $city_name ];
+                $wanted[ $this->tuple_key( (string) ( $city->country ?? '' ), (string) ( $city->region ?? '' ), $city_name ) ] = [
+                    (string) ( $city->country ?? '' ),
+                    (string) ( $city->region ?? '' ),
+                    $city_name
+                ];
             }
         }
         if ( empty( $wanted ) ) {
@@ -305,8 +345,21 @@ final class GeoDirectoryLocations implements TermSource {
         $wanted = array_slice( $wanted, 0, self::MAX_RESOLVED, true );
 
         $query = $this->published_listings()
-            ->select( [ 'd.country', 'd.region', 'd.city', 'MAX(d.post_id) as post_id' ] )
-            ->group_by( [ 'd.country', 'd.region', 'd.city' ] );
+            ->select(
+                [
+                    'd.country',
+                    'd.region',
+                    'd.city',
+                    'MAX(d.post_id) as post_id'
+                ]
+            )
+            ->group_by(
+                [
+                    'd.country',
+                    'd.region',
+                    'd.city'
+                ]
+            );
         $this->where_any_tuple( $query, 'd', array_values( $wanted ) );
 
         $rows = $query->get()->all();
@@ -349,7 +402,14 @@ final class GeoDirectoryLocations implements TermSource {
         $post_ids = array_slice( array_values( array_unique( $post_ids ) ), 0, self::MAX_RESOLVED );
 
         $rows = GeoDirectoryRow::from_table( $this->detail_table(), 'd' )
-            ->select( [ 'd.post_id', 'd.country', 'd.region', 'd.city' ] )
+            ->select(
+                [
+                    'd.post_id',
+                    'd.country',
+                    'd.region',
+                    'd.city'
+                ]
+            )
             ->where_in( 'd.post_id', $post_ids )
             ->get()
             ->all();
@@ -360,7 +420,11 @@ final class GeoDirectoryLocations implements TermSource {
                 continue;
             }
             $this->post_tuples[ (int) $row->post_id ] = $this->tuple_key( (string) $row->country, (string) $row->region, (string) $row->city );
-            $tuples[]                                 = [ (string) $row->country, (string) $row->region, (string) $row->city ];
+            $tuples[]                                 = [
+                (string) $row->country,
+                (string) $row->region,
+                (string) $row->city
+            ];
         }
 
         // Listings with no detail row or no city: remembered so they are never looked up again.
@@ -399,7 +463,11 @@ final class GeoDirectoryLocations implements TermSource {
 
         foreach ( $rows as $row ) {
             if ( '' !== trim( (string) $row->city ) ) {
-                $tuples[] = [ (string) $row->country, (string) $row->region, (string) $row->city ];
+                $tuples[] = [
+                    (string) $row->country,
+                    (string) $row->region,
+                    (string) $row->city
+                ];
             }
         }
 
@@ -493,7 +561,11 @@ final class GeoDirectoryLocations implements TermSource {
         foreach ( $tuples as [ $country, $region, $city ] ) {
             $key = $this->tuple_key( $country, $region, $city );
             if ( '' !== trim( $city ) && ! array_key_exists( $key, $this->tuples ) ) {
-                $wanted[ $key ] = [ $country, $region, $city ];
+                $wanted[ $key ] = [
+                    $country,
+                    $region,
+                    $city
+                ];
             }
         }
 
@@ -567,7 +639,10 @@ final class GeoDirectoryLocations implements TermSource {
             'count' => 'post_count',
         ];
 
-        return [ $columns[ $sort ] ?? 'l.city', $direction ];
+        return [
+            $columns[ $sort ] ?? 'l.city',
+            $direction
+        ];
     }
 
     /**

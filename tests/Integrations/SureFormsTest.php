@@ -39,7 +39,7 @@ class SureFormsTest extends \WP_UnitTestCase {
                     'textLength'   => '',
                     'placeholder'  => '',
                     'defaultValue' => '',
-                ] 
+                ]
             ),
             $this->make_block(
                 'srfm/email', [
@@ -49,7 +49,7 @@ class SureFormsTest extends \WP_UnitTestCase {
                     'required'     => true,
                     'placeholder'  => '',
                     'defaultValue' => '',
-                ] 
+                ]
             ),
             $this->make_block(
                 'srfm/number', [
@@ -61,7 +61,7 @@ class SureFormsTest extends \WP_UnitTestCase {
                     'maxValue'     => '',
                     'placeholder'  => '',
                     'defaultValue' => '',
-                ] 
+                ]
             ),
             $this->make_block(
                 'srfm/url', [
@@ -71,7 +71,7 @@ class SureFormsTest extends \WP_UnitTestCase {
                     'required'     => true,
                     'placeholder'  => '',
                     'defaultValue' => '',
-                ] 
+                ]
             ),
             $this->make_block(
                 'srfm/checkbox', [
@@ -79,7 +79,7 @@ class SureFormsTest extends \WP_UnitTestCase {
                     'label'    => 'Checkboxes',
                     'slug'     => 'checkbox',
                     'required' => false,
-                ] 
+                ]
             ),
             $this->make_block(
                 'srfm/gdpr', [
@@ -87,7 +87,7 @@ class SureFormsTest extends \WP_UnitTestCase {
                     'label'    => 'I consent',
                     'slug'     => 'consent',
                     'required' => true,
-                ] 
+                ]
             ),
             $this->make_block(
                 'srfm/dropdown', [
@@ -96,11 +96,20 @@ class SureFormsTest extends \WP_UnitTestCase {
                     'slug'     => 'dropdown',
                     'required' => false,
                     'options'  => [
-                        [ 'label' => 'First Choice', 'value' => '' ],
-                        [ 'label' => 'Second Choice', 'value' => '' ],
-                        [ 'label' => 'Third Choice', 'value' => '' ],
+                        [
+                            'label' => 'First Choice',
+                            'value' => ''
+                        ],
+                        [
+                            'label' => 'Second Choice',
+                            'value' => ''
+                        ],
+                        [
+                            'label' => 'Third Choice',
+                            'value' => ''
+                        ],
                     ],
-                ] 
+                ]
             ),
         ];
 
@@ -115,7 +124,7 @@ class SureFormsTest extends \WP_UnitTestCase {
                 'post_type'    => 'sureforms_form',
                 'post_status'  => 'publish',
                 'post_content' => $post_content,
-            ] 
+            ]
         );
 
         update_post_meta( $this->form_id, '_srfm_submit_button_text', 'Submit' );
@@ -251,7 +260,7 @@ class SureFormsTest extends \WP_UnitTestCase {
         update_option(
             'srfm_default_dynamic_block_option', [
                 'srfm_valid_email' => 'CUSTOM_EMAIL_MSG',
-            ] 
+            ]
         );
 
         $sureforms = $this->get_integration_instance();
@@ -315,7 +324,7 @@ class SureFormsTest extends \WP_UnitTestCase {
             'srfm_form_submit_data', function ( $form_data ) use ( &$passed_form_data ) {
                 $passed_form_data = $form_data;
                 return $form_data;
-            } 
+            }
         );
 
         $captured_entry_id = null;
@@ -326,7 +335,7 @@ class SureFormsTest extends \WP_UnitTestCase {
                     $captured_entry_id = $response['entry_id'];
                     $entry             = \SRFM\Inc\Database\Tables\Entries::get( $captured_entry_id );
                 }
-            } 
+            }
         );
 
         $sureforms->expose_submit( $request, $form );

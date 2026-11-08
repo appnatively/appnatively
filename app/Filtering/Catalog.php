@@ -86,12 +86,14 @@ abstract class Catalog {
     /**
      * Add the joins the SQL expressions rely on.
      */
-    public function prepare( Builder $query ): void {}
+    public function prepare( Builder $query ): void {
+    }
 
     /**
      * Keep only posts the site lists (catalog visibility and the like).
      */
-    public function where_visible( Builder $query, bool $searching ): void {}
+    public function where_visible( Builder $query, bool $searching ): void {
+    }
 
     /**
      * Columns search text is matched against.
@@ -164,23 +166,50 @@ abstract class Catalog {
      */
     public function sorts(): array {
         $sorts = [
-            'relevance' => [ 'posts.post_date', 'desc' ],
-            'newest'    => [ 'posts.post_date', 'desc' ],
-            'oldest'    => [ 'posts.post_date', 'asc' ],
-            'name_az'   => [ 'posts.post_title', 'asc' ],
-            'name_za'   => [ 'posts.post_title', 'desc' ],
+            'relevance' => [
+                'posts.post_date',
+                'desc'
+            ],
+            'newest'    => [
+                'posts.post_date',
+                'desc'
+            ],
+            'oldest'    => [
+                'posts.post_date',
+                'asc'
+            ],
+            'name_az'   => [
+                'posts.post_title',
+                'asc'
+            ],
+            'name_za'   => [
+                'posts.post_title',
+                'desc'
+            ],
         ];
 
         $ranges = $this->ranges();
         if ( isset( $ranges['price'] ) ) {
-            $sorts['price_low']  = [ $ranges['price']->min_sql, 'asc' ];
-            $sorts['price_high'] = [ $ranges['price']->max_sql, 'desc' ];
+            $sorts['price_low']  = [
+                $ranges['price']->min_sql,
+                'asc'
+            ];
+            $sorts['price_high'] = [
+                $ranges['price']->max_sql,
+                'desc'
+            ];
         }
         if ( isset( $ranges['rating'] ) ) {
-            $sorts['rating'] = [ $ranges['rating']->max_sql, 'desc' ];
+            $sorts['rating'] = [
+                $ranges['rating']->max_sql,
+                'desc'
+            ];
         }
         if ( $this->popularity_sql() ) {
-            $sorts['popularity'] = [ $this->popularity_sql(), 'desc' ];
+            $sorts['popularity'] = [
+                $this->popularity_sql(),
+                'desc'
+            ];
         }
         return $sorts;
     }

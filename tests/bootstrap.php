@@ -27,6 +27,36 @@ require_once $_tests_dir . '/includes/functions.php';
  * Manually load the plugin being tested.
  */
 function _manually_load_plugin() {
+    if ( getenv( 'CI' ) === 'true' ) {
+        if ( ! defined( 'SURECART_CACHE_ACCOUNT' ) ) {
+            define( 'SURECART_CACHE_ACCOUNT', true );
+        }
+        add_filter(
+            'pre_transient_surecart_account', static function () {
+                return [
+                    'id'       => 'acct_isolated_fixture',
+                    'currency' => 'USD'
+                ];
+            }
+        );
+        add_filter(
+            'pre_http_request', static function ( $response ) {
+                return $response !== false ? $response : new \WP_Error( 'appna_isolated_test', 'Outbound HTTP requires an explicit test fixture.' );
+            }, PHP_INT_MAX
+        );
+    }
+    if ( in_array(
+        getenv( 'CRAF_APPNA_TEST_HPOS' ), [
+            'yes',
+            'no'
+        ], true
+    ) ) {
+        add_filter(
+            'pre_option_woocommerce_custom_orders_table_enabled', static function () {
+                return getenv( 'CRAF_APPNA_TEST_HPOS' );
+            }
+        );
+    }
     $wp_core_dir = getenv( 'WP_CORE_DIR' );
     if ( ! $wp_core_dir ) {
         $wp_core_dir = rtrim( sys_get_temp_dir(), '/\\' ) . '/wordpress';
@@ -305,7 +335,9 @@ function _manually_load_plugin() {
     $load_plugin( 'directorist/directorist-base.php' );
     // GeoDirectory fires `geodirectory_loaded` while being required, and that is what boots
     // its Location Manager add-on, so the add-on has to register its hook first.
-    $load_plugin( 'geodir_location_manager/geodir_location_manager.php' );
+    if ( getenv( 'CRAF_APPNA_TEST_EXTENSIONS' ) !== 'no' ) {
+        $load_plugin( 'geodir_location_manager/geodir_location_manager.php' );
+    }
     $load_plugin( 'geodirectory/geodirectory.php' );
     if ( defined( 'GEODIRECTORY_PLUGIN_DIR' )
         && ! class_exists( 'GeoDir_Admin_Install' )
@@ -331,10 +363,13 @@ function _manually_load_plugin() {
     // from its Geolocation extension, and only while this option is on. A `pre_option_`
     // filter rather than an option row, so it is in force before `init` registers it.
     add_filter( 'pre_option_hp_geolocation_generate_regions', fn() => '1' );
-    $load_plugin( 'hivepress-geolocation/hivepress-geolocation.php' );
+    if ( getenv( 'CRAF_APPNA_TEST_EXTENSIONS' ) !== 'no' ) {
+        $load_plugin( 'hivepress-geolocation/hivepress-geolocation.php' );
+    }
     $load_plugin( 'hivepress/hivepress.php' );
     $load_plugin( 'business-directory-plugin/business-directory-plugin.php' );
     $load_plugin( 'classified-listing/classified-listing.php' );
+    $load_plugin( 'adirectory/adirectory.php' );
 
     require dirname( __DIR__ ) . '/appnatively.php';
 

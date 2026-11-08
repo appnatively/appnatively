@@ -98,12 +98,18 @@ class NinjaForms extends Form {
                 }
                 return $rules;
             case 'email':
-                return ['string', 'email'];
+                return [
+                    'string',
+                    'email'
+                ];
             case 'password':
                 return ['string'];
             case 'radio':
             case 'single_select':
-                return ['string', 'max:255'];
+                return [
+                    'string',
+                    'max:255'
+                ];
             case 'checkbox':
                 return ['array'];
             case 'date_time_picker':
@@ -233,7 +239,13 @@ class NinjaForms extends Form {
                     ->set_placeholder( (string) $field->get_setting( 'placeholder' ) )
                     ->set_field_name( (string) $field_id );
 
-                if ( in_array( $std_type, ['radio', 'checkbox', 'single_select'], true ) ) {
+                if ( in_array(
+                    $std_type, [
+                        'radio',
+                        'checkbox',
+                        'single_select'
+                    ], true
+                ) ) {
                     $items = $this->get_field_options( $field );
                     if ( $items ) {
                         $fdto->set_items( $items );

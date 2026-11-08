@@ -200,7 +200,12 @@ class WeFormsTest extends \WP_UnitTestCase {
     }
 
     public function test_get_form_excludes_unpublished_form() {
-        wp_update_post( [ 'ID' => $this->form_id, 'post_status' => 'draft' ] );
+        wp_update_post(
+            [
+                'ID'          => $this->form_id,
+                'post_status' => 'draft'
+            ]
+        );
 
         $weforms = $this->get_integration_instance();
         $form    = $weforms->expose_get_form( $this->form_id );
@@ -213,8 +218,15 @@ class WeFormsTest extends \WP_UnitTestCase {
         $rules   = $weforms->expose_get_validation_rules( $form );
 
         $expected_fields = [
-            'full_name', 'company', 'email', 'secondary_email',
-            'country', 'gender', 'hobbies', 'website', 'birthdate',
+            'full_name',
+            'company',
+            'email',
+            'secondary_email',
+            'country',
+            'gender',
+            'hobbies',
+            'website',
+            'birthdate',
         ];
         foreach ( $expected_fields as $field ) {
             $this->assertArrayHasKey( $field, $rules );
@@ -284,7 +296,12 @@ class WeFormsTest extends \WP_UnitTestCase {
         $wp_request->set_param( 'website', 'https://example.com' );
         $wp_request->set_param( 'country', 'us' );
         $wp_request->set_param( 'gender', 'female' );
-        $wp_request->set_param( 'hobbies', [ 'reading', 'sports' ] );
+        $wp_request->set_param(
+            'hobbies', [
+                'reading',
+                'sports'
+            ]
+        );
         $wp_request->set_param( 'birthdate', '2024-01-15' );
         $wp_request->set_param( 'unsupported', 'should be skipped' );
         $request = new Request( $wp_request );

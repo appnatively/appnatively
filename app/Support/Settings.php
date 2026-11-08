@@ -40,7 +40,17 @@ class Settings {
      * @return void
      */
     public static function set_api_enabled( bool $enabled ): void {
-        update_option( self::OPTION_ENABLED, $enabled ? 'yes' : 'no' );
+        AuthorizationStore::locked(
+            static function () use ( $enabled ): void {
+                global $wpdb;
+                // Preflight also protects calls made before providers register filters.
+                CheckoutHandoff::prepare_api_value( $enabled ? 'yes' : 'no' );
+                update_option( self::OPTION_ENABLED, $enabled ? 'yes' : 'no' );
+                if ( $wpdb->last_error ) {
+                    throw new AuthorizationStorageException();
+                }
+            }
+        );
     }
 
     /**

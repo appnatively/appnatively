@@ -93,9 +93,27 @@ class WPFormsTest extends \WP_UnitTestCase {
                     'type'            => 'select',
                     'label'           => 'Dropdown',
                     'choices'         => [
-                        '1' => [ 'label' => 'First Choice', 'value' => '', 'image' => '', 'icon' => 'face-smile', 'icon_style' => 'regular' ],
-                        '2' => [ 'label' => 'Second Choice', 'value' => '', 'image' => '', 'icon' => 'face-smile', 'icon_style' => 'regular' ],
-                        '3' => [ 'label' => 'Third Choice', 'value' => '', 'image' => '', 'icon' => 'face-smile', 'icon_style' => 'regular' ],
+                        '1' => [
+                            'label'      => 'First Choice',
+                            'value'      => '',
+                            'image'      => '',
+                            'icon'       => 'face-smile',
+                            'icon_style' => 'regular'
+                        ],
+                        '2' => [
+                            'label'      => 'Second Choice',
+                            'value'      => '',
+                            'image'      => '',
+                            'icon'       => 'face-smile',
+                            'icon_style' => 'regular'
+                        ],
+                        '3' => [
+                            'label'      => 'Third Choice',
+                            'value'      => '',
+                            'image'      => '',
+                            'icon'       => 'face-smile',
+                            'icon_style' => 'regular'
+                        ],
                     ],
                     'description'     => '',
                     'required'        => '1',
@@ -110,9 +128,27 @@ class WPFormsTest extends \WP_UnitTestCase {
                     'type'            => 'select',
                     'label'           => 'Dropdown two',
                     'choices'         => [
-                        '1' => [ 'label' => 'First Choice', 'value' => '', 'image' => '', 'icon' => 'face-smile', 'icon_style' => 'regular' ],
-                        '2' => [ 'label' => 'Second Choice', 'value' => '', 'image' => '', 'icon' => 'face-smile', 'icon_style' => 'regular' ],
-                        '3' => [ 'label' => 'Third Choice', 'value' => '', 'image' => '', 'icon' => 'face-smile', 'icon_style' => 'regular' ],
+                        '1' => [
+                            'label'      => 'First Choice',
+                            'value'      => '',
+                            'image'      => '',
+                            'icon'       => 'face-smile',
+                            'icon_style' => 'regular'
+                        ],
+                        '2' => [
+                            'label'      => 'Second Choice',
+                            'value'      => '',
+                            'image'      => '',
+                            'icon'       => 'face-smile',
+                            'icon_style' => 'regular'
+                        ],
+                        '3' => [
+                            'label'      => 'Third Choice',
+                            'value'      => '',
+                            'image'      => '',
+                            'icon'       => 'face-smile',
+                            'icon_style' => 'regular'
+                        ],
                     ],
                     'description'     => '',
                     'style'           => 'classic',
@@ -126,9 +162,27 @@ class WPFormsTest extends \WP_UnitTestCase {
                     'type'                 => 'checkbox',
                     'label'                => 'Checkboxes',
                     'choices'              => [
-                        '1' => [ 'label' => 'First Choice', 'value' => '', 'image' => '', 'icon' => 'face-smile', 'icon_style' => 'regular' ],
-                        '2' => [ 'label' => 'Second Choice', 'value' => '', 'image' => '', 'icon' => 'face-smile', 'icon_style' => 'regular' ],
-                        '3' => [ 'label' => 'Third Choice', 'value' => '', 'image' => '', 'icon' => 'face-smile', 'icon_style' => 'regular' ],
+                        '1' => [
+                            'label'      => 'First Choice',
+                            'value'      => '',
+                            'image'      => '',
+                            'icon'       => 'face-smile',
+                            'icon_style' => 'regular'
+                        ],
+                        '2' => [
+                            'label'      => 'Second Choice',
+                            'value'      => '',
+                            'image'      => '',
+                            'icon'       => 'face-smile',
+                            'icon_style' => 'regular'
+                        ],
+                        '3' => [
+                            'label'      => 'Third Choice',
+                            'value'      => '',
+                            'image'      => '',
+                            'icon'       => 'face-smile',
+                            'icon_style' => 'regular'
+                        ],
                     ],
                     'choices_images_style' => 'modern',
                     'choices_icons_color'  => '#066aab',
@@ -146,9 +200,27 @@ class WPFormsTest extends \WP_UnitTestCase {
                     'type'                 => 'checkbox',
                     'label'                => 'Checkboxes two',
                     'choices'              => [
-                        '1' => [ 'label' => 'First Choice', 'value' => '', 'image' => '', 'icon' => 'face-smile', 'icon_style' => 'regular' ],
-                        '2' => [ 'label' => 'Second Choice', 'value' => '', 'image' => '', 'icon' => 'face-smile', 'icon_style' => 'regular' ],
-                        '3' => [ 'label' => 'Third Choice', 'value' => '', 'image' => '', 'icon' => 'face-smile', 'icon_style' => 'regular' ],
+                        '1' => [
+                            'label'      => 'First Choice',
+                            'value'      => '',
+                            'image'      => '',
+                            'icon'       => 'face-smile',
+                            'icon_style' => 'regular'
+                        ],
+                        '2' => [
+                            'label'      => 'Second Choice',
+                            'value'      => '',
+                            'image'      => '',
+                            'icon'       => 'face-smile',
+                            'icon_style' => 'regular'
+                        ],
+                        '3' => [
+                            'label'      => 'Third Choice',
+                            'value'      => '',
+                            'image'      => '',
+                            'icon'       => 'face-smile',
+                            'icon_style' => 'regular'
+                        ],
                     ],
                     'choices_images_style' => 'modern',
                     'choices_icons_color'  => '#066aab',
@@ -300,7 +372,20 @@ class WPFormsTest extends \WP_UnitTestCase {
         $form    = $wpforms->expose_get_form( $this->form_id );
         $rules   = $wpforms->expose_get_validation_rules( $form );
 
-        $expected_field_ids = [ '1', '10', '7', '11', '2', '12', '4', '13', '5', '14', '6', '15' ];
+        $expected_field_ids = [
+            '1',
+            '10',
+            '7',
+            '11',
+            '2',
+            '12',
+            '4',
+            '13',
+            '5',
+            '14',
+            '6',
+            '15'
+        ];
         foreach ( $expected_field_ids as $id ) {
             $this->assertArrayHasKey( $id, $rules );
         }
@@ -381,7 +466,7 @@ class WPFormsTest extends \WP_UnitTestCase {
             'wpforms_process_before', function ( $entry, $form_data ) use ( &$captured_entry, &$captured_form_data ) {
                 $captured_entry     = $entry;
                 $captured_form_data = $form_data;
-            }, 10, 2 
+            }, 10, 2
         );
 
         $wpforms->expose_submit( $request, $form );

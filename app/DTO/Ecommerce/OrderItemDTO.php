@@ -84,7 +84,10 @@ class OrderItemDTO extends DTO {
         $this->variant_id    = isset( $data['variantId'] ) ? (int) $data['variantId'] : null;
         $this->title         = $data['title'] ?? '';
         $this->quantity      = (int) ( $data['quantity'] ?? 1 );
-        $this->price         = $data['price'] ?? [ 'amount' => '0', 'currencyCode' => 'USD' ];
+        $this->price         = $data['price'] ?? [
+            'amount'       => '0',
+            'currencyCode' => 'USD'
+        ];
         $this->variant_title = $data['variantTitle'] ?? null;
         $this->image         = $data['image'] ?? null;
     }

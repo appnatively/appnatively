@@ -52,28 +52,66 @@ class FormFieldDTO extends DTO {
     private ?string $confirm_placeholder = null;
 
     private static array $universal_properties = [
-        'id', 'fieldType', 'isRequired', 'fieldLabel', 'submissionKey', 'placeholderText', 'leadingIcon',
+        'id',
+        'fieldType',
+        'isRequired',
+        'fieldLabel',
+        'submissionKey',
+        'placeholderText',
+        'leadingIcon',
     ];
 
     private static array $type_property_map = [
-        'text'             => ['minimumTextLength', 'maximumCharacterCount'],
-        'email'            => ['minimumTextLength', 'maximumTextLength'],
-        'url'              => ['minimumTextLength', 'maximumTextLength'],
-        'number'           => ['minimumValue', 'maximumValue'],
+        'text'             => [
+            'minimumTextLength',
+            'maximumCharacterCount'
+        ],
+        'email'            => [
+            'minimumTextLength',
+            'maximumTextLength'
+        ],
+        'url'              => [
+            'minimumTextLength',
+            'maximumTextLength'
+        ],
+        'number'           => [
+            'minimumValue',
+            'maximumValue'
+        ],
         'checkbox'         => ['options'],
         'radio'            => ['options'],
         'single_select'    => ['options'],
         'multi_select'     => ['options'],
-        'date_time_picker' => ['dateTimeMode', 'submittedDateTimeFormat'],
-        'password'         => ['minimumTextLength', 'maximumTextLength', 'showConfirmationField', 'confirmationLabel', 'confirmationPlaceholder'],
-        'range'            => ['rangeSelectionMode', 'minimumValue', 'maximumValue', 'valueStep'],
-        'rating'           => ['maximumRating', 'ratingIcon'],
+        'date_time_picker' => [
+            'dateTimeMode',
+            'submittedDateTimeFormat'
+        ],
+        'password'         => [
+            'minimumTextLength',
+            'maximumTextLength',
+            'showConfirmationField',
+            'confirmationLabel',
+            'confirmationPlaceholder'
+        ],
+        'range'            => [
+            'rangeSelectionMode',
+            'minimumValue',
+            'maximumValue',
+            'valueStep'
+        ],
+        'rating'           => [
+            'maximumRating',
+            'ratingIcon'
+        ],
         'switch'           => [],
         'gdpr'             => [],
     ];
 
     public function __construct() {
-        $this->exclude_to_array = ['universal_properties', 'type_property_map'];
+        $this->exclude_to_array = [
+            'universal_properties',
+            'type_property_map'
+        ];
     }
 
     public function get_id(): string {

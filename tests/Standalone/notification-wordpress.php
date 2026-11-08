@@ -142,14 +142,23 @@ $binding = [
     'keys'         => $keys,
 ];
 check( Events::save_binding( $binding, Events::bindings()['native'] ?? null ), 'Binding saved using native wpdb' );
-delete_option( 'craf_appna_notification_consent' );
-check( get_option( 'craf_appna_notifications_enabled', 'yes' ) === 'yes' && Events::emit( 'custom.created', [] ) === null, 'Default On remains inert without consent' );
-update_option(
-    'craf_appna_notification_consent', [
-        'version' => 1,
-        'epoch'   => 'native-test',
-    ]
-);
+foreach ( [
+    'craf_appna_event_bindings',
+    'craf_appna_event_sequences'
+] as $table ) {
+    $status = $wpdb->get_row( $wpdb->prepare( 'SHOW TABLE STATUS LIKE %s', $wpdb->prefix . $table ), ARRAY_A );
+    check( $status['Engine'] === 'InnoDB', 'Schema builder retains the owned table engine' );
+}
+$stored_payload = $wpdb->get_var( $wpdb->prepare( 'SELECT payload FROM %i WHERE source_id=%s', Events::bindings_table(), 'native' ) );
+$payload_column = $wpdb->get_row( $wpdb->prepare( 'SHOW COLUMNS FROM %i LIKE %s', Events::bindings_table(), 'payload' ), ARRAY_A );
+check( $payload_column['Null'] === 'NO', 'Schema builder retains the encrypted payload NOT NULL constraint' );
+delete_option( 'craf_appna_events_schema' );
+Events::install();
+check( $wpdb->get_var( $wpdb->prepare( 'SELECT payload FROM %i WHERE source_id=%s', Events::bindings_table(), 'native' ) ) === $stored_payload, 'Repeated schema synchronization preserves encrypted bindings' );
+delete_option( 'craf_appna_notification_epoch' );
+check( get_option( 'craf_appna_notifications_enabled', 'yes' ) === 'yes' && Events::emit( 'custom.created', [], ['id' => 'default-on'] ) === 'default-on', 'Default On captures paired events without separate sharing settings' );
+Events::queue( 'native', 'events' )->discard();
+update_option( 'craf_appna_notification_epoch', 'native-test' );
 
 function jobs( $channel ) {
     $items = [];
@@ -177,14 +186,16 @@ $event_queue   = Events::queue( 'native', 'events' );
 $subject_queue = Events::queue( 'native', 'subjects' );
 $event_queue->discard();
 $subject_queue->discard();
-$wpdb->insert_id  = 4321;
-$wpdb->last_error = 'native-state';
-$wpdb->last_query = 'native-query';
+$appna_profile_start = $wpdb->num_queries;
+$wpdb->insert_id     = 4321;
+$wpdb->last_error    = 'native-state';
+$wpdb->last_query    = 'native-query';
 Events::emit(
     'custom.created', [], [
         'id' => 'native-signed',
     ]
 );
+$appna_profiles['hook_enqueue'] = $wpdb->num_queries - $appna_profile_start;
 check( $wpdb->insert_id === 4321 && $wpdb->last_error === 'native-state' && $wpdb->last_query === 'native-query', 'Native wpdb diagnostics and insert ID preserved' );
 $batch    = $event_queue->get_batches()[0];
 $autoload = $wpdb->get_var( $wpdb->prepare( "SELECT autoload FROM {$wpdb->options} WHERE option_name=%s", $batch->key ) );
@@ -222,7 +233,9 @@ $request->set_body(
         ]
     )
 );
-$response = $provider->identity( $request );
+$appna_profile_start        = $wpdb->num_queries;
+$response                   = $provider->identity( $request );
+$appna_profiles['identity'] = $wpdb->num_queries - $appna_profile_start;
 check( $response instanceof WP_REST_Response, 'Native cookie mints notification proof' );
 check( get_user_meta( $user ) === $before, 'Identity endpoint never adds cookie metadata' );
 check( ! get_user_meta( $user, '_craf_appna_cookie_sessions', true ) && ! get_user_meta( $user, '_craf_appna_session_cutoff', true ), 'No experimental cookie-session metadata' );
@@ -351,10 +364,10 @@ Events::emit(
         'id' => 'withdraw',
     ]
 );
-delete_option( 'craf_appna_notification_consent' );
+update_option( 'craf_appna_notifications_enabled', 'no' );
 $event_queue->handle_cron_healthcheck();
-check( ! $event_queue->is_queued(), 'Consent withdrawal clears native queue work' );
-check( ! $http, 'No additional external request after consent withdrawal' );
+check( ! $event_queue->is_queued(), 'Sending Off clears native queue work' );
+check( ! $http, 'No additional external request after sending Off' );
 $event_queue->handle_cron_healthcheck();
 check( true, 'Idle queue health check returns to other cron work' );
 // Real parallel connections must not allocate the same transition version.
@@ -413,17 +426,19 @@ foreach ( $workers as [$process, $pipes] ) {
 }
 sort( $versions );
 check( $versions === range( 501, 600 ), 'One hundred concurrent transition versions are unique' );
-// Native settings screen: On is a preference, never a pre-accepted acknowledgement.
+// One native setting controls delivery, defaulting to On without a separate save.
 wp_set_current_user( 1 );
+delete_option( 'craf_appna_notifications_enabled' );
+delete_option( 'craf_appna_notification_epoch' );
 ob_start();
 $provider->settings_page();
 $html = ob_get_clean();
 check( strpos( $html, 'name="craf_appna_notifications_enabled" value="1"  checked=' ) !== false, 'Native settings default sending to On' );
-check( strpos( $html, 'name="craf_appna_notification_consent" value="1"  checked=' ) === false, 'Native acknowledgement is initially unchecked' );
+check( substr_count( $html, 'type="checkbox"' ) === 1, 'Native settings show only the sending switch' );
+check( get_option( 'craf_appna_notification_epoch', null ) === null && Events::allowed(), 'Default sending is active without saved notification setup' );
 $_POST = [
     'craf_appna_save_notifications'    => '1',
     'craf_appna_notifications_enabled' => '1',
-    'craf_appna_notification_consent'  => '1',
     '_wpnonce'                         => wp_create_nonce( 'craf_appna_notifications' ),
 ];
 // phpcs:ignore WordPress.Security.NonceVerification.Missing -- Copy synthetic form input; the actual settings callback verifies its generated nonce.
@@ -431,9 +446,9 @@ $_REQUEST = $_POST;
 ob_start();
 $provider->settings_page();
 ob_end_clean();
-check( Events::allowed(), 'Explicit native settings acknowledgement enables notifications' );
+check( Events::allowed(), 'Saving only the sending checkbox enables notifications' );
 $provider->website_bridge();
-check( wp_script_is( 'craf-appna-notifications', 'enqueued' ), 'Bridge uses native script enqueue API after consent' );
+check( wp_script_is( 'craf-appna-notifications', 'enqueued' ), 'Bridge uses native script enqueue API when sending is On' );
 $bridge = wp_scripts()->registered['craf-appna-notifications'];
 check( strpos( implode( '', (array) ( $bridge->extra['before'] ?? [] ) ), 'crafAppnaNotifications' ) !== false, 'Bridge config is attached as inline script data' );
 Events::emit(
@@ -441,6 +456,8 @@ Events::emit(
         'id' => 'ui-withdraw',
     ]
 );
+$old_epoch = Events::delivery_epoch();
+
 $_POST = [
     'craf_appna_save_notifications' => '1',
     '_wpnonce'                      => wp_create_nonce( 'craf_appna_notifications' ),
@@ -450,7 +467,24 @@ $_REQUEST = $_POST;
 ob_start();
 $provider->settings_page();
 ob_end_clean();
-check( ! Events::allowed() && ! $event_queue->is_queued(), 'Native settings withdrawal cancels pending work' );
+check( ! Events::allowed() && ! $event_queue->is_queued() && Events::delivery_epoch() !== $old_epoch, 'Saving Off cancels pending work and invalidates its delivery epoch' );
+$_POST    = [];
+$_REQUEST = [];
+ob_start();
+$provider->settings_page();
+$html = ob_get_clean();
+check( strpos( $html, 'name="craf_appna_notifications_enabled" value="1"  checked=' ) === false, 'Saved sending opt-out stays off when the settings page is reopened' );
+$_POST = [
+    'craf_appna_save_notifications'    => '1',
+    'craf_appna_notifications_enabled' => '1',
+    '_wpnonce'                         => wp_create_nonce( 'craf_appna_notifications' ),
+];
+// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Synthetic input is verified by the actual settings callback.
+$_REQUEST = $_POST;
+ob_start();
+$provider->settings_page();
+$html = ob_get_clean();
+check( strpos( $html, 'name="craf_appna_notifications_enabled" value="1"  checked=' ) !== false && Events::allowed(), 'Saving On resumes sending without a sharing checkbox' );
 $_POST    = [];
 $_REQUEST = [];
 // Explicit uninstall removes only this plugin's persistence and scheduled work.
@@ -459,12 +493,7 @@ $core_sessions = get_user_meta( $user, 'session_tokens', true );
 $core_roles    = get_user_meta( $user, $wpdb->prefix . 'capabilities', true );
 update_option( 'other_plugin_fixture', 'keep' );
 wp_schedule_single_event( time() + 120, 'other_plugin_fixture_cron' );
-update_option(
-    'craf_appna_notification_consent', [
-        'version' => 1,
-        'epoch'   => 'uninstall',
-    ]
-);
+update_option( 'craf_appna_notification_epoch', 'uninstall' );
 update_option( 'craf_appna_notifications_enabled', 'yes' );
 Events::emit(
     'custom.created', [], [
@@ -474,15 +503,17 @@ Events::emit(
 $event_queue->dispatch();
 define( 'WP_UNINSTALL_PLUGIN', $appna_test_plugin_dir . '/appnatively.php' );
 require $appna_test_plugin_dir . '/uninstall.php';
+check( get_option( 'craf_appna_notification_epoch', null ) === null, 'Uninstall removes the delivery epoch' );
 check( $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $wpdb->prefix . 'craf_appna_event_bindings' ) ) === null, 'Uninstall removes encrypted bindings table' );
 check( ! $wpdb->get_col( "SELECT option_name FROM {$wpdb->options} WHERE option_name LIKE 'craf_appna_nq_%'" ), 'Uninstall removes queue batches and retry state' );
 check( get_option( 'other_plugin_fixture' ) === 'keep' && wp_next_scheduled( 'other_plugin_fixture_cron' ), 'Uninstall preserves other plugin settings and cron' );
 check( get_user_meta( $user, 'session_tokens', true ) === $core_sessions && get_user_meta( $user, $wpdb->prefix . 'capabilities', true ) === $core_roles, 'Uninstall preserves native cookie sessions and roles' );
 $result = [
-    'checks'    => $checks,
-    'wordpress' => $GLOBALS['wp_version'],
-    'php'       => PHP_VERSION,
-    'mysql'     => $connection->server_info,
+    'query_profiles' => $appna_profiles,
+    'checks'         => $checks,
+    'wordpress'      => $GLOBALS['wp_version'],
+    'php'            => PHP_VERSION,
+    'mysql'          => $connection->server_info,
 ];
 file_put_contents( dirname( $socket ) . '/native-result-' . gmdate( 'Ymd-His' ) . '.json', wp_json_encode( $result ) );
 echo "PASS: {$checks} native WordPress/MySQL integration checks\n";

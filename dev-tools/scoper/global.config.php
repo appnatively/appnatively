@@ -16,6 +16,7 @@ return [
     //
     // For more see: https://github.com/humbug/php-scoper/blob/master/docs/configuration.md#patchers
     'patchers'                => [
+        require __DIR__ . '/patches/database-blueprint.php',
         static function ( string $file_path, string $prefix, string $contents ): string {
             $excluded_alias_classes = [ 
                 'wp-async-request.php', 

@@ -126,7 +126,12 @@ abstract class ProductCatalog extends Catalog {
             'price' => new RangeFacet( __( 'Price', 'appnatively' ), $this->price_min_sql(), $this->price_max_sql(), $this->price_divisor() ),
         ];
         if ( $this->rating_sql() && $this->rated_sql() ) {
-            $ranges['rating'] = new RangeFacet( __( 'Rating', 'appnatively' ), $this->rating_sql(), $this->rating_sql(), 1, [ 0, 5 ], $this->rated_sql() );
+            $ranges['rating'] = new RangeFacet(
+                __( 'Rating', 'appnatively' ), $this->rating_sql(), $this->rating_sql(), 1, [
+                    0,
+                    5
+                ], $this->rated_sql()
+            );
         }
         return $ranges;
     }
@@ -136,8 +141,14 @@ abstract class ProductCatalog extends Catalog {
             'availability' => [
                 'label'   => __( 'Availability', 'appnatively' ),
                 'options' => [
-                    'in_stock' => [ __( 'In stock', 'appnatively' ), $this->in_stock_sql() ],
-                    'on_sale'  => [ __( 'On sale', 'appnatively' ), $this->on_sale_sql() ],
+                    'in_stock' => [
+                        __( 'In stock', 'appnatively' ),
+                        $this->in_stock_sql()
+                    ],
+                    'on_sale'  => [
+                        __( 'On sale', 'appnatively' ),
+                        $this->on_sale_sql()
+                    ],
                 ],
             ],
         ];

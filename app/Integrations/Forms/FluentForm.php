@@ -3,14 +3,15 @@
 namespace Crafium\AppNatively\App\Integrations\Forms;
 
 defined( "ABSPATH" ) || exit;
-
 use Crafium\AppNatively\App\DTO\Forms\FormDTO;
 use Crafium\AppNatively\App\DTO\Forms\FormFieldDTO;
-use Crafium\AppNatively\WpMVC\Helpers\Helpers;
+use Crafium\AppNatively\App\Support\ClientAddress;
+use Crafium\AppNatively\WpMVC\Exceptions\Exception;
 use Crafium\AppNatively\WpMVC\RequestValidator\Request;
-
 class FluentForm extends Form
 {
+    use Concerns\BuildsFieldValidation;
+
     public function get_key(): string {
         return 'fluentform';
     }
@@ -27,13 +28,10 @@ class FluentForm extends Form
         if ( ! $form ) {
             return [];
         }
-
         $form_array = is_array( $form ) ? $form : ( method_exists( $form, 'toArray' ) ? $form->toArray() : (array) $form );
-
         if ( 'published' !== ( $form_array['status'] ?? '' ) ) {
             return [];
         }
-
         return $form_array;
     }
 
@@ -49,9 +47,8 @@ class FluentForm extends Form
             'rating'           => 'ratings',
             'date_time_picker' => 'input_date',
             'password'         => 'input_password',
-            'gdpr_agreement'   => 'gdpr',
+            'gdpr_agreement'   => 'gdpr'
         ];
-
         $key = array_search( $type, $map, true );
         return false !== $key ? $key : null;
     }
@@ -68,7 +65,6 @@ class FluentForm extends Form
     private function get_base_rules( array $field ): array {
         $field_rules      = [];
         $validation_rules = isset( $field['settings']['validation_rules'] ) ? $field['settings']['validation_rules'] : [];
-
         foreach ( $validation_rules as $rule_key => $rule_config ) {
             if ( ! empty( $rule_config['value'] ) ) {
                 if ( 'required' === $rule_key ) {
@@ -86,11 +82,9 @@ class FluentForm extends Form
                 }
             }
         }
-
-        if ( ( isset( $field['required'] ) && $field['required'] ) || ( isset( $field['settings']['required'] ) && $field['settings']['required'] ) ) {
+        if ( isset( $field['required'] ) && $field['required'] || isset( $field['settings']['required'] ) && $field['settings']['required'] ) {
             $field_rules[] = 'required';
         }
-
         return $field_rules;
     }
 
@@ -148,35 +142,24 @@ class FluentForm extends Form
         return $this->get_base_rules( $field );
     }
 
-    private function get_gdpr_rules( array $field ): array {
-        // GDPR consent must always be affirmatively given, regardless of whether the
-        // plugin author happened to mark the field "required" in the form builder.
-        return [ 'integer', 'in:1', 'required' ];
-    }
-
     protected function get_validation_rules( array $form ): array {
         $form_fields = $this->get_form_fields_array( $form );
         if ( empty( $form_fields['fields'] ) ) {
             return [];
         }
-
         $flattened_fields = $this->extract_fluentform_fields( $form_fields['fields'] );
         $rules            = [];
-
         foreach ( $flattened_fields as $field ) {
             $field_name = $field['attributes']['name'] ?? $field['name'] ?? '';
             if ( ! $field_name ) {
                 continue;
             }
-
             $element_type = $field['element'] ?? '';
             $mapped_type  = $this->map_field_type( $element_type );
             if ( ! $mapped_type ) {
                 continue;
             }
-
             $field_rules = [];
-
             switch ( $mapped_type ) {
                 case 'text':
                     $field_rules = $this->get_text_rules( $field );
@@ -220,12 +203,10 @@ class FluentForm extends Form
                 default:
                     continue 2;
             }
-
             if ( ! empty( $field_rules ) ) {
                 $rules[$field_name] = implode( '|', array_unique( $field_rules ) );
             }
         }
-
         return $rules;
     }
 
@@ -234,40 +215,33 @@ class FluentForm extends Form
         if ( empty( $form_fields['fields'] ) ) {
             return [];
         }
-
         $flattened_fields = $this->extract_fluentform_fields( $form_fields['fields'] );
         $default_messages = [];
         if ( class_exists( '\FluentForm\App\Helpers\Helper' ) && method_exists( '\FluentForm\App\Helpers\Helper', 'getAllGlobalDefaultMessages' ) ) {
             $default_messages = \FluentForm\App\Helpers\Helper::getAllGlobalDefaultMessages();
         }
-        $messages = [];
-
+        $messages        = [];
         $resolve_message = function ( array $rule, string $rule_key, string $fallback ) use ( $default_messages ): string {
             if ( ! empty( $rule['global'] ) ) {
-                return $rule['global_message'] ?? ( $default_messages[$rule_key] ?? $fallback );
+                return $rule['global_message'] ?? $default_messages[$rule_key] ?? $fallback;
             }
-            return $rule['message'] ?? ( $default_messages[$rule_key] ?? $fallback );
+            return $rule['message'] ?? $default_messages[$rule_key] ?? $fallback;
         };
-
         foreach ( $flattened_fields as $field ) {
             $field_name = $field['attributes']['name'] ?? $field['name'] ?? '';
             if ( ! $field_name ) {
                 continue;
             }
-
             $element_type = $field['element'] ?? '';
             $mapped_type  = $this->map_field_type( $element_type );
             if ( ! $mapped_type ) {
                 continue;
             }
-
             $validation_rules = $field['settings']['validation_rules'] ?? [];
-
-            $is_required = $mapped_type === 'gdpr' || ! empty( $validation_rules['required']['value'] );
+            $is_required      = $mapped_type === 'gdpr' || ! empty( $validation_rules['required']['value'] );
             if ( $is_required ) {
                 $messages["{$field_name}.required"] = $resolve_message( $validation_rules['required'] ?? [], 'required', 'This field is required' );
             }
-
             switch ( $mapped_type ) {
                 case 'email':
                     if ( ! empty( $validation_rules['email']['value'] ) ) {
@@ -299,7 +273,6 @@ class FluentForm extends Form
                     break;
             }
         }
-
         return $messages;
     }
 
@@ -330,20 +303,16 @@ class FluentForm extends Form
         if ( empty( $form_fields['fields'] ) ) {
             return;
         }
-
         $flattened_fields = $this->extract_fluentform_fields( $form_fields['fields'] );
-
         foreach ( $flattened_fields as $field ) {
             $element_type = $field['element'] ?? '';
             if ( $element_type !== 'gdpr_agreement' ) {
                 continue;
             }
-
             $field_name = $field['attributes']['name'] ?? $field['name'] ?? '';
             if ( ! $field_name ) {
                 continue;
             }
-
             $value = $request->get_param( $field_name );
             if ( $value !== null ) {
                 $request->set_param( $field_name, (int) $value );
@@ -354,18 +323,15 @@ class FluentForm extends Form
     protected function submit( Request $request, array $form ) {
         $form_fields = $this->get_form_fields_array( $form );
         if ( empty( $form_fields['fields'] ) ) {
-            return;
+            throw new Exception( esc_html__( 'The form definition is unavailable. Please contact the site owner.', 'appnatively' ), 422 );
         }
-
         $flattened_fields = $this->extract_fluentform_fields( $form_fields['fields'] );
         $form_data        = [];
-
         foreach ( $flattened_fields as $field ) {
             $element_type = $field['element'] ?? '';
             if ( ! $this->map_field_type( $element_type ) ) {
                 continue;
             }
-
             $field_name = $field['attributes']['name'] ?? $field['name'] ?? '';
             if ( $field_name ) {
                 $value = $request->get_param( $field_name );
@@ -377,61 +343,108 @@ class FluentForm extends Form
                 }
             }
         }
-
-        // Resolve Client IP
-        $ip = Helpers::get_user_ip_address();
-
-        // Insert using Fluent Forms native models/methods
-        $serial_number = 1;
-        $previous_item = \FluentForm\App\Models\Submission::select( 'serial_number' )
-            ->where( 'form_id', (int) $form['id'] )
-            ->orderBy( 'id', 'DESC' )
-            ->first();
-
-        if ( $previous_item ) {
-            $serial_number = (int) $previous_item->serial_number + 1;
+        // Preserve supplied native nonce and honeypot fields, never synthesize them.
+        // phpcs:ignore WordPress.NamingConventions.ValidHookName.UseUnderscores -- Native Fluent Forms hook.
+        $token_name = apply_filters( 'fluentform/token_protection_name', '__fluent_protection_token_' . (int) $form['id'], (int) $form['id'] );
+        foreach ( ['_fluentform_' . (int) $form['id'] . '_fluentformnonce', '_wp_http_referer', 'ff_form_token', $token_name] as $name ) {
+            $value = $request->get_param( $name );
+            if ( is_string( $value ) ) {
+                $form_data[$name] = $value;
+            }
         }
+        if ( ! class_exists( \FluentForm\App\Services\Form\SubmissionHandlerService::class ) ) {
+            throw new Exception( esc_html__( 'The form submission service is unavailable. Please retry.', 'appnatively' ), 503 );
+        }
+        // Retain the supplied native field, including an empty value. Native
+        // validation owns its enablement and rejection; never mint a substitute.
+        // phpcs:ignore WordPress.NamingConventions.ValidHookName.UseUnderscores -- Native Fluent Forms hook.
+        $honeypot_name  = apply_filters( 'fluentform/honeypot_name', 'item_' . (int) $form['id'] . '__fluent_sf', (int) $form['id'] );
+        $honeypot_value = $request->get_param( $honeypot_name );
+        if ( is_string( $honeypot_value ) ) {
+            $form_data[$honeypot_name] = $honeypot_value;
+        }
+        $skip_captcha = static function ( $disabled, $native_form ) use ( $form ): bool {
+            return (int) $native_form->id === (int) $form['id'] ? true : (bool) $disabled;
+        };
+        // This is the explicitly accepted AppNatively CAPTCHA exception.
+        add_filter( 'fluentform/disable_captcha', $skip_captcha, PHP_INT_MAX, 3 );
+        try {
+            ClientAddress::native(
+                static function ( string $address ) use ( $form_data, $form ): void {
+                    $app       = \FluentForm\Framework\Foundation\App::getInstance();
+                    $ip_hook   = $app->config->get( 'app.hook_prefix' ) . 'user_ip';
+                    $ip_filter = static function ( $ip, $anonymize = false ) use ( $address ): string {
+                        return $anonymize ? wp_privacy_anonymize_ip( $address ) : $address;
+                    };
+                    add_filter( $ip_hook, $ip_filter, PHP_INT_MAX, 2 );
+                    // Some native spam checks use wp_send_json()/wp_die rather
+                    // than exceptions. Keep their rejection in our REST envelope.
+                    $ajax   = static function (): bool { return true;
+                    };
+                    $die    = static function ( $handler ) {
+                        return static function (): void {
+                            $response = json_decode( (string) ob_get_contents(), true );
+                            $errors   = is_array( $response ) ? $response['errors'] ?? [] : [];
+                            // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Native validation errors are JSON data, not HTML output.
+                            throw new Exception( '', $errors ? 422 : 503, null, ['errors' => $errors] );
+                        };
+                    };
+                    $level  = ob_get_level();
+                    $status = http_response_code();
+                    ob_start();
+                    add_filter( 'wp_doing_ajax', $ajax, PHP_INT_MAX );
+                    add_filter( 'wp_die_ajax_handler', $die, PHP_INT_MAX );
+                    try {
+                        $result = ( new \FluentForm\App\Services\Form\SubmissionHandlerService() )->handleSubmission( $form_data, (int) $form['id'] );
+                        if ( ! empty( $result['error'] ) ) {
+                            throw new Exception( esc_html__( 'The form actions could not be completed. Please contact the site owner.', 'appnatively' ), 503 );
+                        }
+                    } finally {
+                        remove_filter( 'wp_die_ajax_handler', $die, PHP_INT_MAX );
+                        remove_filter( 'wp_doing_ajax', $ajax, PHP_INT_MAX );
+                        remove_filter( $ip_hook, $ip_filter, PHP_INT_MAX );
+                        while ( ob_get_level() > $level ) {
+                            ob_end_clean();
+                        }
+                        if ( $status ) {
+                            http_response_code( $status );
+                        }
+                    }
+                }
+            );
+        } catch ( \FluentForm\Framework\Validator\ValidationException $error ) {
+            $status = (int) $error->getCode();
+            // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Native field errors are serialized as JSON; status and cause are not output.
+            throw new Exception( '', $status >= 400 && $status < 500 ? $status : 422, $error, $error->errors() );
+        } finally {
+            remove_filter( 'fluentform/disable_captcha', $skip_captcha, PHP_INT_MAX );
+        }
+    }
 
-        $submission_id = \FluentForm\App\Models\Submission::insertGetId(
-            [
-                'form_id'       => (int) $form['id'],
-                'serial_number' => $serial_number,
-                'response'      => wp_json_encode( $form_data ),
-                'status'        => 'unread',
-                'ip'            => $ip,
-                'user_id'       => is_user_logged_in() ? wp_get_current_user()->ID : null,
-                'created_at'    => current_time( 'mysql' ),
-                'updated_at'    => current_time( 'mysql' ),
-            ]
-        );
-
-        // Insert into wp_fluentform_entry_details using Fluent Forms native service
-        ( new \FluentForm\App\Services\Submission\SubmissionService() )->recordEntryDetails( $submission_id, (int) $form['id'], $form_data );
-
-        // Resolve Form model
-        $form_model = \FluentForm\App\Models\Form::find( (int) $form['id'] );
-
-        // Trigger the submission inserted hook so notifications/feeds run
-        // phpcs:ignore WordPress.NamingConventions.ValidHookName.UseUnderscores, WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- firing Fluent Forms' own hook so its native notifications/feeds run, not defining a hook of our own.
-        do_action( 'fluentform/submission_inserted', $submission_id, $form_data, $form_model ?: (object) $form );
+    /** Native validation handles conditional fields as well as form restrictions. */
+    public function form_submit( Request $request ) {
+        $this->check_rate_limit( (int) $request->get_param( 'form_id' ) );
+        $form = $this->get_form( (int) $request->get_param( 'form_id' ) );
+        if ( ! $form ) {
+            throw new Exception( esc_html__( 'Form not found', 'appnatively' ), 404 );
+        }
+        $this->submit( $request, $form );
     }
 
     public function get_forms(): array {
         // Query Fluent Forms' custom database table directly
-        $forms = wpFluent()->table( 'fluentform_forms' )
-            ->select( ['id', 'title', 'status'] )
-            ->where( 'status', 'published' ) // Filters active forms
-            ->get();
-
+        $forms  = wpFluent()->table( 'fluentform_forms' )->select(
+            [
+                'id',
+                'title',
+                'status'
+            ]
+        )->where( 'status', 'published' )->get();
         $result = [];
-
         foreach ( $forms as $form ) {
             // Map the properties from the custom table object to your DTO
-            $result[] = ( new FormDTO() )->set_id( (int) $form->id )
-                ->set_title( $form->title )
-                ->set_exclude_to_array( ['fields'] );
+            $result[] = ( new FormDTO() )->set_id( (int) $form->id )->set_title( $form->title )->set_exclude_to_array( ['fields'] );
         }
-
         return $result;
     }
 
@@ -450,121 +463,113 @@ class FluentForm extends Form
             'gdpr'           => 'gdpr',
             'input_hidden'   => 'text',
             'textarea'       => 'text',
-            'input_textarea' => 'text',
+            'input_textarea' => 'text'
         ];
-
         return $map[$native_type] ?? null;
     }
 
     protected function map_form_to_dto( array $raw_form, array $fields ): FormDTO {
         $dto = new FormDTO();
-
         if ( in_array( 'id', $fields, true ) ) {
             $dto->set_id( (int) ( $raw_form['id'] ?? 0 ) );
         }
-
         if ( in_array( 'title', $fields, true ) ) {
             $dto->set_title( $raw_form['title'] ?? '' );
         }
-
         if ( in_array( 'fields', $fields, true ) ) {
             $form_fields = $this->get_form_fields_array( $raw_form );
-
             if ( ! empty( $form_fields['fields'] ) ) {
                 $flattened  = $this->extract_fluentform_fields( $form_fields['fields'] );
                 $field_dtos = [];
-
                 foreach ( $flattened as $field ) {
                     $element_type = $field['element'] ?? '';
                     $std_type     = $this->get_standardized_type( $element_type );
-
                     if ( ! $std_type ) {
                         continue;
                     }
-
                     $field_name = $field['attributes']['name'] ?? $field['name'] ?? '';
-
                     if ( ! $field_name ) {
                         continue;
                     }
-
                     $fdto = new FormFieldDTO();
-                    $fdto->set_id( $field_name )
-                        ->set_type( $std_type )
-                        ->set_required( ! empty( $field['settings']['validation_rules']['required']['value'] ) || ! empty( $field['required'] ) )
-                        ->set_label( $field['settings']['label'] ?? $field['label'] ?? '' )
-                        ->set_placeholder( $field['attributes']['placeholder'] ?? '' )
-                        ->set_field_name( $field_name );
-
-                    $options = ! empty( $field['settings']['advanced_options'] )
-                        ? $field['settings']['advanced_options']
-                        : ( $field['options'] ?? [] );
-
+                    $fdto->set_id( $field_name )->set_type( $std_type )->set_required( ! empty( $field['settings']['validation_rules']['required']['value'] ) || ! empty( $field['required'] ) )->set_label( $field['settings']['label'] ?? $field['label'] ?? '' )->set_placeholder( $field['attributes']['placeholder'] ?? '' )->set_field_name( $field_name );
+                    $options = ! empty( $field['settings']['advanced_options'] ) ? $field['settings']['advanced_options'] : $field['options'] ?? [];
                     if ( ! empty( $options ) ) {
                         $items = [];
-
                         foreach ( $options as $key => $option ) {
                             if ( is_string( $option ) ) {
                                 $items[] = [
                                     'id'          => (string) $key,
                                     'optionLabel' => $option,
-                                    'optionValue' => $option,
+                                    'optionValue' => $option
                                 ];
                             } elseif ( is_array( $option ) ) {
                                 $items[] = [
                                     'id'          => isset( $option['id'] ) ? (string) $option['id'] : (string) $key,
                                     'optionLabel' => $option['label'] ?? $option['value'] ?? (string) $key,
-                                    'optionValue' => $option['value'] ?? $option['label'] ?? (string) $key,
+                                    'optionValue' => $option['value'] ?? $option['label'] ?? (string) $key
                                 ];
                             }
                         }
-
                         if ( $items ) {
                             $fdto->set_items( $items );
                         }
                     }
-
                     if ( $std_type === 'number' ) {
-                        $fdto->set_min_value( isset( $field['settings']['validation_rules']['min']['value'] ) ? (float) $field['settings']['validation_rules']['min']['value'] : null )
-                            ->set_max_value( isset( $field['settings']['validation_rules']['max']['value'] ) ? (float) $field['settings']['validation_rules']['max']['value'] : null );
+                        $fdto->set_min_value( isset( $field['settings']['validation_rules']['min']['value'] ) ? (float) $field['settings']['validation_rules']['min']['value'] : null )->set_max_value( isset( $field['settings']['validation_rules']['max']['value'] ) ? (float) $field['settings']['validation_rules']['max']['value'] : null );
                     }
-
                     if ( $std_type === 'rating' ) {
                         $fdto->set_rating_max( 5 );
                     }
-
                     if ( $std_type === 'date_time_picker' ) {
                         $format = $field['settings']['date_format'] ?? 'd/m/Y';
-                        $fdto->set_picker_type( $this->fluentform_date_picker_type( $format ) )
-                            ->set_date_format( $this->flatpickr_to_date_fns_format( $format ) );
+                        $fdto->set_picker_type( $this->fluentform_date_picker_type( $format ) )->set_date_format( $this->flatpickr_to_date_fns_format( $format ) );
                     }
-
                     if ( $std_type === 'text' && ! empty( $field['settings']['validation_rules']['max']['value'] ) ) {
                         $fdto->set_character_limit( (int) $field['settings']['validation_rules']['max']['value'] );
                     }
-
                     $field_dtos[] = $fdto;
                 }
-
                 $dto->set_fields( $field_dtos );
             }
         }
-
         return $dto;
     }
 
     private function fluentform_date_picker_type( string $format ): string {
-        $time_tokens = ['H', 'h', 'G', 'i', 'S', 's', 'K'];
-        $date_tokens = ['d', 'D', 'l', 'j', 'J', 'w', 'W', 'F', 'm', 'n', 'M', 'U', 'Y', 'y', 'Z'];
-
-        $has_time = false;
+        $time_tokens = [
+            'H',
+            'h',
+            'G',
+            'i',
+            'S',
+            's',
+            'K'
+        ];
+        $date_tokens = [
+            'd',
+            'D',
+            'l',
+            'j',
+            'J',
+            'w',
+            'W',
+            'F',
+            'm',
+            'n',
+            'M',
+            'U',
+            'Y',
+            'y',
+            'Z'
+        ];
+        $has_time    = false;
         foreach ( $time_tokens as $t ) {
             if ( strpos( $format, $t ) !== false ) {
                 $has_time = true;
                 break;
             }
         }
-
         $has_date = false;
         foreach ( $date_tokens as $t ) {
             if ( strpos( $format, $t ) !== false ) {
@@ -572,7 +577,6 @@ class FluentForm extends Form
                 break;
             }
         }
-
         if ( $has_time && ! $has_date ) {
             return 'time';
         }
@@ -603,9 +607,8 @@ class FluentForm extends Form
             'S' => 'ss',
             's' => 'ss',
             'K' => 'A',
-            'Z' => 'xxx',
+            'Z' => 'xxx'
         ];
-
         $out = '';
         for ( $k = 0, $len = strlen( $format ); $k < $len; $k++ ) {
             $out .= $map[$format[$k]] ?? $format[$k];

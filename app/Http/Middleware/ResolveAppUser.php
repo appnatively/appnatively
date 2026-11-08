@@ -10,6 +10,7 @@ namespace Crafium\AppNatively\App\Http\Middleware;
 defined( 'ABSPATH' ) || exit;
 
 use Crafium\AppNatively\App\Support\Auth;
+use Crafium\AppNatively\App\Support\AuthorizationStorageException;
 use Crafium\AppNatively\App\Support\Settings;
 use Crafium\AppNatively\WpMVC\Routing\Contracts\Middleware;
 use WP_REST_Request;
@@ -43,7 +44,11 @@ class ResolveAppUser implements Middleware {
 
         // An absent or expired token is not an error here — it just means the
         // caller proceeds as a guest.
-        Auth::authenticate( $wp_rest_request );
+        try {
+            Auth::authenticate( $wp_rest_request );
+        } catch ( AuthorizationStorageException $error ) {
+            return new \WP_Error( 'craf_appna_auth_storage', $error->getMessage(), ['status' => 503] );
+        }
 
         return $next( $wp_rest_request );
     }

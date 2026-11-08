@@ -48,7 +48,8 @@ class SureCart extends Provider {
      *
      * @return void
      */
-    public function register() {}
+    public function register() {
+    }
 
     /**
      * Bootstrap any application services.
@@ -129,13 +130,25 @@ class SureCart extends Provider {
     }
 
     public function cart_discount_apply( ?CartDTO $cart_dto, Request $request ): CartDTO {
-        return $this->cart_manager->cart_discount_apply( $cart_dto, $request ); }
+        return $this->cart_manager->cart_discount_apply( $cart_dto, $request );
+    }
 
     public function cart_discount_remove( ?CartDTO $cart_dto, Request $request ): CartDTO {
-        return $this->cart_manager->cart_discount_remove( $cart_dto, $request ); }
+        return $this->cart_manager->cart_discount_remove( $cart_dto, $request );
+    }
 
     public function product_reviews( ?array $reviews, Request $request ): array {
-        $per_page = (int) ( $request->get_param( 'per_page' ) ?: 10 ); return [ 'current_page' => 1, 'last_page' => 1, 'per_page' => $per_page, 'total' => 0, 'average_rating' => 0, 'review_count' => 0, 'rating_counts' => [], 'items' => [] ]; }
+        $per_page = (int) ( $request->get_param( 'per_page' ) ?: 10 ); return [
+            'current_page'   => 1,
+            'last_page'      => 1,
+            'per_page'       => $per_page,
+            'total'          => 0,
+            'average_rating' => 0,
+            'review_count'   => 0,
+            'rating_counts'  => [],
+            'items'          => []
+        ];
+    }
 
     /**
      * Get products.

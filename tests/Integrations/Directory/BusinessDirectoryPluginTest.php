@@ -46,7 +46,13 @@ class BusinessDirectoryPluginTest extends DirectoryIntegrationTestCase {
 
         // Sticky (featured) listings are kept in the plugin's own table.
         global $wpdb;
-        $wpdb->replace( "{$wpdb->prefix}wpbdp_listings", [ "listing_id" => $source_id, "is_sticky" => 1, "listing_status" => "complete" ] );
+        $wpdb->replace(
+            "{$wpdb->prefix}wpbdp_listings", [
+                "listing_id"     => $source_id,
+                "is_sticky"      => 1,
+                "listing_status" => "complete"
+            ]
+        );
 
         $this->assign_terms( $source_id, $this->category_taxonomy, [$category_id] );
         $this->assign_terms( $source_id, $this->tag_taxonomy, [$tag_id] );

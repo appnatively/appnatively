@@ -76,16 +76,20 @@ class ProductDTO extends DTO {
     private string $date_updated;
 
     public function get_average_rating(): ?float {
-        return $this->average_rating; }
+        return $this->average_rating;
+    }
 
     public function set_average_rating( ?float $value ): self {
-        $this->average_rating = $value; return $this; }
+        $this->average_rating = $value; return $this;
+    }
 
     public function get_rating_count(): ?int {
-        return $this->rating_count; }
+        return $this->rating_count;
+    }
 
     public function set_rating_count( ?int $value ): self {
-        $this->rating_count = $value; return $this; }
+        $this->rating_count = $value; return $this;
+    }
 
     /**
      * Get the value of id.

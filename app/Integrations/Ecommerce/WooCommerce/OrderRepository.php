@@ -9,7 +9,6 @@ use Crafium\AppNatively\App\DTO\Ecommerce\OrderItemDTO;
 use Crafium\AppNatively\App\DTO\Ecommerce\OrderPaginatorDTO;
 use Crafium\AppNatively\App\Integrations\Ecommerce\Concerns\EcommerceIntegrationHelpers;
 use Crafium\AppNatively\WpMVC\RequestValidator\Request;
-use Crafium\AppNatively\WpMVC\Exceptions\Exception;
 
 class OrderRepository {
     use EcommerceIntegrationHelpers;
@@ -23,12 +22,21 @@ class OrderRepository {
      */
     private function resolve_item_product_and_variant_id( ?\WC_Product $product ): array {
         if ( ! $product ) {
-            return [ null, null ];
+            return [
+                null,
+                null
+            ];
         }
         if ( $product->is_type( 'variation' ) ) {
-            return [ $product->get_parent_id(), $product->get_id() ];
+            return [
+                $product->get_parent_id(),
+                $product->get_id()
+            ];
         }
-        return [ $product->get_id(), null ];
+        return [
+            $product->get_id(),
+            null
+        ];
     }
 
     /**
@@ -50,7 +58,10 @@ class OrderRepository {
      * @return array
      */
     private function money( string $amount, string $currency ): array {
-        return [ 'amount' => $amount, 'currencyCode' => $currency ];
+        return [
+            'amount'       => $amount,
+            'currencyCode' => $currency
+        ];
     }
 
     /**
@@ -69,7 +80,7 @@ class OrderRepository {
 
         $status = wc_get_order_statuses();
         unset( $status['wc-checkout-draft'] );
-        
+
         $paginator = wc_get_orders(
             [
                 'customer' => $user_id,
@@ -77,7 +88,7 @@ class OrderRepository {
                 'page'     => $page,
                 'status'   => array_keys( $status ),
                 'paginate' => true,
-            ] 
+            ]
         );
 
         $order_dtos = [];
@@ -162,7 +173,14 @@ class OrderRepository {
 
             if ( $product && $product->is_type( 'variation' ) ) {
                 $variant_title = wc_get_formatted_variation( $product, true );
-                $variant_title = trim( str_replace( [ '(', ')' ], '', $variant_title ) );
+                $variant_title = trim(
+                    str_replace(
+                        [
+                            '(',
+                            ')'
+                        ], '', $variant_title
+                    )
+                );
 
                 // Fallback to item meta if standard variation formatter is empty
                 if ( empty( $variant_title ) ) {
@@ -222,7 +240,7 @@ class OrderRepository {
                     'country'   => $shipping['country'],
                 ],
                 'lineItems'          => $line_items,
-            ] 
+            ]
         );
     }
 }

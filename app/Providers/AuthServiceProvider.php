@@ -5,6 +5,9 @@ namespace Crafium\AppNatively\App\Providers;
 defined( "ABSPATH" ) || exit;
 
 use Crafium\AppNatively\App\Support\Auth;
+use Crafium\AppNatively\App\Support\AuthorizationStorageException;
+use Crafium\AppNatively\App\Support\CheckoutHandoff;
+use Crafium\AppNatively\App\Support\Settings;
 use Crafium\AppNatively\WpMVC\Contracts\Provider;
 use WP_User;
 
@@ -14,7 +17,8 @@ class AuthServiceProvider extends Provider {
      *
      * @return void
      */
-    public function register() {}
+    public function register() {
+    }
 
     /**
      * Bootstrap any application services.
@@ -24,6 +28,20 @@ class AuthServiceProvider extends Provider {
     public function boot() {
         // Autologin handler for web checkout
         add_action( 'init', [$this, 'handle_autologin'] );
+        add_filter( 'sanitize_option_' . Settings::OPTION_ENABLED, [CheckoutHandoff::class, 'prepare_api_value'] );
+        add_action(
+            'delete_option_' . Settings::OPTION_ENABLED, static function (): void {
+                CheckoutHandoff::prepare_api_value( 'yes' );
+            }
+        );
+        add_action( CheckoutHandoff::CLEANUP_HOOK, [CheckoutHandoff::class, 'cleanup'] );
+        add_action(
+            'init', static function (): void {
+                if ( ! wp_next_scheduled( CheckoutHandoff::CLEANUP_HOOK ) ) {
+                    wp_schedule_event( time() + HOUR_IN_SECONDS, 'hourly', CheckoutHandoff::CLEANUP_HOOK );
+                }
+            }
+        );
 
         // A credential change has to invalidate app tokens too. Without these,
         // "change your password to lock them out" would not work: WordPress
@@ -44,31 +62,20 @@ class AuthServiceProvider extends Provider {
         }
 
         // phpcs:ignore WordPress.Security.NonceVerification.Recommended
-        $token         = sanitize_text_field( wp_unslash( $_GET['craf_appna_token'] ) );
-        $transient_key = 'craf_appna_autologin_' . hash( 'sha256', $token );
-
-        $payload = get_transient( $transient_key );
-
-        if ( empty( $payload ) || ! is_array( $payload ) || empty( $payload['user_id'] ) ) {
+        $token = sanitize_text_field( wp_unslash( $_GET['craf_appna_token'] ) );
+        try {
+            $redeemed = CheckoutHandoff::redeem(
+                $token, static function ( int $user ): void {
+                    wp_set_auth_cookie( $user );
+                }
+            );
+        } catch ( AuthorizationStorageException $error ) {
+            error_log( 'AppNatively checkout authorization unavailable.' );
             return;
         }
-
-        // One-time use: consume the token before acting on it, so a failed
-        // redemption cannot be retried and a successful one cannot be replayed.
-        //
-        // Deliberately not bound to the requesting client. This hand-off is
-        // from the app's native HTTP stack to a WebView, which are two
-        // different user agents on every platform — and a phone can change IP
-        // between the two calls. Any such binding refuses the legitimate case
-        // it was meant to protect. What limits exposure is the short lifetime
-        // and the single use, both enforced above.
-        delete_transient( $transient_key );
-
-        if ( ! get_userdata( (int) $payload['user_id'] ) instanceof WP_User ) {
+        if ( ! $redeemed ) {
             return;
         }
-
-        wp_set_auth_cookie( (int) $payload['user_id'] );
         wp_safe_redirect( remove_query_arg( 'craf_appna_token' ) );
         exit;
     }

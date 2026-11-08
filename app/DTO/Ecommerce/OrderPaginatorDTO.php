@@ -8,7 +8,7 @@ use Crafium\AppNatively\App\DTO\PaginatorDTO;
 
 /**
  * Class OrderPaginatorDTO
- * 
+ *
  * Data transfer object for paginated orders.
  */
 class OrderPaginatorDTO extends PaginatorDTO {

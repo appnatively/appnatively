@@ -15,7 +15,12 @@ final class Field {
     public const TYPE_BOOLEAN = 'boolean';
 
     /** How a checked true/false field may be stored. */
-    public const TRUTHY_VALUES = [ '1', 'true', 'yes', 'on' ];
+    public const TRUTHY_VALUES = [
+        '1',
+        'true',
+        'yes',
+        'on'
+    ];
 
     public string $label;
 

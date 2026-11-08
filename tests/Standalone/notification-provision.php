@@ -48,17 +48,16 @@ function owner( $payload, $key = 'owner-key' ) {
 
 check( $route['permission_callback']( owner( $payload ) ) === true, 'Owner key authenticates' );
 check( $route['permission_callback']( owner( $payload, 'mobile-token' ) ) instanceof WP_Error, 'Mobile token cannot provision' );
-$consent = get_option( 'craf_appna_notification_consent' );
-delete_option( 'craf_appna_notification_consent' );
-check( $route['callback']( owner( $payload ) ) instanceof WP_Error && ! $requests, 'No pairing HTTP without separate acknowledgement' );
-update_option( 'craf_appna_notification_consent', $consent );
+update_option( 'craf_appna_notifications_enabled', 'no' );
+check( $route['callback']( owner( $payload ) ) instanceof WP_Error && ! $requests, 'Sending Off blocks pairing HTTP' );
+delete_option( 'craf_appna_notifications_enabled' );
 $reply_body = '{"paired":true}';
 $result     = $route['callback']( owner( $payload ) );
 check(
     $result->data === [
         'accepted' => true,
         'status'   => 'ready',
-    ], 'Signed pairing completes within owner request'
+    ], 'Default On permits signed pairing without a separate sharing acknowledgement'
 );
 check( count( $requests ) === 1 && ! $loopbacks, 'Pairing does not dispatch queue work' );
 $route['callback']( owner( $payload ) );

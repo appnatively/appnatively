@@ -50,9 +50,18 @@ class EverestFormTest extends \WP_UnitTestCase {
                 'label'    => 'Dropdown',
                 'meta-key' => 'dropdown_9842',
                 'choices'  => [
-                    '1' => [ 'label' => 'Option 1', 'value' => '' ],
-                    '2' => [ 'label' => 'Option 2', 'value' => '' ],
-                    '3' => [ 'label' => 'Option 3', 'value' => '' ],
+                    '1' => [
+                        'label' => 'Option 1',
+                        'value' => ''
+                    ],
+                    '2' => [
+                        'label' => 'Option 2',
+                        'value' => ''
+                    ],
+                    '3' => [
+                        'label' => 'Option 3',
+                        'value' => ''
+                    ],
                 ],
             ],
             'mQbOUy0F6w-14' => [
@@ -63,9 +72,18 @@ class EverestFormTest extends \WP_UnitTestCase {
                 'required_field_message_setting' => 'individual',
                 'required-field-message'         => '',
                 'choices'                        => [
-                    '1' => [ 'label' => 'Option 1', 'value' => '' ],
-                    '2' => [ 'label' => 'Option 2', 'value' => '' ],
-                    '3' => [ 'label' => 'Option 3', 'value' => '' ],
+                    '1' => [
+                        'label' => 'Option 1',
+                        'value' => ''
+                    ],
+                    '2' => [
+                        'label' => 'Option 2',
+                        'value' => ''
+                    ],
+                    '3' => [
+                        'label' => 'Option 3',
+                        'value' => ''
+                    ],
                 ],
             ],
             'UST3f9qmZk-6'  => [
@@ -73,9 +91,18 @@ class EverestFormTest extends \WP_UnitTestCase {
                 'label'    => 'Checkboxes',
                 'meta-key' => 'checkboxes_1335',
                 'choices'  => [
-                    '1' => [ 'label' => 'First Choice', 'value' => '' ],
-                    '2' => [ 'label' => 'Second Choice', 'value' => '' ],
-                    '3' => [ 'label' => 'Third Choice', 'value' => '' ],
+                    '1' => [
+                        'label' => 'First Choice',
+                        'value' => ''
+                    ],
+                    '2' => [
+                        'label' => 'Second Choice',
+                        'value' => ''
+                    ],
+                    '3' => [
+                        'label' => 'Third Choice',
+                        'value' => ''
+                    ],
                 ],
             ],
             'v1rWdbPGpV-15' => [
@@ -84,9 +111,18 @@ class EverestFormTest extends \WP_UnitTestCase {
                 'meta-key' => 'checkboxes_8940',
                 'required' => '1',
                 'choices'  => [
-                    '1' => [ 'label' => 'First Choice', 'value' => '' ],
-                    '2' => [ 'label' => 'Second Choice', 'value' => '' ],
-                    '3' => [ 'label' => 'Third Choice', 'value' => '' ],
+                    '1' => [
+                        'label' => 'First Choice',
+                        'value' => ''
+                    ],
+                    '2' => [
+                        'label' => 'Second Choice',
+                        'value' => ''
+                    ],
+                    '3' => [
+                        'label' => 'Third Choice',
+                        'value' => ''
+                    ],
                 ],
             ],
             'FHUAMGRzaT-5'  => [
@@ -94,9 +130,18 @@ class EverestFormTest extends \WP_UnitTestCase {
                 'label'    => 'Multiple Choice',
                 'meta-key' => 'multiple_choice_2954',
                 'choices'  => [
-                    '1' => [ 'label' => 'First Choice', 'value' => '' ],
-                    '2' => [ 'label' => 'Second Choice', 'value' => '' ],
-                    '3' => [ 'label' => 'Third Choice', 'value' => '' ],
+                    '1' => [
+                        'label' => 'First Choice',
+                        'value' => ''
+                    ],
+                    '2' => [
+                        'label' => 'Second Choice',
+                        'value' => ''
+                    ],
+                    '3' => [
+                        'label' => 'Third Choice',
+                        'value' => ''
+                    ],
                 ],
             ],
             'XmIh8nzwe4-16' => [
@@ -105,9 +150,18 @@ class EverestFormTest extends \WP_UnitTestCase {
                 'meta-key' => 'multiple_choice_1576',
                 'required' => '1',
                 'choices'  => [
-                    '1' => [ 'label' => 'First Choice', 'value' => '' ],
-                    '2' => [ 'label' => 'Second Choice', 'value' => '' ],
-                    '3' => [ 'label' => 'Third Choice', 'value' => '' ],
+                    '1' => [
+                        'label' => 'First Choice',
+                        'value' => ''
+                    ],
+                    '2' => [
+                        'label' => 'Second Choice',
+                        'value' => ''
+                    ],
+                    '3' => [
+                        'label' => 'Third Choice',
+                        'value' => ''
+                    ],
                 ],
             ],
             'WiZGBhNssO-7'  => [
@@ -244,7 +298,12 @@ class EverestFormTest extends \WP_UnitTestCase {
     }
 
     public function test_get_form_excludes_unpublished_form() {
-        wp_update_post( [ 'ID' => $this->form_id, 'post_status' => 'draft' ] );
+        wp_update_post(
+            [
+                'ID'          => $this->form_id,
+                'post_status' => 'draft'
+            ]
+        );
 
         $everest_forms = $this->get_integration_instance();
         $form          = $everest_forms->expose_get_form( $this->form_id );
@@ -257,16 +316,26 @@ class EverestFormTest extends \WP_UnitTestCase {
         $rules         = $everest_forms->expose_get_validation_rules( $form );
 
         $expected_fields = [
-            '0gsjC51pek-3', 'eX3iOwO3vg-13',
-            'gl1gQOZ2dd-4', 'mQbOUy0F6w-14',
-            'UST3f9qmZk-6', 'v1rWdbPGpV-15',
-            'FHUAMGRzaT-5', 'XmIh8nzwe4-16',
-            'WiZGBhNssO-7', 'YnteIVe13J-17',
-            'CeHcz7jOas-8', '1KWUlhxh9H-18',
-            '6Fzj4kTYzw-9', 'kTb0IUqnKv-19',
-            'Qo2xfJg9ph-10', 'fH9DjoVkli-20',
-            'xNu1qlS13M-12', '7b4xw1QrFk-21',
-            'lW5oxHEnfK-11', 'Wrvcw6q9J7-22',
+            '0gsjC51pek-3',
+            'eX3iOwO3vg-13',
+            'gl1gQOZ2dd-4',
+            'mQbOUy0F6w-14',
+            'UST3f9qmZk-6',
+            'v1rWdbPGpV-15',
+            'FHUAMGRzaT-5',
+            'XmIh8nzwe4-16',
+            'WiZGBhNssO-7',
+            'YnteIVe13J-17',
+            'CeHcz7jOas-8',
+            '1KWUlhxh9H-18',
+            '6Fzj4kTYzw-9',
+            'kTb0IUqnKv-19',
+            'Qo2xfJg9ph-10',
+            'fH9DjoVkli-20',
+            'xNu1qlS13M-12',
+            '7b4xw1QrFk-21',
+            'lW5oxHEnfK-11',
+            'Wrvcw6q9J7-22',
         ];
 
         foreach ( $expected_fields as $field ) {
@@ -455,7 +524,12 @@ class EverestFormTest extends \WP_UnitTestCase {
         $wp_request->set_param( 'kTb0IUqnKv-19', 'https://example.com' );
         $wp_request->set_param( 'YnteIVe13J-17', '25' );
         $wp_request->set_param( 'XmIh8nzwe4-16', 'First Choice' );
-        $wp_request->set_param( 'v1rWdbPGpV-15', [ 'First Choice', 'Second Choice' ] );
+        $wp_request->set_param(
+            'v1rWdbPGpV-15', [
+                'First Choice',
+                'Second Choice'
+            ]
+        );
         $wp_request->set_param( 'mQbOUy0F6w-14', 'Option 1' );
         $wp_request->set_param( 'fH9DjoVkli-20', '2024-01-15' );
         $wp_request->set_param( 'Wrvcw6q9J7-22', '4' );
@@ -487,7 +561,12 @@ class EverestFormTest extends \WP_UnitTestCase {
         $this->assertSame( 'First Choice', $captured_fields['XmIh8nzwe4-16']['value'] );
         $this->assertSame( 'Option 1', $captured_fields['mQbOUy0F6w-14']['value'] );
         $this->assertSame( '2024-01-15', $captured_fields['fH9DjoVkli-20']['value'] );
-        $this->assertEqualsCanonicalizing( [ 'First Choice', 'Second Choice' ], $captured_fields['v1rWdbPGpV-15']['value'] );
+        $this->assertEqualsCanonicalizing(
+            [
+                'First Choice',
+                'Second Choice'
+            ], $captured_fields['v1rWdbPGpV-15']['value']
+        );
 
         // Rating is stored as an array.
         $this->assertIsArray( $captured_fields['Wrvcw6q9J7-22']['value'] );

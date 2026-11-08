@@ -3,7 +3,6 @@
 namespace Crafium\AppNatively\App\Integrations\Directory;
 
 defined( "ABSPATH" ) || exit;
-
 use Crafium\AppNatively\App\DTO\Directory\CategoryDTO;
 use Crafium\AppNatively\App\DTO\Directory\CategoryPaginatorDTO;
 use Crafium\AppNatively\App\DTO\Directory\ListingDTO;
@@ -18,19 +17,19 @@ use Crafium\AppNatively\WpMVC\RequestValidator\Request;
 use WP_Comment;
 use WP_Post;
 use WP_Query;
-
-class ADirectory extends Provider {
+class ADirectory extends Provider
+{
     use ListingIntegrationHelpers;
 
     private ?ADirectoryCatalog $catalog = null;
 
-    public function register() {}
+    public function register() {
+    }
 
     public function boot(): void {
         if ( ! $this->is_loaded() ) {
             return;
         }
-
         $this->register_listing_hooks( "adirectory" );
         add_filter( "craf_appna_directory_adirectory_listing", [$this, "listing"], 10, 3 );
         add_filter( "craf_appna_directory_adirectory_related_listings", [$this, "related_listings"], 10, 3 );
@@ -52,16 +51,13 @@ class ADirectory extends Provider {
         $page       = (int) $request->get_param( "page" ) ?: 1;
         $per_page   = (int) $request->get_param( "per_page" ) ?: 10;
         $post       = $this->get_listing_post( $listing_id );
-
         if ( ! $post || ! taxonomy_exists( $this->catalog()->category_taxonomy() ) ) {
             return new ListingPaginatorDTO( $page, $per_page, 0, 1, [] );
         }
-
         $category_ids = wp_get_post_terms( $listing_id, $this->catalog()->category_taxonomy(), ["fields" => "ids"] );
         if ( is_wp_error( $category_ids ) || empty( $category_ids ) ) {
             return new ListingPaginatorDTO( $page, $per_page, 0, 1, [] );
         }
-
         $query = new WP_Query(
             [
                 "post_type"      => $this->post_types(),
@@ -69,38 +65,33 @@ class ADirectory extends Provider {
                 "has_password"   => false,
                 "paged"          => $page,
                 "posts_per_page" => $per_page,
-                //phpcs:ignore WordPressVIPMinimum.Performance.WPQueryParams.PostNotIn_post__not_in -- small, bounded exclusion of the current listing from its own "related" query.
+            //phpcs:ignore WordPressVIPMinimum.Performance.WPQueryParams.PostNotIn_post__not_in -- small, bounded exclusion of the current listing from its own "related" query.
                 "post__not_in"   => [$listing_id],
-                //phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_tax_query -- filtering listings by taxonomy is the point of this query.
-                "tax_query"      => [
-                    [
-                        "taxonomy" => $this->catalog()->category_taxonomy(),
-                        "field"    => "term_id",
-                        "terms"    => array_map( "intval", $category_ids ),
-                    ],
+            //phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_tax_query -- filtering listings by taxonomy is the point of this query.
+                "tax_query"      => [[
+                    "taxonomy" => $this->catalog()->category_taxonomy(),
+                    "field"    => "term_id",
+                    "terms"    => array_map( "intval", $category_ids )
+                ]
                 ],
                 "orderby"        => "date",
                 "order"          => "DESC",
             ]
         );
-
         $items = [];
         foreach ( $query->posts as $post ) {
             if ( $post instanceof WP_Post ) {
                 $items[] = $this->map_listing_to_dto( $post, $fields );
             }
         }
-
         return new ListingPaginatorDTO( $page, $per_page, (int) $query->found_posts, max( 1, (int) $query->max_num_pages ), $items );
     }
 
     public function reviews( ?array $reviews, Request $request ): ?array {
         $listing_id = (int) craf_appna_route_param( $request, "id" );
-
         if ( ! $this->get_listing_post( $listing_id ) ) {
             return null;
         }
-
         return $this->query_comment_reviews( $listing_id, $request );
     }
 
@@ -110,7 +101,7 @@ class ADirectory extends Provider {
 
     public function category( ?CategoryDTO $category, Request $request, array $fields = [] ): ?CategoryDTO {
         $term = get_term( (int) craf_appna_route_param( $request, "id" ), $this->catalog()->category_taxonomy() );
-        return ( $term && ! is_wp_error( $term ) ) ? $this->map_category_to_dto( $term, $fields ) : null;
+        return $term && ! is_wp_error( $term ) ? $this->map_category_to_dto( $term, $fields ) : null;
     }
 
     public function tags( ?TermPaginatorDTO $tag_paginator, Request $request, array $fields = [] ): TermPaginatorDTO {
@@ -123,7 +114,7 @@ class ADirectory extends Provider {
 
     public function location( ?TermDTO $location, Request $request, array $fields = [] ): ?TermDTO {
         $term = get_term( (int) craf_appna_route_param( $request, "id" ), (string) $this->catalog()->location_taxonomy() );
-        return ( $term && ! is_wp_error( $term ) ) ? $this->map_term_to_dto( $term, $fields ) : null;
+        return $term && ! is_wp_error( $term ) ? $this->map_term_to_dto( $term, $fields ) : null;
     }
 
     protected function catalog(): ListingCatalog {
@@ -143,13 +134,11 @@ class ADirectory extends Provider {
         if ( ! $post instanceof WP_Post || ! in_array( $post->post_type, $this->post_types(), true ) || "publish" !== $post->post_status || craf_appna_is_post_password_protected( $post ) ) {
             return null;
         }
-
         return $post;
     }
 
     private function map_listing_to_dto( WP_Post $post, array $fields ): ListingDTO {
         $dto = new ListingDTO();
-
         if ( in_array( "id", $fields, true ) ) {
             $dto->set_id( (int) $post->ID );
         }
@@ -215,7 +204,7 @@ class ADirectory extends Provider {
                 [
                     "price"       => $this->meta( $post->ID, "_price" ),
                     "price_type"  => $this->meta( $post->ID, "_price_type" ),
-                    "price_range" => $this->meta( $post->ID, "_price_range" ),
+                    "price_range" => $this->meta( $post->ID, "_price_range" )
                 ]
             );
         }
@@ -233,7 +222,6 @@ class ADirectory extends Provider {
         }
         if ( in_array( "review_count", $fields, true ) || in_array( "rating_count", $fields, true ) ) {
             $review_count = $this->get_listing_review_count( (int) $post->ID );
-
             if ( in_array( "review_count", $fields, true ) ) {
                 $dto->set_review_count( $review_count );
             }
@@ -241,7 +229,6 @@ class ADirectory extends Provider {
                 $dto->set_rating_count( $review_count );
             }
         }
-
         return $dto;
     }
 
@@ -253,77 +240,73 @@ class ADirectory extends Provider {
     private function query_categories( Request $request, array $fields ): CategoryPaginatorDTO {
         $page     = (int) $request->get_param( "page" ) ?: 1;
         $per_page = (int) $request->get_param( "per_page" ) ?: 10;
-
         if ( ! taxonomy_exists( $this->catalog()->category_taxonomy() ) ) {
             return new CategoryPaginatorDTO( $page, $per_page, 0, 1, [] );
         }
-
         $terms = $this->get_terms_page( $this->catalog()->category_taxonomy(), $request, $page, $per_page );
         $items = [];
         foreach ( $terms["items"] as $term ) {
             $items[] = $this->map_category_to_dto( $term, $fields );
         }
-
         return new CategoryPaginatorDTO( $page, $per_page, $terms["total"], $terms["last_page"], $items );
     }
 
     private function query_terms( string $taxonomy, Request $request, array $fields ): TermPaginatorDTO {
         $page     = (int) $request->get_param( "page" ) ?: 1;
         $per_page = (int) $request->get_param( "per_page" ) ?: 10;
-
         if ( ! taxonomy_exists( $taxonomy ) ) {
             return new TermPaginatorDTO( $page, $per_page, 0, 1, [] );
         }
-
         $terms = $this->get_terms_page( $taxonomy, $request, $page, $per_page );
         $items = [];
         foreach ( $terms["items"] as $term ) {
             $items[] = $this->map_term_to_dto( $term, $fields );
         }
-
         return new TermPaginatorDTO( $page, $per_page, $terms["total"], $terms["last_page"], $items );
     }
 
     private function get_terms_page( string $taxonomy, Request $request, int $page, int $per_page ): array {
-        $sort = sanitize_text_field( (string) $request->get_param( "sort" ) );
-        $desc = 0 === strpos( $sort, "-" );
-        $key  = $desc ? ltrim( $sort, "-" ) : $sort;
-        $map  = [
+        $sort  = sanitize_text_field( (string) $request->get_param( "sort" ) );
+        $desc  = 0 === strpos( $sort, "-" );
+        $key   = $desc ? ltrim( $sort, "-" ) : $sort;
+        $map   = [
             "name"  => "name",
             "id"    => "term_id",
             "slug"  => "slug",
-            "count" => "count",
+            "count" => "count"
         ];
-        $args = [
+        $args  = [
             "taxonomy"   => $taxonomy,
             "hide_empty" => false,
             "number"     => $per_page,
             "offset"     => ( $page - 1 ) * $per_page,
             "search"     => sanitize_text_field( (string) $request->get_param( "search" ) ),
             "orderby"    => $map[$key] ?? "name",
-            "order"      => $desc ? "DESC" : "ASC",
+            "order"      => $desc ? "DESC" : "ASC"
         ];
-
         $items = get_terms( $args );
-        $total = wp_count_terms( ["taxonomy" => $taxonomy, "hide_empty" => false, "search" => $args["search"]] );
-
+        $total = wp_count_terms(
+            [
+                "taxonomy"   => $taxonomy,
+                "hide_empty" => false,
+                "search"     => $args["search"]
+            ]
+        );
         if ( is_wp_error( $items ) ) {
             $items = [];
         }
         if ( is_wp_error( $total ) ) {
             $total = 0;
         }
-
         return [
             "items"     => $items,
             "total"     => (int) $total,
-            "last_page" => max( 1, (int) ceil( (int) $total / $per_page ) ),
+            "last_page" => max( 1, (int) ceil( (int) $total / $per_page ) )
         ];
     }
 
     private function map_category_to_dto( $term, array $fields ): CategoryDTO {
         $dto = new CategoryDTO();
-
         if ( in_array( "id", $fields, true ) ) {
             $dto->set_id( (int) $term->term_id );
         }
@@ -345,13 +328,11 @@ class ADirectory extends Provider {
         if ( in_array( "image", $fields, true ) ) {
             $dto->set_image( $this->get_term_image( (int) $term->term_id ) );
         }
-
         return $dto;
     }
 
     private function map_term_to_dto( $term, array $fields ): TermDTO {
         $dto = new TermDTO();
-
         if ( in_array( "id", $fields, true ) ) {
             $dto->set_id( (int) $term->term_id );
         }
@@ -367,7 +348,6 @@ class ADirectory extends Provider {
         if ( in_array( "image", $fields, true ) ) {
             $dto->set_image( $this->get_term_image( (int) $term->term_id ) );
         }
-
         return $dto;
     }
 
@@ -382,8 +362,16 @@ class ADirectory extends Provider {
             $cover_id  = $this->get_listing_image_id( $post_id );
             $image_ids = array_values( array_filter( $image_ids, fn( int $image_id ): bool => $image_id !== $cover_id ) );
         }
-
-        return array_values( array_filter( array_map( [$this, "map_attachment_image"], $image_ids ) ) );
+        return array_values(
+            array_filter(
+                array_map(
+                    [
+                        $this,
+                        "map_attachment_image"
+                    ], $image_ids
+                )
+            )
+        );
     }
 
     private function get_listing_image_id( int $post_id ): int {
@@ -391,7 +379,6 @@ class ADirectory extends Provider {
         if ( $image_id > 0 ) {
             return $image_id;
         }
-
         $image_ids = $this->get_listing_image_ids( $post_id );
         return $image_ids ? (int) reset( $image_ids ) : 0;
     }
@@ -399,35 +386,29 @@ class ADirectory extends Provider {
     private function get_listing_image_ids( int $post_id ): array {
         $image_ids    = $this->positive_ids( get_post_meta( $post_id, "_images", true ) );
         $thumbnail_id = (int) get_post_thumbnail_id( $post_id );
-
         if ( $thumbnail_id > 0 ) {
             array_unshift( $image_ids, $thumbnail_id );
         }
-
         return array_values( array_unique( array_filter( $image_ids ) ) );
     }
 
-    private function map_attachment_image( int $image_id ): array {
-        $src = wp_get_attachment_url( $image_id );
-
-        return $src ? [
-            "id"    => (int) $image_id,
-            "src"   => esc_url_raw( (string) $src ),
-            "alt"   => sanitize_text_field( (string) get_post_meta( $image_id, "_wp_attachment_image_alt", true ) ),
-            "title" => (string) get_the_title( $image_id ),
-        ] : [];
-    }
-
     private function get_term_image( int $term_id ): array {
-        foreach ( ["term_image_id", "image", "thumbnail_id", "_thumbnail_id"] as $key ) {
+        foreach ( [
+            "term_image_id",
+            "image",
+            "thumbnail_id",
+            "_thumbnail_id"
+        ] as $key ) {
             $value = get_term_meta( $term_id, $key, true );
             $id    = is_numeric( $value ) ? (int) $value : 0;
             $src   = $id ? wp_get_attachment_url( $id ) : ( is_string( $value ) ? $value : "" );
             if ( $src && filter_var( $src, FILTER_VALIDATE_URL ) ) {
-                return ["id" => $id, "src" => esc_url_raw( $src )];
+                return [
+                    "id"  => $id,
+                    "src" => esc_url_raw( $src )
+                ];
             }
         }
-
         return [];
     }
 
@@ -439,12 +420,14 @@ class ADirectory extends Provider {
         if ( empty( $terms ) || is_wp_error( $terms ) ) {
             return [];
         }
-
         return array_map(
-            function( $term ): array {
-                return ["id" => (int) $term->term_id, "name" => (string) $term->name, "slug" => (string) $term->slug];
-            },
-            $terms
+            function ( $term ): array {
+                return [
+                    "id"   => (int) $term->term_id,
+                    "name" => (string) $term->name,
+                    "slug" => (string) $term->slug
+                ];
+            }, $terms
         );
     }
 
@@ -452,23 +435,16 @@ class ADirectory extends Provider {
         $base         = [
             "post_id" => $listing_id,
             "status"  => "approve",
-            "parent"  => 0,
+            "parent"  => 0
         ];
-        $query        = $this->query_directory_review_rows(
-            $base,
-            $request,
-            fn( WP_Comment $comment ): float => $this->get_comment_rating( (int) $comment->comment_ID )
-        );
+        $query        = $this->query_directory_review_rows( $base, $request, fn( WP_Comment $comment ): float => $this->get_comment_rating( (int) $comment->comment_ID ) );
         $review_count = $this->get_listing_review_count( $listing_id );
-
-        $items = [];
+        $items        = [];
         foreach ( $query["rows"] as $row ) {
             $items[] = $this->map_review_comment( $row["comment"], $row["rating"] );
         }
-
         $rating_counts = $this->get_review_rating_counts( $listing_id );
         $average       = $this->calculate_average_rating( $rating_counts );
-
         return [
             "current_page"   => $query["current_page"],
             "per_page"       => $query["per_page"],
@@ -477,12 +453,19 @@ class ADirectory extends Provider {
             "average_rating" => $average,
             "review_count"   => $review_count,
             "rating_counts"  => $rating_counts,
-            "items"          => $items,
+            "items"          => $items
         ];
     }
 
     private function get_listing_review_count( int $listing_id ): int {
-        return (int) get_comments( ["post_id" => $listing_id, "status" => "approve", "parent" => 0, "count" => true] );
+        return (int) get_comments(
+            [
+                "post_id" => $listing_id,
+                "status"  => "approve",
+                "parent"  => 0,
+                "count"   => true
+            ]
+        );
     }
 
     private function get_comment_rating( int $comment_id ): float {
@@ -492,15 +475,19 @@ class ADirectory extends Provider {
 
     private function get_review_rating_counts( int $listing_id ): array {
         $rating_counts = $this->empty_rating_counts();
-        $comments      = get_comments( ["post_id" => $listing_id, "status" => "approve", "parent" => 0] );
-
+        $comments      = get_comments(
+            [
+                "post_id" => $listing_id,
+                "status"  => "approve",
+                "parent"  => 0
+            ]
+        );
         foreach ( $comments as $comment ) {
             $rating = $this->get_comment_rating( (int) $comment->comment_ID );
             if ( $rating > 0 ) {
                 $rating_counts[(string) max( 1, min( 5, (int) round( $rating ) ) )]++;
             }
         }
-
         return $rating_counts;
     }
 
@@ -525,11 +512,17 @@ class ADirectory extends Provider {
             "review"       => wp_kses_post( (string) $comment->comment_content ),
             "rating"       => $rating,
             "date_created" => (string) get_comment_date( DATE_ATOM, $comment ),
-            "avatar_url"   => (string) get_avatar_url( $comment, ["size" => 96] ),
+            "avatar_url"   => (string) get_avatar_url( $comment, ["size" => 96] )
         ];
     }
 
     private function empty_rating_counts(): array {
-        return ["1" => 0, "2" => 0, "3" => 0, "4" => 0, "5" => 0];
+        return [
+            "1" => 0,
+            "2" => 0,
+            "3" => 0,
+            "4" => 0,
+            "5" => 0
+        ];
     }
 }

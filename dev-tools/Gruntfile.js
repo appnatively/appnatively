@@ -9,6 +9,7 @@ module.exports = ( grunt ) => {
 		'!../CustomSniffs/**',
 		'!../dev-tools/**',
 		'!../node_modules/**',
+		'!../tests/**',
 		'!../vendor/**',
 		'!../vendor-src/**',
 		'!../__build/**',

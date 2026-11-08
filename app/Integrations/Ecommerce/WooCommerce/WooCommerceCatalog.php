@@ -46,7 +46,13 @@ class WooCommerceCatalog extends ProductCatalog {
      */
     public function extra_taxonomies(): array {
         if ( $this->extra_taxonomies === null ) {
-            $internal               = [ 'product_cat', 'product_tag', 'product_type', 'product_visibility', 'product_shipping_class' ];
+            $internal               = [
+                'product_cat',
+                'product_tag',
+                'product_type',
+                'product_visibility',
+                'product_shipping_class'
+            ];
             $this->extra_taxonomies = [];
             foreach ( get_object_taxonomies( 'product', 'objects' ) as $taxonomy ) {
                 if ( in_array( $taxonomy->name, $internal, true ) || str_starts_with( $taxonomy->name, 'pa_' ) || ! $taxonomy->public ) {

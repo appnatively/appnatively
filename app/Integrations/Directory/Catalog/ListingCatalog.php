@@ -2,6 +2,8 @@
 
 namespace Crafium\AppNatively\App\Integrations\Directory\Catalog;
 
+use Crafium\AppNatively\App\Models\DatabaseRow;
+
 defined( "ABSPATH" ) || exit;
 
 use Crafium\AppNatively\App\Filtering\Catalog;
@@ -139,12 +141,22 @@ abstract class ListingCatalog extends Catalog {
      * location taxonomy).
      */
     public function taxonomy_groups(): array {
-        $reserved = array_filter( [ $this->category_taxonomy(), $this->tag_taxonomy(), $this->location_taxonomy() ] );
+        $reserved = array_filter(
+            [
+                $this->category_taxonomy(),
+                $this->tag_taxonomy(),
+                $this->location_taxonomy()
+            ]
+        );
         return [ 'taxonomy' => array_diff_key( $this->extra_taxonomies(), array_flip( $reserved ) ) ];
     }
 
     public function search_columns(): array {
-        return [ 'posts.post_title', 'posts.post_content', 'posts.post_excerpt' ];
+        return [
+            'posts.post_title',
+            'posts.post_content',
+            'posts.post_excerpt'
+        ];
     }
 
     public function ranges(): array {
@@ -154,15 +166,27 @@ abstract class ListingCatalog extends Catalog {
             $ranges['price'] = new RangeFacet( __( 'Price', 'appnatively' ), $price[0], $price[1] );
         }
         if ( $this->rating_sql() && $this->rated_sql() ) {
-            $ranges['rating'] = new RangeFacet( __( 'Rating', 'appnatively' ), $this->rating_sql(), $this->rating_sql(), 1, [ 0, 5 ], $this->rated_sql() );
+            $ranges['rating'] = new RangeFacet(
+                __( 'Rating', 'appnatively' ), $this->rating_sql(), $this->rating_sql(), 1, [
+                    0,
+                    5
+                ], $this->rated_sql()
+            );
         }
         return $ranges;
     }
 
     public function flags(): array {
-        $options = [ 'featured' => [ __( 'Featured', 'appnatively' ), $this->featured_sql() ] ];
+        $options = [ 'featured' => [
+            __( 'Featured', 'appnatively' ),
+            $this->featured_sql()
+        ]
+        ];
         if ( $this->has_business_hours() ) {
-            $options['open_now'] = [ __( 'Open now', 'appnatively' ), fn(): string => $this->open_now_sql() ];
+            $options['open_now'] = [
+                __( 'Open now', 'appnatively' ),
+                fn(): string => $this->open_now_sql()
+            ];
         }
         return [
             'status' => [
@@ -189,7 +213,16 @@ abstract class ListingCatalog extends Catalog {
      */
     public function sorts(): array {
         $sorts              = parent::sorts();
-        $sorts['relevance'] = [ [ $this->featured_sql(), 'desc' ], [ 'posts.post_date', 'desc' ] ];
+        $sorts['relevance'] = [
+            [
+                $this->featured_sql(),
+                'desc'
+            ],
+            [
+                'posts.post_date',
+                'desc'
+            ]
+        ];
         return $sorts;
     }
 
@@ -251,15 +284,13 @@ abstract class ListingCatalog extends Catalog {
         global $wpdb;
         $post_types = $this->post_types();
         // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQLPlaceholders -- one bulk read, cached by the caller.
-        $rows = $wpdb->get_results(
-            $wpdb->prepare(
-                "SELECT pm.post_id, pm.meta_key, pm.meta_value FROM {$wpdb->postmeta} pm
-                INNER JOIN {$wpdb->posts} p ON p.ID = pm.post_id
-                WHERE p.post_status = 'publish' AND p.post_type IN (" . implode( ',', array_fill( 0, count( $post_types ), '%s' ) ) . ')
-                AND pm.meta_key IN (' . implode( ',', array_fill( 0, count( $keys ), '%s' ) ) . ')',
-                array_merge( $post_types, $keys )
-            )
-        );
+        $rows = DatabaseRow::from_table( "postmeta","pm" )->join( "posts as p","p.ID","=","pm.post_id" )->select(
+            [
+                "pm.post_id",
+                "pm.meta_key",
+                "pm.meta_value"
+            ]
+        )->where( "p.post_status","publish" )->where_in( "p.post_type",$post_types )->where_in( "pm.meta_key",$keys )->get()->all();
 
         $values = [];
         foreach ( (array) $rows as $row ) {

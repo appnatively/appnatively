@@ -2,6 +2,8 @@
 
 namespace Crafium\AppNatively\App\Integrations\Directory\Catalog;
 
+use Crafium\AppNatively\App\Models\DatabaseRow;
+
 defined( "ABSPATH" ) || exit;
 
 use Crafium\AppNatively\App\Filtering\Field;
@@ -50,7 +52,10 @@ class ClassifiedListingCatalog extends ListingCatalog {
      */
     public function price_sql(): ?array {
         $price = $this->meta_number( 'price' );
-        return [ $price, 'COALESCE(' . $this->meta_number( '_rtcl_max_price' ) . ", {$price})" ];
+        return [
+            $price,
+            'COALESCE(' . $this->meta_number( '_rtcl_max_price' ) . ", {$price})"
+        ];
     }
 
     public function rating_sql(): ?string {
@@ -66,13 +71,32 @@ class ClassifiedListingCatalog extends ListingCatalog {
     }
 
     public function coordinates(): ?array {
-        return [ $this->meta_number( 'latitude' ), $this->meta_number( 'longitude' ) ];
+        return [
+            $this->meta_number( 'latitude' ),
+            $this->meta_number( 'longitude' )
+        ];
     }
 
     public function internal_meta_keys(): array {
         return [
-            'price', 'featured', 'latitude', 'longitude', 'price_type', 'ad_type', 'zipcode', 'address', 'phone', 'email', 'website',
-            'whatsapp_number', 'never_expires', 'expiry_date', 'featured_expiry_date', 'images', 'rtcl_agree', 'renewal_reminder_sent',
+            'price',
+            'featured',
+            'latitude',
+            'longitude',
+            'price_type',
+            'ad_type',
+            'zipcode',
+            'address',
+            'phone',
+            'email',
+            'website',
+            'whatsapp_number',
+            'never_expires',
+            'expiry_date',
+            'featured_expiry_date',
+            'images',
+            'rtcl_agree',
+            'renewal_reminder_sent',
         ];
     }
 
@@ -87,7 +111,12 @@ class ClassifiedListingCatalog extends ListingCatalog {
      */
     protected function business_hours(): array {
         $hours = [];
-        foreach ( $this->meta_rows( [ '_rtcl_bhs', '_rtcl_special_bhs' ] ) as $post_id => $meta ) {
+        foreach ( $this->meta_rows(
+            [
+                '_rtcl_bhs',
+                '_rtcl_special_bhs'
+            ]
+        ) as $post_id => $meta ) {
             $schedule = new BusinessHours();
             foreach ( is_array( $meta['_rtcl_bhs'] ?? null ) ? $meta['_rtcl_bhs'] : [] as $day => $slot ) {
                 if ( ! is_array( $slot ) || empty( $slot['open'] ) ) {
@@ -121,7 +150,10 @@ class ClassifiedListingCatalog extends ListingCatalog {
         $ranges = [];
         foreach ( is_array( $times ) ? $times : [] as $time ) {
             if ( is_array( $time ) && ! empty( $time['start'] ) && ! empty( $time['end'] ) ) {
-                $ranges[] = [ (string) $time['start'], (string) $time['end'] ];
+                $ranges[] = [
+                    (string) $time['start'],
+                    (string) $time['end']
+                ];
             }
         }
         return $ranges;
@@ -152,7 +184,7 @@ class ClassifiedListingCatalog extends ListingCatalog {
 
         $fields = [];
         // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- a few rows of a trusted table name.
-        foreach ( (array) $wpdb->get_col( "SELECT fields FROM {$table}" ) as $form_fields ) {
+        foreach ( (array) DatabaseRow::values( DatabaseRow::from_table( "rtcl_forms" ),"fields" ) as $form_fields ) {
             foreach ( (array) json_decode( (string) $form_fields, true ) as $field ) {
                 $type = (string) ( $field['element'] ?? '' );
                 $name = (string) ( $field['name'] ?? '' );

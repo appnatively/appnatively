@@ -20,8 +20,16 @@ class FiltersDTO extends DTO {
      * @var string[]
      */
     public const SORT_TOKENS = [
-        "relevance", "newest", "oldest", "price_low", "price_high",
-        "rating", "popularity", "distance", "name_az", "name_za",
+        "relevance",
+        "newest",
+        "oldest",
+        "price_low",
+        "price_high",
+        "rating",
+        "popularity",
+        "distance",
+        "name_az",
+        "name_za",
     ];
 
     /**

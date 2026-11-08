@@ -9,7 +9,7 @@ use Crafium\AppNatively\App\DTO\Forms\FormDTO;
 use Crafium\AppNatively\App\DTO\Forms\FormFieldDTO;
 use Crafium\AppNatively\App\Support\Auth;
 use Crafium\AppNatively\WpMVC\Exceptions\Exception;
-use Crafium\AppNatively\WpMVC\Helpers\Helpers;
+use Crafium\AppNatively\App\Support\ClientAddress;
 use Crafium\AppNatively\WpMVC\RequestValidator\Request;
 
 class ContactForm7 extends Form {
@@ -60,7 +60,10 @@ class ContactForm7 extends Form {
     }
 
     private function get_email_rules( \WPCF7_FormTag $tag ): array {
-        $rules     = [ 'string', 'email' ];
+        $rules     = [
+            'string',
+            'email'
+        ];
         $maxlength = $tag->get_maxlength_option();
         if ( $maxlength ) {
             $rules[] = 'max:' . absint( $maxlength );
@@ -73,7 +76,10 @@ class ContactForm7 extends Form {
     }
 
     private function get_url_rules( \WPCF7_FormTag $tag ): array {
-        $rules     = [ 'string', 'url' ];
+        $rules     = [
+            'string',
+            'url'
+        ];
         $maxlength = $tag->get_maxlength_option();
         if ( $maxlength ) {
             $rules[] = 'max:' . absint( $maxlength );
@@ -99,7 +105,10 @@ class ContactForm7 extends Form {
     }
 
     private function get_single_select_rules( \WPCF7_FormTag $tag ): array {
-        return [ 'string', 'max:255' ];
+        return [
+            'string',
+            'max:255'
+        ];
     }
 
     private function get_date_time_picker_rules( \WPCF7_FormTag $tag ): array {
@@ -111,11 +120,17 @@ class ContactForm7 extends Form {
     }
 
     private function get_radio_rules( \WPCF7_FormTag $tag ): array {
-        return [ 'string', 'max:255' ];
+        return [
+            'string',
+            'max:255'
+        ];
     }
 
     private function get_gdpr_rules( \WPCF7_FormTag $tag ): array {
-        return [ 'string', 'in:1' ];
+        return [
+            'string',
+            'in:1'
+        ];
     }
 
     private function get_password_rules( \WPCF7_FormTag $tag ): array {
@@ -354,17 +369,9 @@ class ContactForm7 extends Form {
             $_SERVER['HTTP_USER_AGENT'] = 'AppNatively/1.0';
         }
 
-        // Helpers::get_user_ip_address() honours HTTP_CLIENT_IP and
-        // X-Forwarded-For before REMOTE_ADDR, so what CF7, Flamingo and
-        // Akismet record here follows whichever of those headers is present.
-        $ip = Helpers::get_user_ip_address();
-        if ( $ip ) {
-            $_SERVER['REMOTE_ADDR'] = $ip;
-        }
-
-        $remote_addr = isset( $_SERVER['REMOTE_ADDR'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) ) : '';
-        if ( ! \WP_Http::is_ip_address( $remote_addr ) ) {
-            $_SERVER['REMOTE_ADDR'] = '127.0.0.1';
+        $_SERVER['REMOTE_ADDR'] = ClientAddress::resolve();
+        foreach ( ['HTTP_CLIENT_IP', 'HTTP_X_FORWARDED_FOR', 'HTTP_X_REAL_IP', 'HTTP_CF_CONNECTING_IP', 'HTTP_FORWARDED'] as $header ) {
+            unset( $_SERVER[$header] );
         }
 
         try {
@@ -613,7 +620,13 @@ class ContactForm7 extends Form {
                         }
                     }
 
-                    if ( in_array( $std_type, [ 'radio', 'checkbox', 'single_select' ], true ) ) {
+                    if ( in_array(
+                        $std_type, [
+                            'radio',
+                            'checkbox',
+                            'single_select'
+                        ], true
+                    ) ) {
                         $items = [];
 
                         foreach ( $tag->values as $key => $value ) {

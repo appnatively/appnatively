@@ -119,9 +119,19 @@ class FormidableTest extends \WP_UnitTestCase {
         $rules = $formidable->expose_get_validation_rules( $form );
 
         $expected_fields = [
-            'full_name', 'company', 'email', 'secondary_email', 'website',
-            'age', 'score', 'gender', 'hobbies', 'country', 'city',
-            'bio', 'gdpr_consent',
+            'full_name',
+            'company',
+            'email',
+            'secondary_email',
+            'website',
+            'age',
+            'score',
+            'gender',
+            'hobbies',
+            'country',
+            'city',
+            'bio',
+            'gdpr_consent',
         ];
         foreach ( $expected_fields as $field ) {
             $this->assertArrayHasKey( $field, $rules );

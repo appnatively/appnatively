@@ -79,10 +79,16 @@ class HivePressTest extends DirectoryIntegrationTestCase {
         $locations = apply_filters(
             "craf_appna_directory_{$this->integration}_locations",
             null,
-            $this->create_request( ["page" => 1, "per_page" => 100, "integration" => $this->integration] ),
+            $this->create_request(
+                [
+                    "page"        => 1,
+                    "per_page"    => 100,
+                    "integration" => $this->integration
+                ]
+            ),
             $this->term_fields()
         );
-        $counts = [];
+        $counts    = [];
         foreach ( $locations->get_items() as $item ) {
             $counts[$item->get_id()] = $item->get_count();
         }
@@ -97,9 +103,14 @@ class HivePressTest extends DirectoryIntegrationTestCase {
         $filters = apply_filters(
             "craf_appna_directory_{$this->integration}_listings_filters",
             null,
-            $this->create_request( ["facets" => ["location"], "integration" => $this->integration] )
+            $this->create_request(
+                [
+                    "facets"      => ["location"],
+                    "integration" => $this->integration
+                ]
+            )
         );
-        $facet = $filters->get_facets()[0];
+        $facet   = $filters->get_facets()[0];
         $this->assertSame( "location", $facet->get_id() );
         $this->assertSame( "Region", $facet->get_label() );
 
@@ -107,7 +118,12 @@ class HivePressTest extends DirectoryIntegrationTestCase {
         foreach ( $facet->get_options() as $option ) {
             $options[$option->get_value()] = $option->get_count();
         }
-        $this->assertSame( ["austin" => 1, "united-states" => 1], $options );
+        $this->assertSame(
+            [
+                "austin"        => 1,
+                "united-states" => 1
+            ], $options
+        );
 
         // A selection narrows by that same slug.
         $this->assertSame( [$in_region], $this->listing_ids_for( $this->integration, ["values" => ["location" => ["united-states"]]] ) );
@@ -116,15 +132,32 @@ class HivePressTest extends DirectoryIntegrationTestCase {
         $listing = apply_filters(
             "craf_appna_directory_{$this->integration}_listing",
             null,
-            $this->create_request( ["id" => $in_region, "integration" => $this->integration] ),
+            $this->create_request(
+                [
+                    "id"          => $in_region,
+                    "integration" => $this->integration
+                ]
+            ),
             $this->listing_fields()
         );
-        $this->assertSame( [["id" => $region_id, "name" => "Austin", "slug" => "austin"]], $listing->get_locations() );
+        $this->assertSame(
+            [[
+                "id"   => $region_id,
+                "name" => "Austin",
+                "slug" => "austin"
+            ]
+            ], $listing->get_locations()
+        );
 
         $elsewhere_listing = apply_filters(
             "craf_appna_directory_{$this->integration}_listing",
             null,
-            $this->create_request( ["id" => $elsewhere, "integration" => $this->integration] ),
+            $this->create_request(
+                [
+                    "id"          => $elsewhere,
+                    "integration" => $this->integration
+                ]
+            ),
             $this->listing_fields()
         );
         $this->assertSame( [], $elsewhere_listing->get_locations() );

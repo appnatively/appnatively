@@ -12,12 +12,7 @@ class NotificationEventsTest extends \WP_UnitTestCase
         parent::setUp();
         Settings::set_api_enabled( true );
         Events::install();
-        update_option(
-            'craf_appna_notification_consent', [
-                'version' => 1,
-                'epoch'   => 'integration-test',
-            ]
-        );
+        update_option( 'craf_appna_notification_epoch', 'integration-test' );
         foreach ( [
             'source-a',
             'source-b',
@@ -105,15 +100,13 @@ class NotificationEventsTest extends \WP_UnitTestCase
         }
     }
 
-    public function test_sending_requires_consent_and_api_access(): void {
-        delete_option( 'craf_appna_notification_consent' );
+    public function test_sending_defaults_on_and_requires_the_sending_switch_and_api_access(): void {
+        delete_option( 'craf_appna_notification_epoch' );
+        delete_option( 'craf_appna_notifications_enabled' );
+        $this->assertSame( 'default-on', Events::emit( 'custom.created', [], ['id' => 'default-on'] ) );
+        update_option( 'craf_appna_notifications_enabled', 'no' );
         $this->assertNull( Events::emit( 'custom.created', [] ) );
-        update_option(
-            'craf_appna_notification_consent', [
-                'version' => 1,
-                'epoch'   => 'again',
-            ]
-        );
+        update_option( 'craf_appna_notifications_enabled', 'yes' );
         Settings::set_api_enabled( false );
         $this->assertNull( Events::emit( 'system.subject.updated', [] ) );
     }
@@ -136,7 +129,7 @@ class NotificationEventsTest extends \WP_UnitTestCase
 
     public function test_original_app_auth_works_without_notification_storage(): void {
         $user = self::factory()->user->create();
-        delete_option( 'craf_appna_notification_consent' );
+        delete_option( 'craf_appna_notification_epoch' );
         $token   = Auth::issue( $user );
         $request = new \WP_REST_Request();
         $request->set_header( 'Authorization', 'Bearer ' . $token );

@@ -3,7 +3,6 @@
 namespace Crafium\AppNatively\App\Integrations\Directory\Concerns;
 
 defined( "ABSPATH" ) || exit;
-
 use Crafium\AppNatively\App\DTO\Directory\ListingPaginatorDTO;
 use Crafium\AppNatively\App\DTO\Directory\TermPaginatorDTO;
 use Crafium\AppNatively\App\DTO\Filter\FiltersDTO;
@@ -12,8 +11,8 @@ use Crafium\AppNatively\App\Integrations\Directory\Catalog\ListingCatalog;
 use Crafium\AppNatively\WpMVC\RequestValidator\Request;
 use WP_Comment;
 use WP_Post;
-
-trait ListingIntegrationHelpers {
+trait ListingIntegrationHelpers
+{
     /** Listing lists and filter facets (see CatalogQuery). */
     private ?CatalogQuery $listing_query = null;
 
@@ -50,7 +49,6 @@ trait ListingIntegrationHelpers {
         $page = $this->listing_query()->paginate( $request );
         _prime_post_caches( $page["ids"] );
         $this->prime_listings( $page["ids"], $fields );
-
         $items = [];
         foreach ( $page["ids"] as $listing_id ) {
             $listing = get_post( $listing_id );
@@ -58,7 +56,6 @@ trait ListingIntegrationHelpers {
                 $items[] = $this->map_listing_to_dto( $listing, $fields );
             }
         }
-
         return new ListingPaginatorDTO( $page["page"], $page["per_page"], $page["total"], $page["last_page"], $items );
     }
 
@@ -69,7 +66,8 @@ trait ListingIntegrationHelpers {
      * @param int[]    $listing_ids The listings about to be mapped.
      * @param string[] $fields      The requested fields.
      */
-    protected function prime_listings( array $listing_ids, array $fields ): void {}
+    protected function prime_listings( array $listing_ids, array $fields ): void {
+    }
 
     /**
      * Available listing filters for the current context.
@@ -94,17 +92,16 @@ trait ListingIntegrationHelpers {
     private function apply_listing_content_filters( WP_Post $post ): string {
         $previous_post   = $GLOBALS["post"] ?? null;
         $GLOBALS["post"] = $post;
-
-        //phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- invoking WordPress core's own "the_content" filter to render the listing the same way a theme would, not defining a hook of our own.
-        $content = (string) apply_filters( "the_content", $post->post_content );
-
-        if ( null === $previous_post ) {
-            unset( $GLOBALS["post"] );
-        } else {
-            $GLOBALS["post"] = $previous_post;
+        try {
+            //phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- invoking WordPress core's own "the_content" filter to render the listing the same way a theme would, not defining a hook of our own.
+            return (string) apply_filters( "the_content", $post->post_content );
+        } finally {
+            if ( null === $previous_post ) {
+                unset( $GLOBALS["post"] );
+            } else {
+                $GLOBALS["post"] = $previous_post;
+            }
         }
-
-        return $content;
     }
 
     /**
@@ -116,16 +113,15 @@ trait ListingIntegrationHelpers {
     private function get_listing_excerpt( WP_Post $post ): string {
         $previous_post   = $GLOBALS["post"] ?? null;
         $GLOBALS["post"] = $post;
-
-        $excerpt = (string) get_the_excerpt( $post );
-
-        if ( null === $previous_post ) {
-            unset( $GLOBALS["post"] );
-        } else {
-            $GLOBALS["post"] = $previous_post;
+        try {
+            return (string) get_the_excerpt( $post );
+        } finally {
+            if ( null === $previous_post ) {
+                unset( $GLOBALS["post"] );
+            } else {
+                $GLOBALS["post"] = $previous_post;
+            }
         }
-
-        return $excerpt;
     }
 
     /**
@@ -140,9 +136,8 @@ trait ListingIntegrationHelpers {
         if ( "" === $value || null === $value || ! is_numeric( $value ) ) {
             return null;
         }
-
         $coordinate = (float) $value;
-        return ( $coordinate >= $min && $coordinate <= $max ) ? $coordinate : null;
+        return $coordinate >= $min && $coordinate <= $max ? $coordinate : null;
     }
 
     /**
@@ -155,7 +150,6 @@ trait ListingIntegrationHelpers {
         if ( ! is_array( $value ) ) {
             $value = [$value];
         }
-
         return array_values( array_filter( array_map( "intval", $value ), fn( int $id ): bool => $id > 0 ) );
     }
 
@@ -168,7 +162,6 @@ trait ListingIntegrationHelpers {
     private function empty_term_paginator( Request $request ): TermPaginatorDTO {
         $page     = (int) $request->get_param( "page" ) ?: 1;
         $per_page = (int) $request->get_param( "per_page" ) ?: 10;
-
         return new TermPaginatorDTO( $page, $per_page, 0, 1, [] );
     }
 
@@ -191,58 +184,47 @@ trait ListingIntegrationHelpers {
         $orderby       = $this->directory_review_orderby( $request );
         $comments      = get_comments(
             array_merge(
-                $base_args,
-                [
+                $base_args, [
                     "orderby" => "comment_date_gmt",
-                    "order"   => "DESC",
+                    "order"   => "DESC"
                 ]
             )
         );
         $rows          = [];
-
         foreach ( $comments as $comment ) {
             if ( ! $comment instanceof WP_Comment ) {
                 continue;
             }
-
             $rating = (float) call_user_func( $rating_resolver, $comment );
             if ( null !== $rating_filter && ( $rating <= 0 || $this->directory_review_rating_bucket( $rating ) !== $rating_filter ) ) {
                 continue;
             }
-
             $rows[] = [
                 "comment" => $comment,
-                "rating"  => $rating,
+                "rating"  => $rating
             ];
         }
-
         usort(
-            $rows,
-            function( array $left, array $right ) use ( $orderby ): int {
+            $rows, function ( array $left, array $right ) use ( $orderby ): int {
                 $date_compare = strcmp( (string) $right["comment"]->comment_date_gmt, (string) $left["comment"]->comment_date_gmt );
-
                 if ( "rating_desc" === $orderby ) {
                     $rating_compare = $right["rating"] <=> $left["rating"];
                     return 0 !== $rating_compare ? $rating_compare : $date_compare;
                 }
-
                 if ( "rating_asc" === $orderby ) {
                     $rating_compare = $left["rating"] <=> $right["rating"];
                     return 0 !== $rating_compare ? $rating_compare : $date_compare;
                 }
-
                 return $date_compare;
             }
         );
-
         $total = count( $rows );
-
         return [
             "current_page" => $page,
             "per_page"     => $per_page,
             "total"        => $total,
             "last_page"    => max( 1, (int) ceil( $total / $per_page ) ),
-            "rows"         => array_slice( $rows, ( $page - 1 ) * $per_page, $per_page ),
+            "rows"         => array_slice( $rows, ( $page - 1 ) * $per_page, $per_page )
         ];
     }
 
@@ -257,7 +239,6 @@ trait ListingIntegrationHelpers {
         if ( null === $rating || "" === $rating || ! is_numeric( $rating ) ) {
             return null;
         }
-
         $rating = (int) $rating;
         return $rating >= 1 && $rating <= 5 ? $rating : null;
     }
@@ -270,7 +251,13 @@ trait ListingIntegrationHelpers {
      */
     private function directory_review_orderby( Request $request ): string {
         $orderby = sanitize_key( (string) $request->get_param( "orderby" ) );
-        return in_array( $orderby, ["newest", "rating_desc", "rating_asc"], true ) ? $orderby : "newest";
+        return in_array(
+            $orderby, [
+                "newest",
+                "rating_desc",
+                "rating_asc"
+            ], true
+        ) ? $orderby : "newest";
     }
 
     /**
@@ -281,5 +268,25 @@ trait ListingIntegrationHelpers {
      */
     private function directory_review_rating_bucket( float $rating ): int {
         return max( 1, min( 5, (int) round( $rating ) ) );
+    }
+
+    private function map_attachment_image( int $image_id ): array {
+        $src = wp_get_attachment_url( $image_id );
+        return $src ? [
+            "id"    => (int) $image_id,
+            "src"   => esc_url_raw( (string) $src ),
+            "alt"   => sanitize_text_field( (string) get_post_meta( $image_id, "_wp_attachment_image_alt", true ) ),
+            "title" => (string) get_the_title( $image_id )
+        ] : [];
+    }
+
+    private function get_meta_value( int $post_id, array $keys ): string {
+        foreach ( $keys as $key ) {
+            $value = get_post_meta( $post_id, $key, true );
+            if ( "" !== $value && null !== $value ) {
+                return is_scalar( $value ) ? sanitize_text_field( (string) $value ) : "";
+            }
+        }
+        return "";
     }
 }

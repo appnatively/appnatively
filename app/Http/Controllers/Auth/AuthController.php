@@ -6,8 +6,9 @@ defined( 'ABSPATH' ) || exit;
 
 use Crafium\AppNatively\App\Http\Controllers\Controller;
 use Crafium\AppNatively\App\Support\Auth;
+use Crafium\AppNatively\App\Support\CheckoutHandoff;
 use Crafium\AppNatively\WpMVC\Exceptions\Exception;
-use Crafium\AppNatively\WpMVC\Helpers\Helpers;
+use Crafium\AppNatively\App\Support\ClientAddress;
 use Crafium\AppNatively\WpMVC\Routing\Response;
 use Crafium\AppNatively\WpMVC\RequestValidator\Request;
 use WP_User;
@@ -135,7 +136,7 @@ class AuthController extends Controller {
     /**
      * Generate a short-lived, one-time-use autologin token for WebView checkout.
      *
-     * The token is stored SHA-256-hashed in a transient, is redeemable exactly
+     * The token has a hashed database key and a bound payload, is redeemable exactly
      * once, and is deleted before the auth cookie is set. Because it
      * necessarily travels in a URL — and so ends up in access logs, referrers
      * and browser history — the window is kept to a minute, which is far more
@@ -147,13 +148,7 @@ class AuthController extends Controller {
     public function autologin_token( Request $request ): array {
         $user = $this->current_user();
 
-        $token = bin2hex( random_bytes( 32 ) );
-
-        set_transient(
-            'craf_appna_autologin_' . hash( 'sha256', $token ),
-            [ 'user_id' => $user->ID ],
-            (int) apply_filters( 'craf_appna_autologin_ttl', MINUTE_IN_SECONDS )
-        );
+        $token = CheckoutHandoff::issue( $request, $user->ID );
 
         return Response::send( [ 'craf_appna_token' => $token ] );
     }
@@ -312,7 +307,7 @@ class AuthController extends Controller {
      * @throws Exception
      */
     private function throttle( string $bucket, int $max, int $window ): void {
-        $key   = 'craf_appna_rl_' . $bucket . '_' . md5( (string) Helpers::get_user_ip_address() );
+        $key   = 'craf_appna_rl_' . $bucket . '_' . md5( (string) ClientAddress::resolve() );
         $count = (int) get_transient( $key );
 
         if ( $count >= $max ) {
@@ -366,7 +361,7 @@ class AuthController extends Controller {
      * @return string
      */
     private function login_attempts_key(): string {
-        return 'craf_appna_login_' . md5( (string) Helpers::get_user_ip_address() );
+        return 'craf_appna_login_' . md5( (string) ClientAddress::resolve() );
     }
 
     /**

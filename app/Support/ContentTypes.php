@@ -294,7 +294,14 @@ class ContentTypes {
 
             $fields[ $key ] = [
                 'key'    => $key,
-                'label'  => ucwords( str_replace( [ '_', '-' ], ' ', $key ) ),
+                'label'  => ucwords(
+                    str_replace(
+                        [
+                            '_',
+                            '-'
+                        ], ' ', $key
+                    )
+                ),
                 'type'   => $type,
                 'source' => 'meta',
                 'group'  => '',

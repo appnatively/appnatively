@@ -24,7 +24,14 @@ class BitForm extends Form {
     }
 
     protected function get_form( int $id ) {
-        $rows = ( new FormModel() )->get( ['id', 'form_name', 'form_content', 'status'], ['id' => $id] );
+        $rows = ( new FormModel() )->get(
+            [
+                'id',
+                'form_name',
+                'form_content',
+                'status'
+            ], ['id' => $id]
+        );
 
         if ( is_wp_error( $rows ) || empty( $rows ) ) {
             return [];
@@ -40,7 +47,12 @@ class BitForm extends Form {
     }
 
     public function get_forms(): array {
-        $rows = ( new FormModel() )->get( ['id', 'form_name'], ['status' => 1] );
+        $rows = ( new FormModel() )->get(
+            [
+                'id',
+                'form_name'
+            ], ['status' => 1]
+        );
 
         if ( is_wp_error( $rows ) || empty( $rows ) ) {
             return [];
@@ -147,9 +159,15 @@ class BitForm extends Form {
                 }
                 return $rules;
             case 'email':
-                return ['string', 'email'];
+                return [
+                    'string',
+                    'email'
+                ];
             case 'url':
-                return ['string', 'url'];
+                return [
+                    'string',
+                    'url'
+                ];
             case 'password':
                 $rules     = ['string'];
                 $minlength = $this->field_prop( $field, 'valid.minlength' );
@@ -159,7 +177,10 @@ class BitForm extends Form {
                 return $rules;
             case 'radio':
             case 'single_select':
-                return ['string', 'max:255'];
+                return [
+                    'string',
+                    'max:255'
+                ];
             case 'checkbox':
                 return ['array'];
             case 'date_time_picker':
@@ -171,7 +192,10 @@ class BitForm extends Form {
                 }
                 return $rules;
             case 'gdpr':
-                return ['integer', 'in:1'];
+                return [
+                    'integer',
+                    'in:1'
+                ];
             default:
                 return [];
         }
@@ -246,7 +270,12 @@ class BitForm extends Form {
     private function get_field_options( $field, string $native_type ): array {
         $items = [];
 
-        if ( in_array( $native_type, ['radio', 'check'], true ) && ! empty( $field->opt ) ) {
+        if ( in_array(
+            $native_type, [
+                'radio',
+                'check'
+            ], true
+        ) && ! empty( $field->opt ) ) {
             foreach ( (array) $field->opt as $key => $opt ) {
                 $items[] = [
                     'id'          => (string) $key,
@@ -254,9 +283,12 @@ class BitForm extends Form {
                     'optionValue' => $opt->val ?? ( $opt->lbl ?? '' ),
                 ];
             }
-            // optionsList is Bit Form's own property name, so it stays as-is.
-            //phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase
-        } elseif ( in_array( $native_type, ['select', 'html-select'], true ) && ! empty( $field->optionsList ) ) {
+        } elseif ( in_array(
+            $native_type, [
+                'select',
+                'html-select'
+            ], true
+        ) && ! empty( $field->optionsList ) ) { // phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Bit Form's native property name.
             //phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase
             $first_wrapper = reset( $field->optionsList );
             if ( $first_wrapper ) {
@@ -316,7 +348,13 @@ class BitForm extends Form {
                     ->set_placeholder( $field->ph ?? '' )
                     ->set_field_name( (string) $key );
 
-                if ( in_array( $std_type, ['radio', 'checkbox', 'single_select'], true ) ) {
+                if ( in_array(
+                    $std_type, [
+                        'radio',
+                        'checkbox',
+                        'single_select'
+                    ], true
+                ) ) {
                     $items = $this->get_field_options( $field, $native_type );
                     if ( $items ) {
                         $fdto->set_items( $items );

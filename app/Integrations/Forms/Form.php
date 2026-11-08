@@ -7,7 +7,7 @@ defined( "ABSPATH" ) || exit;
 use Crafium\AppNatively\App\DTO\Forms\FormsDTO;
 use Crafium\AppNatively\App\DTO\Forms\FormDTO;
 use Crafium\AppNatively\WpMVC\Contracts\Provider;
-use Crafium\AppNatively\WpMVC\Helpers\Helpers;
+use Crafium\AppNatively\App\Support\ClientAddress;
 use Crafium\AppNatively\WpMVC\RequestValidator\Request;
 use Crafium\AppNatively\WpMVC\Exceptions\Exception;
 
@@ -38,22 +38,20 @@ abstract class Form extends Provider {
      * Optional hook to coerce/normalize request params (checkbox arrays, gdpr
      * ints, range/slider payloads, ...) before validation rules are applied.
      */
-    protected function prepare_request_for_validation( Request $request, array $form ): void {}
+    protected function prepare_request_for_validation( Request $request, array $form ): void {
+    }
 
     /**
      * Throttle submissions per (IP, integration, form) so the public submit
      * endpoint can't be flooded.
      *
-     * The address comes from Helpers::get_user_ip_address(), which reads
-     * HTTP_CLIENT_IP and X-Forwarded-For before falling back to REMOTE_ADDR —
-     * both are headers the caller can set, so this is a best-effort bucket,
-     * not a hard guarantee against rotating them for a fresh one.
+     * Only explicitly trusted proxy chains can override the socket peer.
      *
      * If no address can be determined at all, callers share one bucket rather
      * than skipping the check.
      */
-    private function check_rate_limit( int $form_id ): void {
-        $ip = Helpers::get_user_ip_address() ?? 'unknown';
+    protected function check_rate_limit( int $form_id ): void {
+        $ip = ClientAddress::resolve();
 
         $max    = (int) apply_filters( 'craf_appna_form_rate_limit_max', 5 );
         $window = (int) apply_filters( 'craf_appna_form_rate_limit_window', MINUTE_IN_SECONDS );
@@ -104,7 +102,10 @@ abstract class Form extends Provider {
         }
 
         $fields_param = $request->get_param( 'fields' );
-        $fields       = $fields_param ? explode( ',', $fields_param ) : ['id', 'fields'];
+        $fields       = $fields_param ? explode( ',', $fields_param ) : [
+            'id',
+            'fields'
+        ];
 
         return $this->map_form_to_dto( $raw_form, $fields );
     }

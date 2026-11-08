@@ -7,7 +7,6 @@ use Crafium\AppNatively\App\DTO\Forms\FormsDTO;
 defined( "ABSPATH" ) || exit;
 
 use Crafium\AppNatively\App\DTO\Forms\FormDTO;
-use Crafium\AppNatively\App\DTO\Forms\FormPaginatorDTO;
 use Crafium\AppNatively\App\Http\Controllers\Controller;
 use Crafium\AppNatively\WpMVC\Exceptions\Exception;
 use Crafium\AppNatively\WpMVC\Routing\Response;
@@ -70,7 +69,12 @@ class FormController extends Controller {
             return $error_response;
         }
 
-        return Response::send( ['message' => __( 'Form submitted successfully', 'appnatively' ), 'success' => true] );
+        return Response::send(
+            [
+                'message' => __( 'Form submitted successfully', 'appnatively' ),
+                'success' => true
+            ]
+        );
     }
 
     /**

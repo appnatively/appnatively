@@ -66,12 +66,24 @@ class SurecartTest extends \WP_UnitTestCase
                 'updated_at'     => '2024-01-01T00:00:00+00:00',
                 'prices'         => [
                     'data' => [
-                        [ 'id' => $this->sc_price_id, 'amount' => 1999, 'scratch_amount' => 0, 'currency' => 'usd' ],
+                        [
+                            'id'             => $this->sc_price_id,
+                            'amount'         => 1999,
+                            'scratch_amount' => 0,
+                            'currency'       => 'usd'
+                        ],
                     ],
                 ],
                 'variants'       => [
                     'data' => [
-                        [ 'id' => $this->sc_variant_id, 'sku' => 'TEST-RED', 'name' => 'Red', 'amount' => 2500, 'scratch_amount' => 0, 'available' => true ],
+                        [
+                            'id'             => $this->sc_variant_id,
+                            'sku'            => 'TEST-RED',
+                            'name'           => 'Red',
+                            'amount'         => 2500,
+                            'scratch_amount' => 0,
+                            'available'      => true
+                        ],
                     ],
                 ],
                 'product_medias' => [ 'data' => [] ],
@@ -84,11 +96,16 @@ class SurecartTest extends \WP_UnitTestCase
 
         // Block real network calls to SureCart's live API — tests must be
         // deterministic and must never depend on (or hit) a connected account.
-        add_filter( 'pre_http_request', [ $this, 'block_surecart_network' ], 10, 3 );
+        add_filter( 'pre_http_request', [$this, 'block_surecart_network'], 10, 3 );
     }
 
     public function tearDown(): void {
-        remove_filter( 'pre_http_request', [ $this, 'block_surecart_network' ], 10 );
+        remove_filter(
+            'pre_http_request', [
+                $this,
+                'block_surecart_network'
+            ], 10
+        );
 
         if ( $this->post_id ) {
             wp_delete_post( $this->post_id, true );
@@ -122,9 +139,20 @@ class SurecartTest extends \WP_UnitTestCase
 
     public function test_products_returns_seeded_product() {
         $surecart = new SureCart();
-        $request  = $this->build_request( [ 'page' => 1, 'per_page' => 10 ] );
+        $request  = $this->build_request(
+            [
+                'page'     => 1,
+                'per_page' => 10
+            ]
+        );
 
-        $paginator = $surecart->products( null, $request, [ 'id', 'name', 'price' ] );
+        $paginator = $surecart->products(
+            null, $request, [
+                'id',
+                'name',
+                'price'
+            ]
+        );
 
         $this->assertGreaterThanOrEqual( 1, $paginator->get_total() );
         $ids = array_map( fn( $dto ) => $dto->get_id(), $paginator->get_items() );
@@ -140,10 +168,21 @@ class SurecartTest extends \WP_UnitTestCase
             ]
         );
         update_post_meta( $other_id, 'sc_id', 'prod_other' );
-        update_post_meta( $other_id, 'product', [ 'id' => 'prod_other', 'name' => 'Other SureCart Product' ] );
+        update_post_meta(
+            $other_id, 'product', [
+                'id'   => 'prod_other',
+                'name' => 'Other SureCart Product'
+            ]
+        );
 
         $surecart = new SureCart();
-        $request  = $this->build_request( [ 'page' => 1, 'per_page' => 10, 'categories' => [ $this->category_id ] ] );
+        $request  = $this->build_request(
+            [
+                'page'       => 1,
+                'per_page'   => 10,
+                'categories' => [ $this->category_id ]
+            ]
+        );
 
         $paginator = $surecart->products( null, $request, [ 'id' ] );
         $ids       = array_map( fn( $dto ) => $dto->get_id(), $paginator->get_items() );
@@ -158,7 +197,13 @@ class SurecartTest extends \WP_UnitTestCase
         $surecart = new SureCart();
         $request  = $this->build_request( [ 'id' => $this->post_id ] );
 
-        $dto = $surecart->product( null, $request, [ 'id', 'name', 'price' ] );
+        $dto = $surecart->product(
+            null, $request, [
+                'id',
+                'name',
+                'price'
+            ]
+        );
 
         $this->assertNotNull( $dto );
         $this->assertEquals( $this->post_id, $dto->get_id() );
@@ -178,7 +223,12 @@ class SurecartTest extends \WP_UnitTestCase
         $surecart = new SureCart();
         $request  = $this->build_request( [ 'id' => $this->post_id ] );
 
-        $dto = $surecart->product( null, $request, [ 'id', 'variants' ] );
+        $dto = $surecart->product(
+            null, $request, [
+                'id',
+                'variants'
+            ]
+        );
 
         $this->assertNotNull( $dto );
         $variants = $dto->get_variants();
@@ -205,9 +255,19 @@ class SurecartTest extends \WP_UnitTestCase
 
     public function test_categories_returns_seeded_category() {
         $surecart = new SureCart();
-        $request  = $this->build_request( [ 'page' => 1, 'per_page' => 10 ] );
+        $request  = $this->build_request(
+            [
+                'page'     => 1,
+                'per_page' => 10
+            ]
+        );
 
-        $paginator = $surecart->categories( null, $request, [ 'id', 'name' ] );
+        $paginator = $surecart->categories(
+            null, $request, [
+                'id',
+                'name'
+            ]
+        );
 
         $ids = array_map( fn( $dto ) => $dto->get_id(), $paginator->get_items() );
         $this->assertContains( $this->category_id, $ids );
@@ -217,7 +277,12 @@ class SurecartTest extends \WP_UnitTestCase
         $surecart = new SureCart();
         $request  = $this->build_request( [ 'id' => $this->category_id ] );
 
-        $dto = $surecart->category( null, $request, [ 'id', 'name' ] );
+        $dto = $surecart->category(
+            null, $request, [
+                'id',
+                'name'
+            ]
+        );
 
         $this->assertNotNull( $dto );
         $this->assertEquals( $this->category_id, $dto->get_id() );
@@ -235,11 +300,7 @@ class SurecartTest extends \WP_UnitTestCase
     public function test_cart_get_returns_empty_cart_without_checkout_id() {
         $surecart = new SureCart();
 
-        try {
-            $cart = $surecart->cart_get( null, $this->build_request() );
-        } catch ( \Throwable $e ) {
-            $this->markTestSkipped( 'SureCart account/currency resolution is not safe to exercise without a connected account: ' . $e->getMessage() );
-        }
+        $cart = $surecart->cart_get( null, $this->build_request() );
 
         $this->assertNull( $cart->get_id() );
         $this->assertSame( [], $cart->get_items() );
@@ -249,7 +310,12 @@ class SurecartTest extends \WP_UnitTestCase
     public function test_cart_add_throws_when_live_api_unreachable() {
         $surecart = new SureCart();
         $request  = $this->build_request(
-            [ 'items' => [ [ 'productId' => $this->post_id, 'quantity' => 2 ] ] ]
+            [ 'items' => [ [
+                'productId' => $this->post_id,
+                'quantity'  => 2
+            ]
+            ]
+            ]
         );
 
         // Resolving price/variant succeeds locally (from the mirror), but
@@ -261,7 +327,14 @@ class SurecartTest extends \WP_UnitTestCase
 
     public function test_orders_get_returns_empty_for_guest() {
         $surecart  = new SureCart();
-        $paginator = $surecart->orders_get( null, $this->build_request( [ 'page' => 1, 'per_page' => 10 ] ) );
+        $paginator = $surecart->orders_get(
+            null, $this->build_request(
+                [
+                    'page'     => 1,
+                    'per_page' => 10
+                ]
+            )
+        );
 
         $this->assertEquals( 0, $paginator->get_total() );
         $this->assertSame( [], $paginator->get_items() );
@@ -271,7 +344,14 @@ class SurecartTest extends \WP_UnitTestCase
         wp_set_current_user( $this->user_id );
         $surecart = new SureCart();
 
-        $paginator = $surecart->orders_get( null, $this->build_request( [ 'page' => 1, 'per_page' => 10 ] ) );
+        $paginator = $surecart->orders_get(
+            null, $this->build_request(
+                [
+                    'page'     => 1,
+                    'per_page' => 10
+                ]
+            )
+        );
 
         $this->assertEquals( 0, $paginator->get_total() );
         $this->assertSame( [], $paginator->get_items() );
@@ -282,7 +362,14 @@ class SurecartTest extends \WP_UnitTestCase
         update_user_meta( $this->user_id, 'sc_customer_ids', [ 'live' => 'cus_test123' ] );
 
         $surecart  = new SureCart();
-        $paginator = $surecart->orders_get( null, $this->build_request( [ 'page' => 1, 'per_page' => 10 ] ) );
+        $paginator = $surecart->orders_get(
+            null, $this->build_request(
+                [
+                    'page'     => 1,
+                    'per_page' => 10
+                ]
+            )
+        );
 
         // The live Order::where()->paginate() call is network-blocked and
         // returns a WP_Error — orders_get() must degrade to an empty

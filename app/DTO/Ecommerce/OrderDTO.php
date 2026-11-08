@@ -132,7 +132,10 @@ class OrderDTO extends DTO {
         $this->processed_at         = $data['processedAt'] ?? '';
         $this->financial_status     = $data['financialStatus'] ?? '';
         $this->fulfillment_status   = $data['fulfillmentStatus'] ?? '';
-        $this->total_price          = $data['totalPrice'] ?? [ 'amount' => '0', 'currencyCode' => 'USD' ];
+        $this->total_price          = $data['totalPrice'] ?? [
+            'amount'       => '0',
+            'currencyCode' => 'USD'
+        ];
         $this->subtotal_price       = $data['subtotalPrice'] ?? null;
         $this->total_tax            = $data['totalTax'] ?? null;
         $this->total_shipping_price = $data['totalShippingPrice'] ?? null;
@@ -140,7 +143,6 @@ class OrderDTO extends DTO {
         $this->total_discount       = $data['totalDiscount'] ?? null;
         $this->payment_method       = $data['paymentMethod'] ?? '';
         $this->discount_code        = $data['discountCode'] ?? '';
-
 
         if ( isset( $data['lineItems'] ) && is_array( $data['lineItems'] ) ) {
             foreach ( $data['lineItems'] as $item ) {

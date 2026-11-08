@@ -37,6 +37,7 @@ use Crafium\AppNatively\App\Models\User;
 use Crafium\AppNatively\App\Integrations\Ecommerce\Woocommerce;
 use Crafium\AppNatively\App\Integrations\Ecommerce\SureCart;
 use Crafium\AppNatively\WpMVC\Helpers\Helpers;
+use Crafium\AppNatively\App\Providers\NotificationEventServiceProvider;
 
 return [
     /**
@@ -52,7 +53,7 @@ return [
          * The namespace for the REST API.
          */
         'namespace' => 'craf_appna',
-        
+
         /**
          * The versions of the REST API.
          */
@@ -67,7 +68,7 @@ return [
          * The namespace for the AJAX API.
          */
         'namespace' => 'craf_appna',
-        
+
         /**
          * The versions of the AJAX API.
          */
@@ -80,7 +81,7 @@ return [
     'providers'                   => [
         //Core
         AuthServiceProvider::class,
-        \Crafium\AppNatively\App\Providers\NotificationEventServiceProvider::class,
+        NotificationEventServiceProvider::class,
         ApiGateServiceProvider::class,
 
         // Ecommerce Integrations
@@ -165,7 +166,7 @@ return [
     /**
      * This configuration option defines a hook that will fire before executing the route callback,
      * such as before a controller action. It provides two parameters:
-     * 
+     *
      * @param WP_REST_Request $wp_rest_request The current REST request object.
      * @param string $full_route The full route being accessed.
      */
@@ -175,7 +176,7 @@ return [
      * Configuration for the REST API response filter hook.
      *
      * This filter hook allows overriding the entire REST API response.
-     * 
+     *
      * @param $response The response object from the controller.
      * @param WP_REST_Request  $wp_rest_request The request object.
      * @param string           $full_route The full route of the request.
@@ -184,7 +185,7 @@ return [
 
     /**
      * This filter hook that can override all REST API permissions.
-     * 
+     *
      * @param mixed $permission The current permission setting.
      * @param mixed $middleware The middleware being applied.
      * @param string $full_route The full route of the API endpoint.

@@ -22,7 +22,8 @@ class ApiGateServiceProvider extends Provider {
      *
      * @return void
      */
-    public function register() {}
+    public function register() {
+    }
 
     /**
      * Bootstrap any application services.
@@ -82,13 +83,23 @@ class ApiGateServiceProvider extends Provider {
             $path
         ) || (bool) preg_match( '#^/(?:auth|notifications|ecommerce/(?:cart|orders|wishlist)|directory/wishlist)(?:/|$)#i', $path );
 
-        foreach ( ['Authorization', 'X-AppNatively-Key', 'X-Cart-Id', 'X-WC-Session'] as $header ) {
+        foreach ( [
+            'Authorization',
+            'X-AppNatively-Key',
+            'X-Cart-Id',
+            'X-WC-Session'
+        ] as $header ) {
             if ( null !== $request->get_header( $header ) ) {
                 $private = true;
             }
         }
 
-        if ( ! $private && ! is_user_logged_in() && in_array( $request->get_method(), ['GET', 'HEAD'], true ) && $response->get_status() < 400 ) {
+        if ( ! $private && ! is_user_logged_in() && in_array(
+            $request->get_method(), [
+                'GET',
+                'HEAD'
+            ], true
+        ) && $response->get_status() < 400 ) {
             return $response;
         }
 

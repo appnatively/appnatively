@@ -86,7 +86,13 @@ class GeoDirectoryTest extends DirectoryIntegrationTestCase {
         $locations = apply_filters(
             "craf_appna_directory_{$this->integration}_locations",
             null,
-            $this->create_request( ["page" => 1, "per_page" => 100, "integration" => $this->integration] ),
+            $this->create_request(
+                [
+                    "page"        => 1,
+                    "per_page"    => 100,
+                    "integration" => $this->integration
+                ]
+            ),
             $this->term_fields()
         );
         $this->assertSame( 1, $locations->get_items()[0]->get_count() );
@@ -98,9 +104,14 @@ class GeoDirectoryTest extends DirectoryIntegrationTestCase {
         $filters = apply_filters(
             "craf_appna_directory_{$this->integration}_listings_filters",
             null,
-            $this->create_request( ["facets" => ["location"], "integration" => $this->integration] )
+            $this->create_request(
+                [
+                    "facets"      => ["location"],
+                    "integration" => $this->integration
+                ]
+            )
         );
-        $facet = $filters->get_facets()[0];
+        $facet   = $filters->get_facets()[0];
         $this->assertSame( "location", $facet->get_id() );
         $this->assertSame( "Location", $facet->get_label() );
         $this->assertCount( 1, $facet->get_options() );
@@ -115,11 +126,21 @@ class GeoDirectoryTest extends DirectoryIntegrationTestCase {
         $listing = apply_filters(
             "craf_appna_directory_{$this->integration}_listing",
             null,
-            $this->create_request( ["id" => $in_city_id, "integration" => $this->integration] ),
+            $this->create_request(
+                [
+                    "id"          => $in_city_id,
+                    "integration" => $this->integration
+                ]
+            ),
             $this->listing_fields()
         );
         $this->assertSame(
-            [["id" => $location_id, "name" => "Dhaka", "slug" => "dhaka"]],
+            [[
+                "id"   => $location_id,
+                "name" => "Dhaka",
+                "slug" => "dhaka"
+            ]
+            ],
             $listing->get_locations()
         );
     }
@@ -147,7 +168,12 @@ class GeoDirectoryTest extends DirectoryIntegrationTestCase {
         $filters = apply_filters(
             "craf_appna_directory_{$this->integration}_listings_filters",
             null,
-            $this->create_request( ["facets" => ["location"], "integration" => $this->integration] )
+            $this->create_request(
+                [
+                    "facets"      => ["location"],
+                    "integration" => $this->integration
+                ]
+            )
         );
         $options = $filters->get_facets()[0]->get_options();
 
@@ -156,7 +182,10 @@ class GeoDirectoryTest extends DirectoryIntegrationTestCase {
         $this->assertSame( 2, $options[0]->get_count() );
 
         $this->assertSame(
-            [$missouri_id, $illinois_id],
+            [
+                $missouri_id,
+                $illinois_id
+            ],
             $this->listing_ids_for( $this->integration, ["values" => ["location" => ["springfield"]]] )
         );
 
@@ -190,19 +219,68 @@ class GeoDirectoryTest extends DirectoryIntegrationTestCase {
         // exact match must win however they are ordered by seo_id.
         $wpdb->insert(
             GEODIR_LOCATION_SEO_TABLE,
-            ["location_type" => "city", "country_slug" => "elsewhere", "region_slug" => "elsewhere", "city_slug" => "kyoto", "meta_title" => "", "meta_desc" => "", "image" => "0", "image_tagline" => "", "location_desc" => "", "cpt_desc" => ""],
-            ["%s", "%s", "%s", "%s", "%s", "%s", "%s", "%s", "%s", "%s"]
+            [
+                "location_type" => "city",
+                "country_slug"  => "elsewhere",
+                "region_slug"   => "elsewhere",
+                "city_slug"     => "kyoto",
+                "meta_title"    => "",
+                "meta_desc"     => "",
+                "image"         => "0",
+                "image_tagline" => "",
+                "location_desc" => "",
+                "cpt_desc"      => ""
+            ],
+            [
+                "%s",
+                "%s",
+                "%s",
+                "%s",
+                "%s",
+                "%s",
+                "%s",
+                "%s",
+                "%s",
+                "%s"
+            ]
         );
         $wpdb->insert(
             GEODIR_LOCATION_SEO_TABLE,
-            ["location_type" => "city", "country_slug" => "japan", "region_slug" => "kansai", "city_slug" => "kyoto", "meta_title" => "", "meta_desc" => "", "image" => (string) $attachment_id, "image_tagline" => "", "location_desc" => "", "cpt_desc" => ""],
-            ["%s", "%s", "%s", "%s", "%s", "%s", "%s", "%s", "%s", "%s"]
+            [
+                "location_type" => "city",
+                "country_slug"  => "japan",
+                "region_slug"   => "kansai",
+                "city_slug"     => "kyoto",
+                "meta_title"    => "",
+                "meta_desc"     => "",
+                "image"         => (string) $attachment_id,
+                "image_tagline" => "",
+                "location_desc" => "",
+                "cpt_desc"      => ""
+            ],
+            [
+                "%s",
+                "%s",
+                "%s",
+                "%s",
+                "%s",
+                "%s",
+                "%s",
+                "%s",
+                "%s",
+                "%s"
+            ]
         );
 
         $location = apply_filters(
             "craf_appna_directory_{$this->integration}_location",
             null,
-            $this->create_request( ["id" => $location_id, "integration" => $this->integration] ),
+            $this->create_request(
+                [
+                    "id"          => $location_id,
+                    "integration" => $this->integration
+                ]
+            ),
             $this->term_fields()
         );
 
@@ -237,7 +315,12 @@ class GeoDirectoryTest extends DirectoryIntegrationTestCase {
         $location = apply_filters(
             "craf_appna_directory_{$this->integration}_location",
             null,
-            $this->create_request( ["id" => $location_id, "integration" => $this->integration] ),
+            $this->create_request(
+                [
+                    "id"          => $location_id,
+                    "integration" => $this->integration
+                ]
+            ),
             $this->term_fields()
         );
 
@@ -257,14 +340,41 @@ class GeoDirectoryTest extends DirectoryIntegrationTestCase {
         );
         $wpdb->insert(
             GEODIR_LOCATION_SEO_TABLE,
-            ["location_type" => "city", "country_slug" => "japan", "region_slug" => "kansai", "city_slug" => "osaka", "meta_title" => "", "meta_desc" => "", "image" => (string) $own_image_id, "image_tagline" => "", "location_desc" => "", "cpt_desc" => ""],
-            ["%s", "%s", "%s", "%s", "%s", "%s", "%s", "%s", "%s", "%s"]
+            [
+                "location_type" => "city",
+                "country_slug"  => "japan",
+                "region_slug"   => "kansai",
+                "city_slug"     => "osaka",
+                "meta_title"    => "",
+                "meta_desc"     => "",
+                "image"         => (string) $own_image_id,
+                "image_tagline" => "",
+                "location_desc" => "",
+                "cpt_desc"      => ""
+            ],
+            [
+                "%s",
+                "%s",
+                "%s",
+                "%s",
+                "%s",
+                "%s",
+                "%s",
+                "%s",
+                "%s",
+                "%s"
+            ]
         );
 
         $located = apply_filters(
             "craf_appna_directory_{$this->integration}_location",
             null,
-            $this->create_request( ["id" => $location_id, "integration" => $this->integration] ),
+            $this->create_request(
+                [
+                    "id"          => $location_id,
+                    "integration" => $this->integration
+                ]
+            ),
             $this->term_fields()
         );
 
@@ -282,7 +392,13 @@ class GeoDirectoryTest extends DirectoryIntegrationTestCase {
         $locations = apply_filters(
             "craf_appna_directory_{$this->integration}_locations",
             null,
-            $this->create_request( ["page" => 1, "per_page" => 10, "integration" => $this->integration] ),
+            $this->create_request(
+                [
+                    "page"        => 1,
+                    "per_page"    => 10,
+                    "integration" => $this->integration
+                ]
+            ),
             $this->term_fields()
         );
 
@@ -292,7 +408,12 @@ class GeoDirectoryTest extends DirectoryIntegrationTestCase {
             apply_filters(
                 "craf_appna_directory_{$this->integration}_location",
                 null,
-                $this->create_request( ["id" => 1, "integration" => $this->integration] ),
+                $this->create_request(
+                    [
+                        "id"          => 1,
+                        "integration" => $this->integration
+                    ]
+                ),
                 $this->term_fields()
             )
         );
@@ -354,7 +475,12 @@ class GeoDirectoryTest extends DirectoryIntegrationTestCase {
         $this->assertIsArray( $reviews );
         $this->assertSame( 2, $reviews["total"] );
         $this->assertCount( 2, $reviews["items"] );
-        $this->assertSame( [5.0, 5.0], array_column( $reviews["items"], "rating" ) );
+        $this->assertSame(
+            [
+                5.0,
+                5.0
+            ], array_column( $reviews["items"], "rating" )
+        );
         $this->assertSame( 3, $reviews["review_count"] );
         $this->assertSame( 2, $reviews["rating_counts"]["5"] );
         $this->assertSame( 1, $reviews["rating_counts"]["3"] );
@@ -390,9 +516,27 @@ class GeoDirectoryTest extends DirectoryIntegrationTestCase {
             $this->create_request( array_merge( $base_params, ["orderby" => "rating_asc"] ) )
         );
 
-        $this->assertSame( ["Newest medium geo review", "Middle high geo review", "Old low geo review"], array_column( $newest["items"], "review" ) );
-        $this->assertSame( [5.0, 3.0, 1.0], array_column( $highest["items"], "rating" ) );
-        $this->assertSame( [1.0, 3.0, 5.0], array_column( $lowest["items"], "rating" ) );
+        $this->assertSame(
+            [
+                "Newest medium geo review",
+                "Middle high geo review",
+                "Old low geo review"
+            ], array_column( $newest["items"], "review" )
+        );
+        $this->assertSame(
+            [
+                5.0,
+                3.0,
+                1.0
+            ], array_column( $highest["items"], "rating" )
+        );
+        $this->assertSame(
+            [
+                1.0,
+                3.0,
+                5.0
+            ], array_column( $lowest["items"], "rating" )
+        );
     }
 
     /**
@@ -420,7 +564,17 @@ class GeoDirectoryTest extends DirectoryIntegrationTestCase {
                 "longitude"    => "90.4125",
                 "is_default"   => 0,
             ],
-            ["%s", "%s", "%s", "%s", "%s", "%s", "%s", "%s", "%d"]
+            [
+                "%s",
+                "%s",
+                "%s",
+                "%s",
+                "%s",
+                "%s",
+                "%s",
+                "%s",
+                "%d"
+            ]
         );
 
         $location_id                  = (int) $wpdb->insert_id;
@@ -442,7 +596,17 @@ class GeoDirectoryTest extends DirectoryIntegrationTestCase {
 
         //phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
         if ( $wpdb->get_var( $wpdb->prepare( "SELECT post_id FROM {$table} WHERE post_id = %d", $post_id ) ) ) {
-            return false !== $wpdb->update( $table, ["city" => $city, "region" => $region, "country" => $country], ["post_id" => $post_id], ["%s", "%s", "%s"], ["%d"] );
+            return false !== $wpdb->update(
+                $table, [
+                    "city"    => $city,
+                    "region"  => $region,
+                    "country" => $country
+                ], ["post_id" => $post_id], [
+                    "%s",
+                    "%s",
+                    "%s"
+                ], ["%d"]
+            );
         }
 
         return false !== $wpdb->insert(
@@ -455,7 +619,14 @@ class GeoDirectoryTest extends DirectoryIntegrationTestCase {
                 "region"      => $region,
                 "country"     => $country,
             ],
-            ["%d", "%s", "%s", "%s", "%s", "%s"]
+            [
+                "%d",
+                "%s",
+                "%s",
+                "%s",
+                "%s",
+                "%s"
+            ]
         );
     }
 
@@ -519,7 +690,20 @@ class GeoDirectoryTest extends DirectoryIntegrationTestCase {
                 "latitude"    => "",
                 "longitude"   => "",
             ],
-            ["%d", "%d", "%d", "%f", "%s", "%s", "%s", "%s", "%s", "%s", "%s", "%s"]
+            [
+                "%d",
+                "%d",
+                "%d",
+                "%f",
+                "%s",
+                "%s",
+                "%s",
+                "%s",
+                "%s",
+                "%s",
+                "%s",
+                "%s"
+            ]
         );
     }
 }

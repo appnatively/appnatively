@@ -14,6 +14,17 @@ if ( ! file_exists( $tests_dir . '/includes/functions.php' ) ) {
 }
 
 require_once $tests_dir . '/includes/functions.php';
+if ( getenv( 'CI' ) === 'true' ) {
+    tests_add_filter(
+        'muplugins_loaded', static function () {
+            add_filter(
+                'pre_http_request', static function ( $response ) {
+                    return $response !== false ? $response : new \WP_Error( 'appna_isolated_test', 'Outbound HTTP requires an explicit test fixture.' );
+                }, PHP_INT_MAX
+            );
+        }
+    );
+}
 tests_add_filter(
     'muplugins_loaded', static function() {
         require dirname( __DIR__ ) . '/appnatively.php';

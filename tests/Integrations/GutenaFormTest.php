@@ -209,7 +209,12 @@ class GutenaFormTest extends \WP_UnitTestCase {
     }
 
     public function test_get_form_excludes_unpublished_form() {
-        wp_update_post( [ 'ID' => $this->form_id, 'post_status' => 'draft' ] );
+        wp_update_post(
+            [
+                'ID'          => $this->form_id,
+                'post_status' => 'draft'
+            ]
+        );
 
         $gutena = $this->get_integration_instance();
         $form   = $gutena->expose_get_form( $this->form_id );
@@ -222,13 +227,20 @@ class GutenaFormTest extends \WP_UnitTestCase {
         $rules  = $gutena->expose_get_validation_rules( $form );
 
         $expected_fields = [
-            'text_1', 'text_2',
-            'email_1', 'email_2',
-            'radio_1', 'radio_2',
-            'checkbox_1', 'checkbox_2',
-            'select_1', 'select_2',
-            'range_1', 'range_2',
-            'number_1', 'number_2',
+            'text_1',
+            'text_2',
+            'email_1',
+            'email_2',
+            'radio_1',
+            'radio_2',
+            'checkbox_1',
+            'checkbox_2',
+            'select_1',
+            'select_2',
+            'range_1',
+            'range_2',
+            'number_1',
+            'number_2',
         ];
 
         foreach ( $expected_fields as $field ) {
@@ -302,12 +314,28 @@ class GutenaFormTest extends \WP_UnitTestCase {
         $form     = $gutena->expose_get_form( $this->form_id );
         $messages = $gutena->expose_get_validation_messages( $form );
 
-        $required_fields = [ 'text_2', 'email_1', 'radio_1', 'checkbox_1', 'select_1', 'range_1', 'number_1' ];
+        $required_fields = [
+            'text_2',
+            'email_1',
+            'radio_1',
+            'checkbox_1',
+            'select_1',
+            'range_1',
+            'number_1'
+        ];
         foreach ( $required_fields as $field ) {
             $this->assertArrayHasKey( "{$field}.required", $messages );
         }
 
-        $non_required = [ 'text_1', 'email_2', 'radio_2', 'checkbox_2', 'select_2', 'range_2', 'number_2' ];
+        $non_required = [
+            'text_1',
+            'email_2',
+            'radio_2',
+            'checkbox_2',
+            'select_2',
+            'range_2',
+            'number_2'
+        ];
         foreach ( $non_required as $field ) {
             $this->assertArrayNotHasKey( "{$field}.required", $messages );
         }
@@ -342,7 +370,12 @@ class GutenaFormTest extends \WP_UnitTestCase {
         $wp_request->set_param( 'text_2', 'John' );
         $wp_request->set_param( 'email_1', 'john@example.com' );
         $wp_request->set_param( 'radio_1', 'First Choice' );
-        $wp_request->set_param( 'checkbox_1', [ 'First Choice', 'Second Choice' ] );
+        $wp_request->set_param(
+            'checkbox_1', [
+                'First Choice',
+                'Second Choice'
+            ]
+        );
         $wp_request->set_param( 'select_1', 'First Choice' );
         $wp_request->set_param( 'range_1', '25' );
         $wp_request->set_param( 'number_1', '42' );
@@ -401,9 +434,19 @@ class GutenaFormTest extends \WP_UnitTestCase {
         $wp_request->set_param( 'text_2', 'John' );
         $wp_request->set_param( 'email_1', 'john@example.com' );
         $wp_request->set_param( 'radio_1', 'First Choice' );
-        $wp_request->set_param( 'checkbox_1', [ 'First Choice', 'Second Choice' ] );
+        $wp_request->set_param(
+            'checkbox_1', [
+                'First Choice',
+                'Second Choice'
+            ]
+        );
         $wp_request->set_param( 'select_1', 'First Choice' );
-        $wp_request->set_param( 'range_1', [ 'min' => '10', 'max' => '25' ] );
+        $wp_request->set_param(
+            'range_1', [
+                'min' => '10',
+                'max' => '25'
+            ]
+        );
         $wp_request->set_param( 'number_1', '42' );
 
         $request = new Request( $wp_request );
@@ -440,7 +483,12 @@ class GutenaFormTest extends \WP_UnitTestCase {
         $wp_request->set_param( 'text_2', 'John' );
         $wp_request->set_param( 'email_1', 'john@example.com' );
         $wp_request->set_param( 'radio_1', 'First Choice' );
-        $wp_request->set_param( 'checkbox_1', [ 'First Choice', 'Second Choice' ] );
+        $wp_request->set_param(
+            'checkbox_1', [
+                'First Choice',
+                'Second Choice'
+            ]
+        );
         $wp_request->set_param( 'select_1', 'First Choice' );
         $wp_request->set_param( 'range_1', '25' );
         $wp_request->set_param( 'number_1', '42' );
@@ -477,7 +525,12 @@ class GutenaFormTest extends \WP_UnitTestCase {
         $wp_request->set_param( 'text_2', 'John' );
         $wp_request->set_param( 'email_1', 'john@example.com' );
         $wp_request->set_param( 'radio_1', 'First Choice' );
-        $wp_request->set_param( 'checkbox_1', [ 'First Choice', 'Second Choice' ] );
+        $wp_request->set_param(
+            'checkbox_1', [
+                'First Choice',
+                'Second Choice'
+            ]
+        );
         $wp_request->set_param( 'select_1', 'First Choice' );
         $wp_request->set_param( 'range_1', '25' );
         $wp_request->set_param( 'number_1', '42' );
@@ -507,7 +560,7 @@ class GutenaFormTest extends \WP_UnitTestCase {
         add_filter(
             'craf_appna_form_rate_limit_max', function () {
                 return 2;
-            } 
+            }
         );
 
         $gutena = $this->get_integration_instance();

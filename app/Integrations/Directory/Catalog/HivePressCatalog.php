@@ -22,7 +22,15 @@ class HivePressCatalog extends ListingCatalog {
     ];
 
     /** Attributes the catalog reads itself, never offered as custom fields. */
-    private const CORE_ATTRIBUTES = [ 'price', 'featured', 'rating', 'latitude', 'longitude', 'location', 'region' ];
+    private const CORE_ATTRIBUTES = [
+        'price',
+        'featured',
+        'rating',
+        'latitude',
+        'longitude',
+        'location',
+        'region'
+    ];
 
     /** @var array<string, array>|null Listing attributes by name (see attributes()). */
     private ?array $attributes = null;
@@ -65,7 +73,10 @@ class HivePressCatalog extends ListingCatalog {
 
     public function price_sql(): ?array {
         $price = $this->meta_number( 'hp_price' );
-        return [ $price, $price ];
+        return [
+            $price,
+            $price
+        ];
     }
 
     public function rating_sql(): ?string {
@@ -77,13 +88,31 @@ class HivePressCatalog extends ListingCatalog {
     }
 
     public function coordinates(): ?array {
-        return [ $this->meta_number( 'hp_latitude' ), $this->meta_number( 'hp_longitude' ) ];
+        return [
+            $this->meta_number( 'hp_latitude' ),
+            $this->meta_number( 'hp_longitude' )
+        ];
     }
 
     public function internal_meta_keys(): array {
         return [
-            'hp_featured', 'hp_price', 'hp_rating', 'hp_rating_count', 'hp_latitude', 'hp_longitude', 'hp_location', 'hp_verified', 'hp_vendor',
-            'hp_image', 'hp_images', 'hp_expired_time', 'hp_featured_time', 'hp_address', 'hp_phone', 'hp_email', 'hp_website',
+            'hp_featured',
+            'hp_price',
+            'hp_rating',
+            'hp_rating_count',
+            'hp_latitude',
+            'hp_longitude',
+            'hp_location',
+            'hp_verified',
+            'hp_vendor',
+            'hp_image',
+            'hp_images',
+            'hp_expired_time',
+            'hp_featured_time',
+            'hp_address',
+            'hp_phone',
+            'hp_email',
+            'hp_website',
         ];
     }
 

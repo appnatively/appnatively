@@ -50,7 +50,12 @@ class ProductRepository {
 
         $by_id = [];
         if ( ! empty( $page['ids'] ) ) {
-            foreach ( Product::with( [ 'detail', 'variants' ] )->whereIn( 'ID', $page['ids'] )->get() as $product ) {
+            foreach ( Product::with(
+                [
+                    'detail',
+                    'variants'
+                ]
+            )->whereIn( 'ID', $page['ids'] )->get() as $product ) {
                 $by_id[ (int) $product->ID ] = $product;
             }
         }
@@ -99,7 +104,11 @@ class ProductRepository {
         $per_page   = (int) $request->get_param( 'per_page' ) ?: 10;
         $tax_query  = [ 'relation' => 'OR' ];
 
-        foreach ( [ FluentCartCatalog::CATEGORY_TAXONOMY, FluentCartCatalog::BRAND_TAXONOMY, 'product-tags' ] as $taxonomy ) {
+        foreach ( [
+            FluentCartCatalog::CATEGORY_TAXONOMY,
+            FluentCartCatalog::BRAND_TAXONOMY,
+            'product-tags'
+        ] as $taxonomy ) {
             if ( ! taxonomy_exists( $taxonomy ) ) {
                 continue;
             }
@@ -136,7 +145,12 @@ class ProductRepository {
 
         $products = [];
         foreach ( $query->posts as $post ) {
-            $product = Product::with( [ 'detail', 'variants' ] )->find( $post->ID );
+            $product = Product::with(
+                [
+                    'detail',
+                    'variants'
+                ]
+            )->find( $post->ID );
             if ( $product ) {
                 $products[] = $this->map_to_product_dto( $product, $fields );
             }
@@ -162,7 +176,12 @@ class ProductRepository {
         }
 
         // Use native model with eager loading
-        $product = Product::with( [ 'detail', 'variants' ] )->find( $id );
+        $product = Product::with(
+            [
+                'detail',
+                'variants'
+            ]
+        )->find( $id );
 
         if ( ! $product || $product->post_status !== 'publish' || '' !== (string) $product->post_password ) {
             throw new Exception( esc_html__( "Product not found.", "appnatively" ), 404 );
@@ -190,7 +209,12 @@ class ProductRepository {
 
         $products = [];
         foreach ( $ids as $id ) {
-            $product = Product::with( [ 'detail', 'variants' ] )->find( $id );
+            $product = Product::with(
+                [
+                    'detail',
+                    'variants'
+                ]
+            )->find( $id );
             if ( $product && $product->post_status === 'publish' && '' === (string) $product->post_password ) {
                 $products[] = $this->map_to_product_dto( $product, $fields );
             }

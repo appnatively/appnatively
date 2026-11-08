@@ -338,7 +338,12 @@ class ForminatorTest extends \WP_UnitTestCase {
     }
 
     public function test_get_form_excludes_unpublished_form() {
-        wp_update_post( [ 'ID' => $this->form_id, 'post_status' => 'draft' ] );
+        wp_update_post(
+            [
+                'ID'          => $this->form_id,
+                'post_status' => 'draft'
+            ]
+        );
 
         $forminator = $this->get_integration_instance();
         $form       = $forminator->expose_get_form( $this->form_id );
@@ -552,7 +557,12 @@ class ForminatorTest extends \WP_UnitTestCase {
         $wp_request->set_param( 'url-1', 'https://example.com' );
         $wp_request->set_param( 'number-1', '25' );
         $wp_request->set_param( 'radio-1', 'male' );
-        $wp_request->set_param( 'checkbox-1', [ 'reading', 'music' ] );
+        $wp_request->set_param(
+            'checkbox-1', [
+                'reading',
+                'music'
+            ]
+        );
         $wp_request->set_param( 'select-1', 'us' );
         $wp_request->set_param( 'date-1', '2024-01-15' );
         $wp_request->set_param( 'rating-1', '4' );
@@ -586,7 +596,12 @@ class ForminatorTest extends \WP_UnitTestCase {
         $this->assertSame( '2024-01-15', $captured_mail_data['date-1'] );
         $this->assertSame( '4', $captured_mail_data['rating-1'] );
         $this->assertSame( '5000', $captured_mail_data['slider-1'] );
-        $this->assertEqualsCanonicalizing( [ 'reading', 'music' ], $captured_mail_data['checkbox-1'] );
+        $this->assertEqualsCanonicalizing(
+            [
+                'reading',
+                'music'
+            ], $captured_mail_data['checkbox-1']
+        );
 
         $entries = $wpdb->get_results(
             $wpdb->prepare(

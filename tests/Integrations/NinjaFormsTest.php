@@ -67,8 +67,14 @@ class NinjaFormsTest extends \WP_UnitTestCase {
                 'label'    => 'Gender',
                 'required' => false,
                 'options'  => [
-                    [ 'label' => 'Male', 'value' => 'male' ],
-                    [ 'label' => 'Female', 'value' => 'female' ],
+                    [
+                        'label' => 'Male',
+                        'value' => 'male'
+                    ],
+                    [
+                        'label' => 'Female',
+                        'value' => 'female'
+                    ],
                 ],
             ]
         );

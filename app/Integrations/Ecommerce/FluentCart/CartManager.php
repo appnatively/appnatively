@@ -83,7 +83,12 @@ class CartManager {
                 continue;
             }
 
-            $result = CartResource::create( [ 'id' => $variation_id, 'quantity' => $quantity ] );
+            $result = CartResource::create(
+                [
+                    'id'       => $variation_id,
+                    'quantity' => $quantity
+                ]
+            );
 
             if ( is_wp_error( $result ) ) {
                 throw new Exception( esc_html( $result->get_error_message() ), 400 );
@@ -153,7 +158,8 @@ class CartManager {
         $this->get_cart( $request );
         $result = CartResource::applyCoupon( [ sanitize_text_field( (string) $request->get_param( 'code' ) ) ] );
         if ( is_wp_error( $result ) ) {
-            throw new Exception( esc_html( $result->get_error_message() ), 400 ); }
+            throw new Exception( esc_html( $result->get_error_message() ), 400 );
+        }
         return $this->cart_get( null, $request );
     }
 
@@ -161,7 +167,8 @@ class CartManager {
         $this->get_cart( $request );
         $result = CartResource::removeCoupon( sanitize_text_field( (string) $request->get_param( 'code' ) ) );
         if ( is_wp_error( $result ) ) {
-            throw new Exception( esc_html( $result->get_error_message() ), 400 ); }
+            throw new Exception( esc_html( $result->get_error_message() ), 400 );
+        }
         return $this->cart_get( null, $request );
     }
 

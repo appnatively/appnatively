@@ -26,10 +26,27 @@ class SureCartCatalog extends ProductCatalog {
     /** The mirror's own bookkeeping meta, never a shopper filter. */
     public function internal_meta_keys(): array {
         return [
-            'sc_id', 'product', 'min_price_amount', 'max_price_amount', 'available_stock', 'stock_enabled',
-            'allow_out_of_stock_purchases', 'featured', 'recurring', 'shipping_enabled', 'purchase_limit', 'sku',
-            'weight', 'weight_unit', 'display_amount', 'scratch_display_amount', 'range_display_amount',
-            'is_on_sale', 'total_reviews', 'average_stars', 'reviews_enabled',
+            'sc_id',
+            'product',
+            'min_price_amount',
+            'max_price_amount',
+            'available_stock',
+            'stock_enabled',
+            'allow_out_of_stock_purchases',
+            'featured',
+            'recurring',
+            'shipping_enabled',
+            'purchase_limit',
+            'sku',
+            'weight',
+            'weight_unit',
+            'display_amount',
+            'scratch_display_amount',
+            'range_display_amount',
+            'is_on_sale',
+            'total_reviews',
+            'average_stars',
+            'reviews_enabled',
         ];
     }
 

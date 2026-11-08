@@ -39,7 +39,10 @@ class ConnectionAuthTest extends \WP_UnitTestCase {
             ['authorization' => 'bEaReR  ' . $this->key],
             ['Authorization' => "\tBearer\t" . $this->key . "\t"],
             ['X-AppNatively-Key' => $this->key],
-            ['Authorization' => 'Bearer ' . $this->key, 'X-AppNatively-Key' => 'wrong'],
+            [
+                'Authorization'     => 'Bearer ' . $this->key,
+                'X-AppNatively-Key' => 'wrong'
+            ],
         ] as $headers ) {
             $this->assertTrue( $this->authorize( $headers ) );
             $this->assertSame( 0, get_current_user_id() );
@@ -47,10 +50,22 @@ class ConnectionAuthTest extends \WP_UnitTestCase {
     }
 
     public function test_invalid_authorization_never_falls_back_to_a_valid_legacy_key(): void {
-        foreach ( ['', 'Bearer', 'Bearer wrong', 'Basic ' . $this->key, 'prefix Bearer ' . $this->key,
-            'Bearer ' . $this->key . ' extra', 'Bearer ' . $this->key . ',another', "Bearer " . $this->key . "\n",
+        foreach ( [
+            '',
+            'Bearer',
+            'Bearer wrong',
+            'Basic ' . $this->key,
+            'prefix Bearer ' . $this->key,
+            'Bearer ' . $this->key . ' extra',
+            'Bearer ' . $this->key . ',another',
+            "Bearer " . $this->key . "\n",
         ] as $header ) {
-            $error = $this->authorize( ['Authorization' => $header, 'X-AppNatively-Key' => $this->key] );
+            $error = $this->authorize(
+                [
+                    'Authorization'     => $header,
+                    'X-AppNatively-Key' => $this->key
+                ]
+            );
             $this->assertWPError( $error );
             $this->assertSame( 'craf_appna_bad_site_key', $error->get_error_code() );
             $this->assertSame( 401, $error->get_error_data()['status'] );
@@ -65,7 +80,10 @@ class ConnectionAuthTest extends \WP_UnitTestCase {
 
     public function test_rotation_revokes_both_transports(): void {
         $new_key = Settings::regenerate_site_key();
-        foreach ( ['Authorization', 'X-AppNatively-Key'] as $header ) {
+        foreach ( [
+            'Authorization',
+            'X-AppNatively-Key'
+        ] as $header ) {
             $prefix = 'Authorization' === $header ? 'Bearer ' : '';
             $this->assertWPError( $this->authorize( [$header => $prefix . $this->key] ) );
             $this->assertTrue( $this->authorize( [$header => $prefix . $new_key] ) );
@@ -81,11 +99,26 @@ class ConnectionAuthTest extends \WP_UnitTestCase {
 
     public function protected_routes(): array {
         return [
-            ['GET', '/plugins'],
-            ['GET', '/post-types/available'],
-            ['POST', '/post-types/selection'],
-            ['GET', '/ecommerce/products/filter-sources'],
-            ['GET', '/directory/listings/filter-sources'],
+            [
+                'GET',
+                '/plugins'
+            ],
+            [
+                'GET',
+                '/post-types/available'
+            ],
+            [
+                'POST',
+                '/post-types/selection'
+            ],
+            [
+                'GET',
+                '/ecommerce/products/filter-sources'
+            ],
+            [
+                'GET',
+                '/directory/listings/filter-sources'
+            ],
         ];
     }
 
@@ -105,7 +138,10 @@ class ConnectionAuthTest extends \WP_UnitTestCase {
         // Check the real route's permission callback without needing an active
         // ecommerce/directory integration for its controller to run.
         $endpoints = rest_get_server()->get_routes()[$route];
-        foreach ( ['Authorization', 'X-AppNatively-Key'] as $header ) {
+        foreach ( [
+            'Authorization',
+            'X-AppNatively-Key'
+        ] as $header ) {
             $authorized = new \WP_REST_Request( $method, $route );
             $authorized->set_header( $header, ( 'Authorization' === $header ? 'Bearer ' : '' ) . $this->key );
             $found = false;
@@ -139,7 +175,10 @@ class ConnectionAuthTest extends \WP_UnitTestCase {
     }
 
     public function test_authenticated_get_and_post_work_with_both_transports(): void {
-        foreach ( ['Authorization', 'X-AppNatively-Key'] as $header ) {
+        foreach ( [
+            'Authorization',
+            'X-AppNatively-Key'
+        ] as $header ) {
             $value = ( 'Authorization' === $header ? 'Bearer ' : '' ) . $this->key;
             $get   = new \WP_REST_Request( 'GET', '/craf_appna/v1/plugins' );
             $get->set_header( $header, $value );
@@ -147,7 +186,12 @@ class ConnectionAuthTest extends \WP_UnitTestCase {
 
             $post = new \WP_REST_Request( 'POST', '/craf_appna/v1/post-types/selection' );
             $post->set_header( $header, $value );
-            $post->set_body_params( ['app_id' => 'auth-test', 'contentTypes' => []] );
+            $post->set_body_params(
+                [
+                    'app_id'       => 'auth-test',
+                    'contentTypes' => []
+                ]
+            );
             $response = rest_do_request( $post );
             $this->assertSame( 200, $response->get_status() );
             $this->assertSame( [], $response->get_data()['data']['selected'] );

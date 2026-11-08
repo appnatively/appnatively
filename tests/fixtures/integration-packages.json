@@ -1,0 +1,170 @@
+[
+  {
+    "slug": "formgent",
+    "version": "1.12.0",
+    "file": "formgent/formgent.php",
+    "group": "forms-a",
+    "source": "wordpress.org"
+  },
+  {
+    "slug": "fluentform",
+    "version": "6.2.13",
+    "file": "fluentform/fluentform.php",
+    "group": "forms-a",
+    "source": "wordpress.org"
+  },
+  {
+    "slug": "everest-forms",
+    "version": "3.6.0",
+    "file": "everest-forms/everest-forms.php",
+    "group": "forms-a",
+    "source": "wordpress.org"
+  },
+  {
+    "slug": "contact-form-7",
+    "version": "6.1.7",
+    "file": "contact-form-7/wp-contact-form-7.php",
+    "group": "forms-a",
+    "source": "wordpress.org"
+  },
+  {
+    "slug": "formidable",
+    "version": "6.34",
+    "file": "formidable/formidable.php",
+    "group": "forms-a",
+    "source": "wordpress.org"
+  },
+  {
+    "slug": "forminator",
+    "version": "1.57.2",
+    "file": "forminator/forminator.php",
+    "group": "forms-a",
+    "source": "wordpress.org"
+  },
+  {
+    "slug": "gutena-forms",
+    "version": "2.1.0",
+    "file": "gutena-forms/gutena-forms.php",
+    "group": "forms-a",
+    "source": "wordpress.org"
+  },
+  {
+    "slug": "happyforms",
+    "version": "1.26.15",
+    "file": "happyforms/happyforms.php",
+    "group": "forms-b",
+    "source": "wordpress.org"
+  },
+  {
+    "slug": "sureforms",
+    "version": "2.12.2",
+    "file": "sureforms/sureforms.php",
+    "group": "forms-b",
+    "source": "wordpress.org"
+  },
+  {
+    "slug": "weforms",
+    "version": "1.6.28",
+    "file": "weforms/weforms.php",
+    "group": "forms-b",
+    "source": "wordpress.org"
+  },
+  {
+    "slug": "wpforms-lite",
+    "version": "2.0.0.2",
+    "file": "wpforms-lite/wpforms.php",
+    "group": "forms-b",
+    "source": "wordpress.org"
+  },
+  {
+    "slug": "bit-form",
+    "version": "3.3.0",
+    "file": "bit-form/bitforms.php",
+    "group": "forms-b",
+    "source": "wordpress.org"
+  },
+  {
+    "slug": "ninja-forms",
+    "version": "3.15.2",
+    "file": "ninja-forms/ninja-forms.php",
+    "group": "forms-b",
+    "source": "wordpress.org"
+  },
+  {
+    "slug": "directorist",
+    "version": "8.9.6",
+    "file": "directorist/directorist-base.php",
+    "group": "directory",
+    "source": "wordpress.org"
+  },
+  {
+    "slug": "geodirectory",
+    "version": "2.8.178",
+    "file": "geodirectory/geodirectory.php",
+    "group": "directory",
+    "source": "wordpress.org"
+  },
+  {
+    "slug": "hivepress",
+    "version": "1.7.31",
+    "file": "hivepress/hivepress.php",
+    "group": "directory",
+    "source": "wordpress.org"
+  },
+  {
+    "slug": "business-directory-plugin",
+    "version": "6.4.27",
+    "file": "business-directory-plugin/business-directory-plugin.php",
+    "group": "directory",
+    "source": "wordpress.org"
+  },
+  {
+    "slug": "classified-listing",
+    "version": "6.1.1",
+    "file": "classified-listing/classified-listing.php",
+    "group": "directory",
+    "source": "wordpress.org"
+  },
+  {
+    "slug": "adirectory",
+    "version": "3.1.6",
+    "file": "adirectory/adirectory.php",
+    "group": "directory",
+    "source": "wordpress.org"
+  },
+  {
+    "slug": "hivepress-geolocation",
+    "version": "1.3.10",
+    "file": "hivepress-geolocation/hivepress-geolocation.php",
+    "group": "directory",
+    "source": "artifact"
+  },
+  {
+    "slug": "geodir_location_manager",
+    "version": "2.3.39",
+    "file": "geodir_location_manager/geodir_location_manager.php",
+    "group": "directory",
+    "source": "artifact"
+  },
+  {
+    "slug": "woocommerce",
+    "version": "11.0.0",
+    "file": "woocommerce/woocommerce.php",
+    "group": "commerce",
+    "source": "wordpress.org"
+  },
+  {
+    "slug": "fluent-cart",
+    "version": "1.7.0",
+    "file": "fluent-cart/fluent-cart.php",
+    "group": "commerce",
+    "source": "wordpress.org"
+  },
+  {
+    "slug": "surecart",
+    "version": "4.6.2",
+    "file": "surecart/surecart.php",
+    "group": "commerce",
+    "source": "wordpress.org"
+  }
+]

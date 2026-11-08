@@ -38,7 +38,10 @@ class MenuServiceProvider extends Provider
             __( 'AppNatively', 'appnatively' ),
             'manage_options',
             self::PAGE_SLUG,
-            [$this, 'dashboard'],
+            [
+                $this,
+                'dashboard'
+            ],
             'dashicons-smartphone',
             30
         );
@@ -56,14 +59,14 @@ class MenuServiceProvider extends Provider
 
         View::render(
             'settings', [
-                'api_enabled'    => Settings::is_api_enabled(),
-                'site_key'       => Settings::get_site_key(),
-                'site_url'       => home_url(),
-                'active_tokens'  => Auth::count_all_active(),
-                'token_days'     => (int) round( Auth::get_ttl() / DAY_IN_SECONDS ),
-                'permalink_ok'   => Settings::uses_postname_permalinks(),
-                'content_types'  => ContentTypes::all(),
-                'notice'         => $this->current_notice(),
+                'api_enabled'   => Settings::is_api_enabled(),
+                'site_key'      => Settings::get_site_key(),
+                'site_url'      => home_url(),
+                'active_tokens' => Auth::count_all_active(),
+                'token_days'    => (int) round( Auth::get_ttl() / DAY_IN_SECONDS ),
+                'permalink_ok'  => Settings::uses_postname_permalinks(),
+                'content_types' => ContentTypes::all(),
+                'notice'        => $this->current_notice(),
             ]
         );
     }

@@ -27,7 +27,13 @@ abstract class DirectoryIntegrationTestCase extends \WP_UnitTestCase {
                 "public"       => true,
                 "show_ui"      => true,
                 "has_archive"  => true,
-                "supports"     => ["title", "editor", "excerpt", "thumbnail", "comments"],
+                "supports"     => [
+                    "title",
+                    "editor",
+                    "excerpt",
+                    "thumbnail",
+                    "comments"
+                ],
                 "rewrite"      => false,
                 "show_in_rest" => true,
             ]
@@ -152,15 +158,41 @@ abstract class DirectoryIntegrationTestCase extends \WP_UnitTestCase {
     }
 
     protected function category_fields(): array {
-        return ["id", "name", "slug", "description", "parent", "count", "image"];
+        return [
+            "id",
+            "name",
+            "slug",
+            "description",
+            "parent",
+            "count",
+            "image"
+        ];
     }
 
     protected function term_fields(): array {
-        return ["id", "name", "slug", "count", "image"];
+        return [
+            "id",
+            "name",
+            "slug",
+            "count",
+            "image"
+        ];
     }
 
     protected function assert_provider_filter_surface( string $integration ): void {
-        foreach ( ["listings", "listings_filters", "listings_filter_sources", "listing", "related_listings", "reviews", "categories", "category", "tags", "locations", "location"] as $operation ) {
+        foreach ( [
+            "listings",
+            "listings_filters",
+            "listings_filter_sources",
+            "listing",
+            "related_listings",
+            "reviews",
+            "categories",
+            "category",
+            "tags",
+            "locations",
+            "location"
+        ] as $operation ) {
             $this->assertNotFalse(
                 has_filter( "craf_appna_directory_{$integration}_{$operation}" ),
                 "Missing directory filter for {$integration}: {$operation}"
@@ -192,7 +224,12 @@ abstract class DirectoryIntegrationTestCase extends \WP_UnitTestCase {
         $featured = apply_filters(
             "craf_appna_directory_{$integration}_listings",
             null,
-            $this->create_request( [ "featured" => "1", "integration" => $integration ] ),
+            $this->create_request(
+                [
+                    "featured"    => "1",
+                    "integration" => $integration
+                ]
+            ),
             $this->listing_fields()
         );
         $this->assertInstanceOf( ListingPaginatorDTO::class, $featured );
@@ -201,7 +238,12 @@ abstract class DirectoryIntegrationTestCase extends \WP_UnitTestCase {
         $filters = apply_filters(
             "craf_appna_directory_{$integration}_listings_filters",
             null,
-            $this->create_request( [ "facets" => [ "status" ], "integration" => $integration ] )
+            $this->create_request(
+                [
+                    "facets"      => [ "status" ],
+                    "integration" => $integration
+                ]
+            )
         );
         $this->assertInstanceOf( FiltersDTO::class, $filters );
         $status = $filters->get_facets()[0];
@@ -341,7 +383,16 @@ abstract class DirectoryIntegrationTestCase extends \WP_UnitTestCase {
         $reviews = apply_filters( "craf_appna_directory_{$integration}_reviews", null, $request );
 
         $this->assertIsArray( $reviews );
-        foreach ( ["current_page", "per_page", "total", "last_page", "average_rating", "review_count", "rating_counts", "items"] as $key ) {
+        foreach ( [
+            "current_page",
+            "per_page",
+            "total",
+            "last_page",
+            "average_rating",
+            "review_count",
+            "rating_counts",
+            "items"
+        ] as $key ) {
             $this->assertArrayHasKey( $key, $reviews );
         }
     }

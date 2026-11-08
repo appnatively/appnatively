@@ -21,7 +21,13 @@ class OrderRepository {
      *
      * @var string[]
      */
-    private const ORDER_EXPAND = [ 'checkout', 'checkout.line_items', 'checkout.line_items.price', 'checkout.line_items.product', 'checkout.line_items.variant' ];
+    private const ORDER_EXPAND = [
+        'checkout',
+        'checkout.line_items',
+        'checkout.line_items.price',
+        'checkout.line_items.product',
+        'checkout.line_items.variant'
+    ];
 
     /**
      * The current user's SureCart customer id, if any.
@@ -52,7 +58,12 @@ class OrderRepository {
 
         $paginator = Order::where( [ 'customer_ids' => [ $customer_id ] ] )
             ->with( self::ORDER_EXPAND )
-            ->paginate( [ 'page' => $page, 'per_page' => $per_page ] );
+            ->paginate(
+                [
+                    'page'     => $page,
+                    'per_page' => $per_page
+                ]
+            );
 
         if ( is_wp_error( $paginator ) ) {
             return new OrderPaginatorDTO( $page, $per_page, 0, 1, [] );
@@ -130,11 +141,26 @@ class OrderRepository {
                 'processedAt'        => $this->format_date( $order->created_at ?? null ),
                 'financialStatus'    => (string) ( $order->status ?? '' ),
                 'fulfillmentStatus'  => (string) ( $order->fulfillment_status ?? '' ),
-                'totalPrice'         => [ 'amount' => $this->format_amount( $checkout->total_amount ?? 0 ), 'currencyCode' => $currency ],
-                'subtotalPrice'      => [ 'amount' => $this->format_amount( $checkout->subtotal_amount ?? 0 ), 'currencyCode' => $currency ],
-                'totalTax'           => [ 'amount' => $this->format_amount( $checkout->tax_amount ?? 0 ), 'currencyCode' => $currency ],
-                'totalShippingPrice' => [ 'amount' => $this->format_amount( $checkout->shipping_amount ?? 0 ), 'currencyCode' => $currency ],
-                'totalDiscount'      => [ 'amount' => $this->format_amount( $checkout->discount_amount ?? 0 ), 'currencyCode' => $currency ],
+                'totalPrice'         => [
+                    'amount'       => $this->format_amount( $checkout->total_amount ?? 0 ),
+                    'currencyCode' => $currency
+                ],
+                'subtotalPrice'      => [
+                    'amount'       => $this->format_amount( $checkout->subtotal_amount ?? 0 ),
+                    'currencyCode' => $currency
+                ],
+                'totalTax'           => [
+                    'amount'       => $this->format_amount( $checkout->tax_amount ?? 0 ),
+                    'currencyCode' => $currency
+                ],
+                'totalShippingPrice' => [
+                    'amount'       => $this->format_amount( $checkout->shipping_amount ?? 0 ),
+                    'currencyCode' => $currency
+                ],
+                'totalDiscount'      => [
+                    'amount'       => $this->format_amount( $checkout->discount_amount ?? 0 ),
+                    'currencyCode' => $currency
+                ],
                 'paymentMethod'      => '',
                 'discountCode'       => '',
                 'lineItems'          => $line_items,

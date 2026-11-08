@@ -1,0 +1,77 @@
+name: Refactor integration gates
+
+on:
+  pull_request:
+    branches: [test]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  wordpress:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {php: '7.4', wordpress: '6.5', group: core, suite: Core, hpos: 'no'}
+          - {php: '8.3', wordpress: '7.1', group: core, suite: Core, hpos: 'no'}
+          - {php: '8.3', wordpress: '7.1', group: forms-a, suite: FormsA, hpos: 'no'}
+          - {php: '8.3', wordpress: '7.1', group: forms-b, suite: FormsB, hpos: 'no'}
+          - {php: '8.3', wordpress: '7.1', group: directory, suite: Directory, hpos: 'no', extensions: 'yes'}
+          - {php: '8.3', wordpress: '7.1', group: directory, suite: Directory, hpos: 'no', extensions: 'no'}
+          - {php: '8.3', wordpress: '7.1', group: commerce, suite: Commerce, hpos: 'no'}
+          - {php: '8.3', wordpress: '7.1', group: commerce, suite: Commerce, hpos: 'yes'}
+    services:
+      mysql:
+        image: mysql:8.0.35
+        env:
+          MYSQL_ROOT_PASSWORD: test-only-password
+          MYSQL_DATABASE: appnatively_test
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd="mysqladmin ping -ptest-only-password"
+          --health-interval=10s --health-timeout=5s --health-retries=10
+    env:
+      CI: 'true'
+      APPNA_TEST_DB_PASSWORD: test-only-password
+      CRAF_APPNA_TEST_HPOS: ${{ matrix.hpos }}
+      CRAF_APPNA_TEST_EXTENSIONS: ${{ matrix.extensions }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: mysqli, pdo_mysql, pdo_sqlite
+          coverage: none
+      - run: composer setup
+      - run: sudo apt-get update && sudo apt-get install -y subversion
+      # Licensed extension ZIPs must be supplied by the repository owner's CI provisioning.
+      # The installer fails explicitly when they are missing.
+      - run: python3 bin/ci-wordpress.py '${{ matrix.wordpress }}' '${{ matrix.group }}'
+      - name: Local-style standalone checks
+        if: matrix.group == 'core'
+        run: |
+          for test in notification-queue notification-sessions notification-forms notification-provision notification-hardening notification-app-adapters notification-audiences refactor-contracts schema-setup; do
+            php "tests/Standalone/$test.php"
+          done
+      - name: Core WordPress suite
+        if: matrix.group == 'core'
+        run: php vendor/vendor-src/bin/phpunit -c phpunit.ci.xml --bootstrap tests/bootstrap-auth.php --testsuite Core --fail-on-skipped --fail-on-incomplete --log-junit junit.xml
+      - name: Integration suite
+        if: matrix.group != 'core' && matrix.group != 'directory'
+        run: php vendor/vendor-src/bin/phpunit -c phpunit.ci.xml --testsuite '${{ matrix.suite }}' --fail-on-skipped --fail-on-incomplete --log-junit junit.xml
+      - name: Directory suite with extensions
+        if: matrix.group == 'directory' && matrix.extensions == 'yes'
+        run: php vendor/vendor-src/bin/phpunit -c phpunit.ci.xml --testsuite Directory --filter '/^(?!.*test_geodirectory_locations_are_empty_without_the_location_manager)/' --fail-on-skipped --fail-on-incomplete --log-junit junit.xml
+      - name: Directory without Location Manager
+        if: matrix.group == 'directory' && matrix.extensions == 'no'
+        run: php vendor/vendor-src/bin/phpunit -c phpunit.ci.xml --testsuite Directory --filter test_geodirectory_locations_are_empty_without_the_location_manager --fail-on-skipped --fail-on-incomplete --log-junit junit.xml
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: tests-${{ matrix.php }}-${{ matrix.group }}-${{ matrix.hpos }}-${{ matrix.extensions }}
+          path: |
+            junit.xml
+            ci-package-digests.json

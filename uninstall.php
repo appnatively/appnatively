@@ -14,7 +14,7 @@ $craf_appna_cleanup_site = static function (): void {
         'craf_appna_events_schema',
         'craf_appna_event_last_error',
         'craf_appna_notifications_enabled',
-        'craf_appna_notification_consent',
+        'craf_appna_notification_epoch',
         'craf_appna_notification_bindings',
     ] as $option ) {
         delete_option( $option );
@@ -22,7 +22,7 @@ $craf_appna_cleanup_site = static function (): void {
     }
     foreach ( (array) _get_cron_array() as $timestamp => $hooks ) {
         foreach ( $hooks as $hook => $events ) {
-            if ( strpos( $hook, 'craf_appna_nq_' ) !== 0 && $hook !== 'craf_appna_notification_dispatch' ) {
+            if ( strpos( $hook, 'craf_appna_nq_' ) !== 0 && $hook !== 'craf_appna_notification_dispatch' && $hook !== 'craf_appna_handoff_cleanup' ) {
                 continue;
             }
             foreach ( $events as $event ) {
@@ -40,10 +40,12 @@ $craf_appna_cleanup_site = static function (): void {
         'craf_appna_event_sequences',
         'craf_appna_event_bindings',
     ] as $table ) {
-        // phpcs:ignore WordPress.DB.DirectDatabaseQuery.SchemaChange, WordPress.DB.PreparedSQL.NotPrepared -- fixed plugin-owned suffix and trusted WordPress prefix.
-        $wpdb->query( 'DROP TABLE IF EXISTS ' . $wpdb->prefix . $table );
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery.SchemaChange -- fixed AppNatively-owned tables only.
+        $wpdb->query( $wpdb->prepare( 'DROP TABLE IF EXISTS %i', $wpdb->prefix . $table ) );
     }
     foreach ( [
+        'craf_appna_handoff_',
+        'craf_appna_auth_',
         'craf_appna_nq_',
         'craf_appna_setup_',
         '_transient_craf_appna_',

@@ -95,7 +95,13 @@ class FluentCartTest extends \WP_UnitTestCase
         $request->set_param( 'page', 1 );
         $request->set_param( 'per_page', 10 );
 
-        $paginator = $fluent_cart->products( null, $request, [ 'id', 'name', 'price' ] );
+        $paginator = $fluent_cart->products(
+            null, $request, [
+                'id',
+                'name',
+                'price'
+            ]
+        );
 
         $this->assertGreaterThanOrEqual( 1, $paginator->get_total() );
         $ids = array_map( fn( $dto ) => $dto->get_id(), $paginator->get_items() );
@@ -107,7 +113,15 @@ class FluentCartTest extends \WP_UnitTestCase
         $request     = new \WP_REST_Request();
         $request->set_param( 'id', $this->product_id );
 
-        $dto = $fluent_cart->product( null, $request, [ 'id', 'name', 'price', 'compare_at_price', 'variants' ] );
+        $dto = $fluent_cart->product(
+            null, $request, [
+                'id',
+                'name',
+                'price',
+                'compare_at_price',
+                'variants'
+            ]
+        );
 
         $this->assertNotNull( $dto );
         $this->assertEquals( $this->product_id, $dto->get_id() );
@@ -144,7 +158,12 @@ class FluentCartTest extends \WP_UnitTestCase
         $request->set_param( 'page', 1 );
         $request->set_param( 'per_page', 10 );
 
-        $paginator = $fluent_cart->categories( null, $request, [ 'id', 'name' ] );
+        $paginator = $fluent_cart->categories(
+            null, $request, [
+                'id',
+                'name'
+            ]
+        );
 
         $ids = array_map( fn( $dto ) => $dto->get_id(), $paginator->get_items() );
         $this->assertContains( $this->category_id, $ids );
@@ -155,7 +174,12 @@ class FluentCartTest extends \WP_UnitTestCase
         $request     = new \WP_REST_Request();
         $request->set_param( 'id', $this->category_id );
 
-        $dto = $fluent_cart->category( null, $request, [ 'id', 'name' ] );
+        $dto = $fluent_cart->category(
+            null, $request, [
+                'id',
+                'name'
+            ]
+        );
 
         $this->assertNotNull( $dto );
         $this->assertEquals( $this->category_id, $dto->get_id() );
@@ -177,7 +201,12 @@ class FluentCartTest extends \WP_UnitTestCase
 
         // Add
         $add_request = $this->build_request(
-            [ 'items' => [ [ 'variantId' => $this->variation_id, 'quantity' => 2 ] ] ]
+            [ 'items' => [ [
+                'variantId' => $this->variation_id,
+                'quantity'  => 2
+            ]
+            ]
+            ]
         );
         $cart        = $fluent_cart->cart_add( null, $add_request );
 
@@ -192,7 +221,12 @@ class FluentCartTest extends \WP_UnitTestCase
 
         // Update (by_input => absolute quantity)
         $update_request = $this->build_request(
-            [ 'items' => [ [ 'itemId' => $this->variation_id, 'quantity' => 5 ] ] ]
+            [ 'items' => [ [
+                'itemId'   => $this->variation_id,
+                'quantity' => 5
+            ]
+            ]
+            ]
         );
         $updated_cart   = $fluent_cart->cart_update( null, $update_request );
         $this->assertEquals( 5, $updated_cart->get_item_count() );
@@ -249,7 +283,14 @@ class FluentCartTest extends \WP_UnitTestCase
         wp_set_current_user( $this->user_id );
         $fluent_cart = new FluentCart();
 
-        $paginator = $fluent_cart->orders_get( null, $this->build_request( [ 'page' => 1, 'per_page' => 10 ] ) );
+        $paginator = $fluent_cart->orders_get(
+            null, $this->build_request(
+                [
+                    'page'     => 1,
+                    'per_page' => 10
+                ]
+            )
+        );
         $this->assertGreaterThanOrEqual( 1, $paginator->get_total() );
 
         $order_ids = array_map( fn( $dto ) => $dto->id, $paginator->get_items() );

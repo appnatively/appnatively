@@ -70,33 +70,30 @@ class Auth {
      * @return string The plaintext token. Never stored, never recoverable.
      */
     public static function issue( int $user_id ): string {
-        $secret = bin2hex( random_bytes( 32 ) );
-        $now    = time();
-
-        $tokens   = self::get_tokens( $user_id );
-        $previous = $tokens;
-
-        $tokens[ hash( 'sha256', $secret ) ] = [
-            'issued'  => $now,
-            'expires' => $now + self::get_ttl(),
-        ];
-
-        // Keep the newest MAX_TOKENS so a user signing in across many devices
-        // does not accumulate credentials indefinitely.
-        if ( count( $tokens ) > self::MAX_TOKENS ) {
-            uasort(
-                $tokens, function ( $a, $b ) {
-                    return $b['issued'] <=> $a['issued'];
+        return AuthorizationStore::locked(
+            static function () use ( $user_id ): string {
+                $secret   = bin2hex( random_bytes( 32 ) );
+                $now      = time();
+                $row      = AuthorizationStore::token_row( $user_id );
+                $previous = AuthorizationStore::decode_tokens( $row );
+                $tokens   = self::fresh_tokens( $previous );
+                if ( count( $tokens ) >= self::MAX_TOKENS ) {
+                    uksort(
+                        $tokens, static function ( $a, $b ) use ( $tokens ): int {
+                            return ( $tokens[$b]['issued'] <=> $tokens[$a]['issued'] ) ?: strcmp( $a, $b );
+                        }
+                    );
+                    $tokens = array_slice( $tokens, 0, self::MAX_TOKENS - 1, true );
                 }
-            );
-            $tokens = array_slice( $tokens, 0, self::MAX_TOKENS, true );
-        }
-
-        if ( false !== update_user_meta( $user_id, self::META_KEY, $tokens ) ) {
-            do_action( 'craf_appna_auth_tokens_changed', $user_id, $previous, $tokens );
-        }
-
-        return $user_id . '.' . $secret;
+                $tokens[hash( 'sha256', $secret )] = [
+                    'issued'  => $now,
+                    'expires' => $now + self::get_ttl(),
+                ];
+                AuthorizationStore::save_tokens( $user_id, $row, $tokens );
+                self::changed( $user_id, $previous, $tokens );
+                return $user_id . '.' . $secret;
+            }
+        );
     }
 
     /**
@@ -208,10 +205,17 @@ class Auth {
      * @return void
      */
     public static function revoke_all( int $user_id ): void {
-        $previous = self::get_tokens( $user_id );
-        if ( delete_user_meta( $user_id, self::META_KEY ) ) {
-            do_action( 'craf_appna_auth_tokens_changed', $user_id, $previous, [] );
-        }
+        AuthorizationStore::locked(
+            static function () use ( $user_id ): void {
+                $row      = AuthorizationStore::token_row( $user_id );
+                $previous = AuthorizationStore::decode_tokens( $row );
+                AuthorizationStore::advance( 'craf_appna_auth_user_' . $user_id );
+                if ( $row ) {
+                    AuthorizationStore::save_tokens( $user_id, $row, [] );
+                    self::changed( $user_id, $previous, [] );
+                }
+            }
+        );
     }
 
     /**
@@ -234,130 +238,94 @@ class Auth {
      * @return int
      */
     public static function count_all_active(): int {
-        global $wpdb;
-
-        //phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-        $rows = $wpdb->get_col(
-            $wpdb->prepare( "SELECT meta_value FROM {$wpdb->usermeta} WHERE meta_key = %s", self::META_KEY )
-        );
-
-        $now   = time();
-        $total = 0;
-
-        foreach ( (array) $rows as $row ) {
-            $tokens = maybe_unserialize( $row );
-
-            if ( ! is_array( $tokens ) ) {
-                continue;
-            }
-
-            foreach ( $tokens as $meta ) {
-                if ( is_array( $meta ) && ! empty( $meta['expires'] ) && $meta['expires'] >= $now ) {
-                    ++$total;
+        return AuthorizationStore::locked(
+            static function (): int {
+                $total = 0;
+                foreach ( self::all_token_rows() as $row ) {
+                    $total += count( self::fresh_tokens( AuthorizationStore::decode_tokens( $row ) ) );
                 }
+                return $total;
             }
-        }
-
-        return $total;
+        );
     }
 
     /**
      * Revoke every app token on the site.
      *
-     * Deletes the meta key outright in one statement. A paged get_users() loop
-     * would silently stop at its page size, reporting success while leaving an
-     * unbounded number of tokens live — the opposite of what an administrator
-     * reaching for this control needs.
+     * Clears current snapshots under the same lock as issuance. Empty rows
+     * remain as tombstones; no paged user list can omit active credentials.
      *
      * @return int Number of users whose tokens were cleared.
      */
     public static function revoke_everyones(): int {
+        return AuthorizationStore::locked(
+            static function (): int {
+                $rows    = self::all_token_rows();
+                $cleared = 0;
+                AuthorizationStore::advance( 'craf_appna_auth_global' );
+                foreach ( $rows as $row ) {
+                    $previous = AuthorizationStore::decode_tokens( $row );
+                    AuthorizationStore::save_tokens( (int) $row['user_id'], $row, [] );
+                    if ( $previous ) {
+                        ++$cleared;
+                        self::changed( (int) $row['user_id'], $previous, [] );
+                    }
+                }
+                return $cleared;
+            }
+        );
+    }
+
+    private static function all_token_rows(): array {
         global $wpdb;
-
-        // Collect the affected ids first: after the delete there is no way to
-        // know whose meta caches need clearing, and a stale cache would mean a
-        // revoked token still validates.
-        //phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-        $user_ids = $wpdb->get_col(
-            $wpdb->prepare( "SELECT DISTINCT user_id FROM {$wpdb->usermeta} WHERE meta_key = %s", self::META_KEY )
-        );
-
-        if ( empty( $user_ids ) ) {
-            return 0;
-        }
-
-        //phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.SlowDBQuery.slow_db_query_meta_key -- bulk-revoking every issued token by this plugin's own meta key, not a WP_Query arg.
-        $previous = $wpdb->get_results(
-            $wpdb->prepare( "SELECT user_id, meta_value FROM {$wpdb->usermeta} WHERE meta_key = %s", self::META_KEY ), ARRAY_A
-        );
-        $deleted  = $wpdb->delete( $wpdb->usermeta, [ 'meta_key' => self::META_KEY ], [ '%s' ] );
-
-        // wp_cache_flush_group() is not implemented by every object-cache
-        // drop-in, so clear each entry explicitly instead.
-        foreach ( $user_ids as $user_id ) {
-            wp_cache_delete( (int) $user_id, 'user_meta' );
-        }
-        if ( $deleted ) {
-            foreach ( (array) $previous as $row ) {
-                $tokens = maybe_unserialize( $row['meta_value'] );
-                do_action( 'craf_appna_auth_tokens_changed', (int) $row['user_id'], is_array( $tokens ) ? $tokens : [], [] );
+        $rows = AuthorizationStore::rows( $wpdb->prepare( "SELECT umeta_id,user_id,meta_value FROM {$wpdb->usermeta} WHERE meta_key=%s ORDER BY user_id", self::META_KEY ) );
+        $seen = [];
+        foreach ( $rows as $row ) {
+            if ( isset( $seen[$row['user_id']] ) ) {
+                throw new AuthorizationStorageException();
             }
+            AuthorizationStore::decode_tokens( $row );
+            $seen[$row['user_id']] = true;
         }
-
-        return count( $user_ids );
+        return $rows;
     }
 
-    /**
-     * Read a user's stored tokens, dropping any that have expired.
-     *
-     * @param int $user_id The user.
-     * @return array<string, array{issued:int, expires:int}>
-     */
-    private static function get_tokens( int $user_id ): array {
-        $tokens = get_user_meta( $user_id, self::META_KEY, true );
-
-        if ( ! is_array( $tokens ) ) {
-            return [];
-        }
-
-        $now   = time();
-        $fresh = [];
-
-        foreach ( $tokens as $hash => $meta ) {
-            if ( is_array( $meta ) && ! empty( $meta['expires'] ) && $meta['expires'] >= $now ) {
-                $fresh[ $hash ] = $meta;
-            }
-        }
-
-        return $fresh;
+    /** Shared authoritative reader for authentication and notification proofs. */
+    public static function get_tokens( int $user_id ): array {
+        return self::fresh_tokens( AuthorizationStore::decode_tokens( AuthorizationStore::token_row( $user_id ) ) );
     }
 
-    /**
-     * Remove one token hash from a user's stored set.
-     *
-     * @param int    $user_id The user.
-     * @param string $hash    The stored SHA-256 hash.
-     * @return void
-     */
+    private static function fresh_tokens( array $tokens ): array {
+        $now = time();
+        return array_filter(
+            $tokens, static function ( $meta ) use ( $now ): bool {
+                return is_array( $meta ) && ( $meta['expires'] ?? 0 ) > $now;
+            }
+        );
+    }
+
     private static function forget( int $user_id, string $hash ): void {
-        $tokens = self::get_tokens( $user_id );
-
-        if ( ! isset( $tokens[ $hash ] ) ) {
-            return;
-        }
-
-        $previous = $tokens;
-        unset( $tokens[ $hash ] );
-
-        if ( empty( $tokens ) ) {
-            if ( delete_user_meta( $user_id, self::META_KEY ) ) {
-                do_action( 'craf_appna_auth_tokens_changed', $user_id, $previous, [] );
+        AuthorizationStore::locked(
+            static function () use ( $user_id, $hash ): void {
+                $row      = AuthorizationStore::token_row( $user_id );
+                $previous = AuthorizationStore::decode_tokens( $row );
+                if ( ! isset( $previous[$hash] ) ) {
+                    return;
+                }
+                $tokens = self::fresh_tokens( $previous );
+                unset( $tokens[$hash] );
+                AuthorizationStore::save_tokens( $user_id, $row, $tokens );
+                self::changed( $user_id, $previous, $tokens );
             }
-            return;
-        }
+        );
+    }
 
-        if ( false !== update_user_meta( $user_id, self::META_KEY, $tokens ) ) {
-            do_action( 'craf_appna_auth_tokens_changed', $user_id, $previous, $tokens );
+    private static function changed( int $user, array $previous, array $tokens ): void {
+        try {
+            do_action( 'craf_appna_auth_tokens_changed', $user, $previous, $tokens );
+        } catch ( \Throwable $error ) {
+            // A notification extension cannot roll back a completed account action.
+            error_log( 'AppNatively token-change notification failed.' );
         }
     }
 

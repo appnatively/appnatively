@@ -2,6 +2,8 @@
 
 namespace Crafium\AppNatively\App\Integrations\Directory\Catalog;
 
+use Crafium\AppNatively\App\Models\DatabaseRow;
+
 defined( "ABSPATH" ) || exit;
 
 use Crafium\AppNatively\App\Filtering\Field;
@@ -26,13 +28,38 @@ class GeoDirectoryCatalog extends ListingCatalog {
     ];
 
     /** Numeric column types (a `text` field of these types is a number). */
-    private const NUMBER_DATA_TYPES = [ 'INT', 'FLOAT', 'DECIMAL' ];
+    private const NUMBER_DATA_TYPES = [
+        'INT',
+        'FLOAT',
+        'DECIMAL'
+    ];
 
     /** Columns the catalog reads itself, never offered as custom fields. */
     private const CORE_COLUMNS = [
-        'post_title', 'post_content', 'post_tags', 'post_category', 'default_category', 'address', 'street', 'street2', 'city',
-        'region', 'country', 'zip', 'latitude', 'longitude', 'featured', 'business_hours', 'price', 'email', 'phone', 'website',
-        'overall_rating', 'rating_count', 'post_images', 'post_status',
+        'post_title',
+        'post_content',
+        'post_tags',
+        'post_category',
+        'default_category',
+        'address',
+        'street',
+        'street2',
+        'city',
+        'region',
+        'country',
+        'zip',
+        'latitude',
+        'longitude',
+        'featured',
+        'business_hours',
+        'price',
+        'email',
+        'phone',
+        'website',
+        'overall_rating',
+        'rating_count',
+        'post_images',
+        'post_status',
     ];
 
     /** @var string[]|null */
@@ -100,7 +127,10 @@ class GeoDirectoryCatalog extends ListingCatalog {
             return null;
         }
         $price = "(NULLIF(gd_detail.price, '') + 0)";
-        return [ $price, $price ];
+        return [
+            $price,
+            $price
+        ];
     }
 
     public function rating_sql(): ?string {
@@ -115,7 +145,10 @@ class GeoDirectoryCatalog extends ListingCatalog {
         if ( ! $this->has_column( 'latitude' ) || ! $this->has_column( 'longitude' ) ) {
             return null;
         }
-        return [ "(NULLIF(gd_detail.latitude, '') + 0)", "(NULLIF(gd_detail.longitude, '') + 0)" ];
+        return [
+            "(NULLIF(gd_detail.latitude, '') + 0)",
+            "(NULLIF(gd_detail.longitude, '') + 0)"
+        ];
     }
 
     public function has_business_hours(): bool {
@@ -129,7 +162,12 @@ class GeoDirectoryCatalog extends ListingCatalog {
     protected function business_hours(): array {
         global $wpdb;
         // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- one bulk read of a trusted table name, cached by the caller.
-        $rows  = $wpdb->get_results( "SELECT post_id, business_hours FROM {$wpdb->prefix}{$this->detail_table()} WHERE post_status = 'publish' AND business_hours <> ''" );
+        $rows  = DatabaseRow::from_table( $this->detail_table() )->select(
+            [
+                "post_id",
+                "business_hours"
+            ]
+        )->where( "post_status","publish" )->where( "business_hours","<>","" )->get()->all();
         $hours = [];
         foreach ( (array) $rows as $row ) {
             $schema = geodir_schema_to_array( stripslashes( (string) $row->business_hours ) );
@@ -163,7 +201,16 @@ class GeoDirectoryCatalog extends ListingCatalog {
         global $wpdb;
         $this->fields = [];
         // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- builder listing and per-request lookup of a small table.
-        $rows = $wpdb->get_results( $wpdb->prepare( "SELECT htmlvar_name, admin_title, frontend_title, field_type, data_type, option_values FROM {$wpdb->prefix}geodir_custom_fields WHERE post_type = %s AND is_active = 1", $this->post_type() ) );
+        $rows = DatabaseRow::from_table( "geodir_custom_fields" )->select(
+            [
+                "htmlvar_name",
+                "admin_title",
+                "frontend_title",
+                "field_type",
+                "data_type",
+                "option_values"
+            ]
+        )->where( "post_type",$this->post_type() )->where( "is_active",1 )->get()->all();
 
         $searchable = $this->advanced_search_fields();
         foreach ( (array) $rows as $row ) {
@@ -235,7 +282,7 @@ class GeoDirectoryCatalog extends ListingCatalog {
             return [];
         }
         // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- small lookup of a trusted table name.
-        return array_map( 'strval', (array) $wpdb->get_col( $wpdb->prepare( "SELECT htmlvar_name FROM {$table} WHERE post_type = %s", $this->post_type() ) ) );
+        return array_map( 'strval', (array) DatabaseRow::values( DatabaseRow::from_table( "geodir_custom_advance_search_fields" )->where( "post_type",$this->post_type() ),"htmlvar_name" ) );
     }
 
     private function post_type(): string {
@@ -253,7 +300,7 @@ class GeoDirectoryCatalog extends ListingCatalog {
         if ( $this->columns === null ) {
             global $wpdb;
             // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- schema lookup of a trusted table name.
-            $this->columns = array_map( 'strval', (array) $wpdb->get_col( "SHOW COLUMNS FROM {$wpdb->prefix}{$this->detail_table()}" ) );
+            $this->columns = array_map( 'strval', (array) $wpdb->get_col( $wpdb->prepare( 'SHOW COLUMNS FROM %i', $wpdb->prefix . $this->detail_table() ) ) );
         }
         return in_array( $column, $this->columns, true );
     }

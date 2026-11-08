@@ -102,7 +102,12 @@ class DirectoristTest extends DirectoryIntegrationTestCase {
         $this->assertIsArray( $reviews );
         $this->assertSame( 2, $reviews["total"] );
         $this->assertCount( 2, $reviews["items"] );
-        $this->assertSame( [5.0, 5.0], array_column( $reviews["items"], "rating" ) );
+        $this->assertSame(
+            [
+                5.0,
+                5.0
+            ], array_column( $reviews["items"], "rating" )
+        );
         $this->assertSame( 3, $reviews["review_count"] );
         $this->assertSame( 2, $reviews["rating_counts"]["5"] );
         $this->assertSame( 1, $reviews["rating_counts"]["3"] );
@@ -139,9 +144,27 @@ class DirectoristTest extends DirectoryIntegrationTestCase {
             $this->create_request( array_merge( $base_params, ["orderby" => "rating_asc"] ) )
         );
 
-        $this->assertSame( ["Newest medium directorist review", "Middle high directorist review", "Old low directorist review"], array_column( $newest["items"], "review" ) );
-        $this->assertSame( [5.0, 3.0, 1.0], array_column( $highest["items"], "rating" ) );
-        $this->assertSame( [1.0, 3.0, 5.0], array_column( $lowest["items"], "rating" ) );
+        $this->assertSame(
+            [
+                "Newest medium directorist review",
+                "Middle high directorist review",
+                "Old low directorist review"
+            ], array_column( $newest["items"], "review" )
+        );
+        $this->assertSame(
+            [
+                5.0,
+                3.0,
+                1.0
+            ], array_column( $highest["items"], "rating" )
+        );
+        $this->assertSame(
+            [
+                1.0,
+                3.0,
+                5.0
+            ], array_column( $lowest["items"], "rating" )
+        );
     }
 
     private function create_review( int $post_id, int $rating, string $content, string $date ): int {

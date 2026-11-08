@@ -40,7 +40,12 @@ class WoocommerceTest extends \WP_UnitTestCase
         $attribute = new \WC_Product_Attribute();
         $attribute->set_id( 0 );
         $attribute->set_name( 'Color' );
-        $attribute->set_options( [ 'Red', 'Blue' ] );
+        $attribute->set_options(
+            [
+                'Red',
+                'Blue'
+            ]
+        );
         $attribute->set_visible( true );
         $attribute->set_variation( true );
 
@@ -109,9 +114,20 @@ class WoocommerceTest extends \WP_UnitTestCase
 
     public function test_products_returns_seeded_product() {
         $woocommerce = new Woocommerce();
-        $request     = $this->build_request( [ 'page' => 1, 'per_page' => 10 ] );
+        $request     = $this->build_request(
+            [
+                'page'     => 1,
+                'per_page' => 10
+            ]
+        );
 
-        $paginator = $woocommerce->products( null, $request, [ 'id', 'name', 'price' ] );
+        $paginator = $woocommerce->products(
+            null, $request, [
+                'id',
+                'name',
+                'price'
+            ]
+        );
 
         $this->assertGreaterThanOrEqual( 1, $paginator->get_total() );
         $ids = array_map( fn( $dto ) => $dto->get_id(), $paginator->get_items() );
@@ -122,7 +138,14 @@ class WoocommerceTest extends \WP_UnitTestCase
         $woocommerce = new Woocommerce();
         $request     = $this->build_request( [ 'id' => $this->simple_product_id ] );
 
-        $dto = $woocommerce->product( null, $request, [ 'id', 'name', 'price', 'categories' ] );
+        $dto = $woocommerce->product(
+            null, $request, [
+                'id',
+                'name',
+                'price',
+                'categories'
+            ]
+        );
 
         $this->assertNotNull( $dto );
         $this->assertEquals( $this->simple_product_id, $dto->get_id() );
@@ -142,7 +165,12 @@ class WoocommerceTest extends \WP_UnitTestCase
         $woocommerce = new Woocommerce();
         $request     = $this->build_request( [ 'id' => $this->variable_product_id ] );
 
-        $dto = $woocommerce->product( null, $request, [ 'id', 'variants' ] );
+        $dto = $woocommerce->product(
+            null, $request, [
+                'id',
+                'variants'
+            ]
+        );
 
         $this->assertNotNull( $dto );
         $variant_ids = array_map( fn( $v ) => $v->get_id(), $dto->get_variants() );
@@ -151,9 +179,19 @@ class WoocommerceTest extends \WP_UnitTestCase
 
     public function test_categories_returns_seeded_category() {
         $woocommerce = new Woocommerce();
-        $request     = $this->build_request( [ 'page' => 1, 'per_page' => 10 ] );
+        $request     = $this->build_request(
+            [
+                'page'     => 1,
+                'per_page' => 10
+            ]
+        );
 
-        $paginator = $woocommerce->categories( null, $request, [ 'id', 'name' ] );
+        $paginator = $woocommerce->categories(
+            null, $request, [
+                'id',
+                'name'
+            ]
+        );
 
         $ids = array_map( fn( $dto ) => $dto->get_id(), $paginator->get_items() );
         $this->assertContains( $this->category_id, $ids );
@@ -163,7 +201,12 @@ class WoocommerceTest extends \WP_UnitTestCase
         $woocommerce = new Woocommerce();
         $request     = $this->build_request( [ 'id' => $this->category_id ] );
 
-        $dto = $woocommerce->category( null, $request, [ 'id', 'name' ] );
+        $dto = $woocommerce->category(
+            null, $request, [
+                'id',
+                'name'
+            ]
+        );
 
         $this->assertNotNull( $dto );
         $this->assertEquals( $this->category_id, $dto->get_id() );
@@ -184,11 +227,24 @@ class WoocommerceTest extends \WP_UnitTestCase
         $this->create_product_review( 3, 'Average review', '2024-01-03 10:00:00' );
 
         $woocommerce = new Woocommerce();
-        $reviews     = $woocommerce->product_reviews( null, $this->build_request( [ 'id' => $this->simple_product_id, 'rating' => 5, 'per_page' => 10 ] ) );
+        $reviews     = $woocommerce->product_reviews(
+            null, $this->build_request(
+                [
+                    'id'       => $this->simple_product_id,
+                    'rating'   => 5,
+                    'per_page' => 10
+                ]
+            )
+        );
 
         $this->assertSame( 2, $reviews['total'] );
         $this->assertCount( 2, $reviews['items'] );
-        $this->assertSame( [ 5.0, 5.0 ], array_column( $reviews['items'], 'rating' ) );
+        $this->assertSame(
+            [
+                5.0,
+                5.0
+            ], array_column( $reviews['items'], 'rating' )
+        );
         $this->assertSame( 2, $reviews['rating_counts']['5'] );
         $this->assertSame( 1, $reviews['rating_counts']['3'] );
     }
@@ -199,15 +255,36 @@ class WoocommerceTest extends \WP_UnitTestCase
         $this->create_product_review( 3, 'Newest medium review', '2024-01-03 10:00:00' );
 
         $woocommerce = new Woocommerce();
-        $base_params = [ 'id' => $this->simple_product_id, 'per_page' => 10 ];
+        $base_params = [
+            'id'       => $this->simple_product_id,
+            'per_page' => 10
+        ];
 
         $newest  = $woocommerce->product_reviews( null, $this->build_request( array_merge( $base_params, [ 'orderby' => 'newest' ] ) ) );
         $highest = $woocommerce->product_reviews( null, $this->build_request( array_merge( $base_params, [ 'orderby' => 'rating_desc' ] ) ) );
         $lowest  = $woocommerce->product_reviews( null, $this->build_request( array_merge( $base_params, [ 'orderby' => 'rating_asc' ] ) ) );
 
-        $this->assertSame( [ 'Newest medium review', 'Middle high review', 'Old low review' ], array_column( $newest['items'], 'review' ) );
-        $this->assertSame( [ 5.0, 3.0, 1.0 ], array_column( $highest['items'], 'rating' ) );
-        $this->assertSame( [ 1.0, 3.0, 5.0 ], array_column( $lowest['items'], 'rating' ) );
+        $this->assertSame(
+            [
+                'Newest medium review',
+                'Middle high review',
+                'Old low review'
+            ], array_column( $newest['items'], 'review' )
+        );
+        $this->assertSame(
+            [
+                5.0,
+                3.0,
+                1.0
+            ], array_column( $highest['items'], 'rating' )
+        );
+        $this->assertSame(
+            [
+                1.0,
+                3.0,
+                5.0
+            ], array_column( $lowest['items'], 'rating' )
+        );
     }
 
     public function test_cart_add_get_update_remove_clear() {
@@ -216,7 +293,12 @@ class WoocommerceTest extends \WP_UnitTestCase
 
         // Add
         $add_request = $this->build_request(
-            [ 'items' => [ [ 'productId' => $this->simple_product_id, 'quantity' => 2 ] ] ]
+            [ 'items' => [ [
+                'productId' => $this->simple_product_id,
+                'quantity'  => 2
+            ]
+            ]
+            ]
         );
         $cart        = $woocommerce->cart_add( null, $add_request );
 
@@ -231,7 +313,12 @@ class WoocommerceTest extends \WP_UnitTestCase
 
         // Update
         $update_request = $this->build_request(
-            [ 'items' => [ [ 'itemId' => $item_key, 'quantity' => 5 ] ] ]
+            [ 'items' => [ [
+                'itemId'   => $item_key,
+                'quantity' => 5
+            ]
+            ]
+            ]
         );
         $updated_cart   = $woocommerce->cart_update( null, $update_request );
         $this->assertEquals( 5, $updated_cart->get_item_count() );
@@ -257,7 +344,14 @@ class WoocommerceTest extends \WP_UnitTestCase
         $order->calculate_totals();
         $order->save();
 
-        $orders_paginator = $woocommerce->orders_get( null, $this->build_request( [ 'page' => 1, 'per_page' => 10 ] ) );
+        $orders_paginator = $woocommerce->orders_get(
+            null, $this->build_request(
+                [
+                    'page'     => 1,
+                    'per_page' => 10
+                ]
+            )
+        );
         $this->assertGreaterThanOrEqual( 1, $orders_paginator->get_total() );
 
         $order_ids = array_map( fn( $dto ) => $dto->id, $orders_paginator->get_items() );

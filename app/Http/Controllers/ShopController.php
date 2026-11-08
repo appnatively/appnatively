@@ -19,7 +19,7 @@ class ShopController extends Controller {
         $data = apply_filters(
             "craf_appna_shop_data", [
                 "currency" => "USD"
-            ] 
+            ]
         );
 
         return Response::send( $data );

@@ -44,7 +44,10 @@ class BitFormTest extends \WP_UnitTestCase {
                         'typ'       => 'text',
                         'lbl'       => 'Full Name Required',
                         'fieldName' => 'full_name_req',
-                        'valid'     => [ 'req' => true, 'maxlength' => 50 ],
+                        'valid'     => [
+                            'req'       => true,
+                            'maxlength' => 50
+                        ],
                     ],
                     'fld_email'         => [
                         'typ'       => 'email',
@@ -58,8 +61,14 @@ class BitFormTest extends \WP_UnitTestCase {
                         'fieldName' => 'gender',
                         'valid'     => [ 'req' => false ],
                         'opt'       => [
-                            [ 'lbl' => 'Male', 'val' => 'male' ],
-                            [ 'lbl' => 'Female', 'val' => 'female' ],
+                            [
+                                'lbl' => 'Male',
+                                'val' => 'male'
+                            ],
+                            [
+                                'lbl' => 'Female',
+                                'val' => 'female'
+                            ],
                         ],
                     ],
                     'fld_gdpr'          => [
@@ -127,7 +136,13 @@ class BitFormTest extends \WP_UnitTestCase {
         $form    = $bitform->expose_get_form( $this->form_id );
         $rules   = $bitform->expose_get_validation_rules( $form );
 
-        $expected_fields = [ 'fld_full_name', 'fld_full_name_req', 'fld_email', 'fld_gender', 'fld_gdpr' ];
+        $expected_fields = [
+            'fld_full_name',
+            'fld_full_name_req',
+            'fld_email',
+            'fld_gender',
+            'fld_gdpr'
+        ];
         foreach ( $expected_fields as $field ) {
             $this->assertArrayHasKey( $field, $rules );
         }

@@ -3,7 +3,6 @@
 namespace Crafium\AppNatively\App\Integrations\Directory;
 
 defined( "ABSPATH" ) || exit;
-
 use Crafium\AppNatively\App\DTO\Directory\CategoryDTO;
 use Crafium\AppNatively\App\DTO\Directory\CategoryPaginatorDTO;
 use Crafium\AppNatively\App\DTO\Directory\ListingDTO;
@@ -20,8 +19,8 @@ use Directorist\Helper;
 use WP_Comment;
 use WP_Post;
 use WP_Query;
-
-class Directorist extends Provider {
+class Directorist extends Provider
+{
     use ListingIntegrationHelpers;
 
     private ?DirectoristCatalog $catalog = null;
@@ -31,7 +30,8 @@ class Directorist extends Provider {
      *
      * @return void
      */
-    public function register() {}
+    public function register() {
+    }
 
     /**
      * Bootstrap any application services.
@@ -42,7 +42,6 @@ class Directorist extends Provider {
         if ( ! $this->is_loaded() ) {
             return;
         }
-
         $this->register_listing_hooks( "directorist" );
         add_filter( "craf_appna_directory_directorist_listing", [$this, "listing"], 10, 3 );
         add_filter( "craf_appna_directory_directorist_related_listings", [$this, "related_listings"], 10, 3 );
@@ -116,11 +115,9 @@ class Directorist extends Provider {
         $listing_id = (int) craf_appna_route_param( $request, "id" );
         $post_type  = $this->get_post_type();
         $post       = get_post( $listing_id );
-
         if ( ! $post instanceof WP_Post || $post->post_type !== $post_type || $post->post_status !== "publish" || craf_appna_is_post_password_protected( $post ) ) {
             return null;
         }
-
         return $this->map_listing_to_dto( $post, $fields );
     }
 
@@ -138,48 +135,37 @@ class Directorist extends Provider {
         $per_page   = (int) $request->get_param( "per_page" ) ?: 10;
         $post_type  = $this->get_post_type();
         $post       = get_post( $listing_id );
-
         if ( ! $post instanceof WP_Post || $post->post_type !== $post_type || $post->post_status !== "publish" || craf_appna_is_post_password_protected( $post ) ) {
             return new ListingPaginatorDTO( $page, $per_page, 0, 1, [] );
         }
-
         $category_taxonomy = $this->get_category_taxonomy();
         $tag_taxonomy      = $this->get_tags_taxonomy();
         $category_ids      = wp_get_post_terms( $listing_id, $category_taxonomy, ["fields" => "ids"] );
         $tag_ids           = wp_get_post_terms( $listing_id, $tag_taxonomy, ["fields" => "ids"] );
-
         if ( is_wp_error( $category_ids ) ) {
             $category_ids = [];
         }
-
         if ( is_wp_error( $tag_ids ) ) {
             $tag_ids = [];
         }
-
-        $tax_query = [
-            "relation" => "OR",
-        ];
-
+        $tax_query = ["relation" => "OR"];
         if ( ! empty( $category_ids ) ) {
             $tax_query[] = [
                 "taxonomy" => $category_taxonomy,
                 "field"    => "term_id",
-                "terms"    => array_map( "intval", $category_ids ),
+                "terms"    => array_map( "intval", $category_ids )
             ];
         }
-
         if ( ! empty( $tag_ids ) ) {
             $tax_query[] = [
                 "taxonomy" => $tag_taxonomy,
                 "field"    => "term_id",
-                "terms"    => array_map( "intval", $tag_ids ),
+                "terms"    => array_map( "intval", $tag_ids )
             ];
         }
-
         if ( count( $tax_query ) === 1 ) {
             return new ListingPaginatorDTO( $page, $per_page, 0, 1, [] );
         }
-
         $query = new WP_Query(
             [
                 "post_type"      => $post_type,
@@ -187,29 +173,21 @@ class Directorist extends Provider {
                 "has_password"   => false,
                 "paged"          => $page,
                 "posts_per_page" => $per_page,
-                //phpcs:ignore WordPressVIPMinimum.Performance.WPQueryParams.PostNotIn_post__not_in -- small, bounded exclusion of the current listing from its own "related" query.
-                "post__not_in"   => [ $listing_id ],
-                //phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_tax_query -- filtering listings by taxonomy is the point of this query.
+            //phpcs:ignore WordPressVIPMinimum.Performance.WPQueryParams.PostNotIn_post__not_in -- small, bounded exclusion of the current listing from its own "related" query.
+                "post__not_in"   => [$listing_id],
+            //phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_tax_query -- filtering listings by taxonomy is the point of this query.
                 "tax_query"      => $tax_query,
                 "orderby"        => "date",
                 "order"          => "DESC",
             ]
         );
-
         $items = [];
         foreach ( $query->posts as $related_listing ) {
             if ( $related_listing instanceof WP_Post ) {
                 $items[] = $this->map_listing_to_dto( $related_listing, $fields );
             }
         }
-
-        return new ListingPaginatorDTO(
-            $page,
-            $per_page,
-            (int) $query->found_posts,
-            max( 1, (int) $query->max_num_pages ),
-            $items
-        );
+        return new ListingPaginatorDTO( $page, $per_page, (int) $query->found_posts, max( 1, (int) $query->max_num_pages ), $items );
     }
 
     /**
@@ -223,35 +201,23 @@ class Directorist extends Provider {
         $listing_id = (int) craf_appna_route_param( $request, "id" );
         $post_type  = $this->get_post_type();
         $post       = get_post( $listing_id );
-
         if ( ! $post instanceof WP_Post || $post->post_type !== $post_type || $post->post_status !== "publish" || craf_appna_is_post_password_protected( $post ) ) {
             return null;
         }
-
-        $base_args = [
+        $base_args          = [
             "post_id" => $listing_id,
             "status"  => "approve",
             "type"    => "review",
-            "parent"  => 0,
+            "parent"  => 0
         ];
-
-        $query = $this->query_directory_review_rows(
-            $base_args,
-            $request,
-            fn( WP_Comment $comment ): float => (float) get_comment_meta( $comment->comment_ID, "rating", true )
-        );
-
+        $query              = $this->query_directory_review_rows( $base_args, $request, fn( WP_Comment $comment ): float => (float) get_comment_meta( $comment->comment_ID, "rating", true ) );
         $rating_counts      = $this->get_review_rating_counts( $listing_id );
         $calculated_average = $this->calculate_average_rating( $rating_counts );
-        $average            = function_exists( "directorist_get_listing_rating" )
-            ? (float) directorist_get_listing_rating( $listing_id )
-            : $calculated_average;
+        $average            = function_exists( "directorist_get_listing_rating" ) ? (float) directorist_get_listing_rating( $listing_id ) : $calculated_average;
         $review_count       = $this->get_listing_review_count( $listing_id );
-
         if ( $average <= 0 && $calculated_average > 0 ) {
             $average = $calculated_average;
         }
-
         return [
             "current_page"   => $query["current_page"],
             "per_page"       => $query["per_page"],
@@ -260,11 +226,11 @@ class Directorist extends Provider {
             "average_rating" => $average,
             "review_count"   => $review_count,
             "rating_counts"  => $rating_counts,
-            "items"          => array_map( fn( array $row ): array => $this->map_review_comment( $row["comment"] ), $query["rows"] ),
+            "items"          => array_map( fn( array $row ): array => $this->map_review_comment( $row["comment"] ), $query["rows"] )
         ];
     }
 
-     /**
+    /**
      * Resolve device-local wishlist listing IDs into full listing records.
      *
      * @param ListingPaginatorDTO|null $listing_paginator The listing paginator.
@@ -275,31 +241,26 @@ class Directorist extends Provider {
     public function wishlist( ?ListingPaginatorDTO $listing_paginator, Request $request, array $fields = [] ): ListingPaginatorDTO {
         $ids = (array) $request->get_param( "ids" );
         $ids = array_values( array_filter( array_map( 'intval', $ids ) ) );
-
         if ( empty( $ids ) ) {
             return new ListingPaginatorDTO( 1, 0, 0, 1, [] );
         }
-
         $post_type = $this->get_post_type();
-
-        $query = new WP_Query(
+        $query     = new WP_Query(
             [
                 "post_type"      => $post_type,
                 "post_status"    => "publish",
                 "has_password"   => false,
                 "posts_per_page" => count( $ids ),
                 "post__in"       => $ids,
-                "orderby"        => "post__in",
+                "orderby"        => "post__in"
             ]
         );
-
-        $items = [];
+        $items     = [];
         foreach ( $query->posts as $listing ) {
             if ( $listing instanceof WP_Post ) {
                 $items[] = $this->map_listing_to_dto( $listing, $fields );
             }
         }
-
         return new ListingPaginatorDTO( 1, count( $items ), count( $items ), 1, $items );
     }
 
@@ -316,23 +277,17 @@ class Directorist extends Provider {
         $per_page = (int) $request->get_param( "per_page" ) ?: 10;
         $search   = sanitize_text_field( (string) $request->get_param( "search" ) );
         $taxonomy = $this->get_category_taxonomy();
-
-        $query = Term::join( "term_taxonomy", "terms.term_id", "=", "term_taxonomy.term_id" )
-            ->where( "term_taxonomy.taxonomy", $taxonomy );
-
-        $columns = $this->get_category_columns_from_fields( $fields );
+        $query    = Term::join( "term_taxonomy", "terms.term_id", "=", "term_taxonomy.term_id" )->where( "term_taxonomy.taxonomy", $taxonomy );
+        $columns  = $this->get_category_columns_from_fields( $fields );
         $query->select( $columns );
-
         if ( ! empty( $search ) ) {
             global $wpdb;
             $search = $wpdb->esc_like( $search );
-            $query->where( "terms.name", "like", "%$search%" );
+            $query->where( "terms.name", "like", "%{$search}%" );
         }
-
         $sort     = sanitize_text_field( (string) $request->get_param( "sort" ) );
         $order_by = "name";
         $order    = "ASC";
-
         if ( ! empty( $sort ) ) {
             if ( 0 === strpos( $sort, "-" ) ) {
                 $order_by = ltrim( $sort, "-" );
@@ -342,29 +297,19 @@ class Directorist extends Provider {
                 $order    = "ASC";
             }
         }
-
         $sort_map = [
             "name"  => "terms.name",
             "id"    => "terms.term_id",
             "slug"  => "terms.slug",
-            "count" => "term_taxonomy.count",
+            "count" => "term_taxonomy.count"
         ];
-
         $query->order_by( $sort_map[$order_by] ?? "terms.name", $order );
         $paginator = $query->paginate( $page, $per_page );
-
-        $items = [];
+        $items     = [];
         foreach ( $paginator->items() as $term ) {
             $items[] = $this->map_term_to_category_dto( $term, $fields );
         }
-
-        return new CategoryPaginatorDTO(
-            $page,
-            $per_page,
-            $paginator->total(),
-            $paginator->last_page(),
-            $items
-        );
+        return new CategoryPaginatorDTO( $page, $per_page, $paginator->total(), $paginator->last_page(), $items );
     }
 
     /**
@@ -379,11 +324,9 @@ class Directorist extends Provider {
         $category_id = (int) craf_appna_route_param( $request, "id" );
         $taxonomy    = $this->get_category_taxonomy();
         $term        = get_term( $category_id, $taxonomy );
-
         if ( ! $term || is_wp_error( $term ) ) {
             return null;
         }
-
         return $this->map_term_to_category_dto( $term, $fields );
     }
 
@@ -400,21 +343,22 @@ class Directorist extends Provider {
         $per_page = (int) $request->get_param( "per_page" ) ?: 10;
         $search   = sanitize_text_field( (string) $request->get_param( "search" ) );
         $taxonomy = $this->get_tags_taxonomy();
-
-        $query = Term::join( "term_taxonomy", "terms.term_id", "=", "term_taxonomy.term_id" )
-            ->where( "term_taxonomy.taxonomy", $taxonomy )
-            ->select( ["terms.term_id", "terms.name", "terms.slug", "term_taxonomy.count"] );
-
+        $query    = Term::join( "term_taxonomy", "terms.term_id", "=", "term_taxonomy.term_id" )->where( "term_taxonomy.taxonomy", $taxonomy )->select(
+            [
+                "terms.term_id",
+                "terms.name",
+                "terms.slug",
+                "term_taxonomy.count"
+            ]
+        );
         if ( ! empty( $search ) ) {
             global $wpdb;
             $search = $wpdb->esc_like( $search );
-            $query->where( "terms.name", "like", "%$search%" );
+            $query->where( "terms.name", "like", "%{$search}%" );
         }
-
         $sort     = sanitize_text_field( (string) $request->get_param( "sort" ) );
         $order_by = "name";
         $order    = "ASC";
-
         if ( ! empty( $sort ) ) {
             if ( 0 === strpos( $sort, "-" ) ) {
                 $order_by = ltrim( $sort, "-" );
@@ -424,28 +368,18 @@ class Directorist extends Provider {
                 $order    = "ASC";
             }
         }
-
         $sort_map = [
             "name" => "terms.name",
             "id"   => "terms.term_id",
-            "slug" => "terms.slug",
+            "slug" => "terms.slug"
         ];
-
         $query->order_by( $sort_map[$order_by] ?? "terms.name", $order );
         $paginator = $query->paginate( $page, $per_page );
-
-        $items = [];
+        $items     = [];
         foreach ( $paginator->items() as $term ) {
             $items[] = $this->map_term_to_dto( $term, $fields );
         }
-
-        return new TermPaginatorDTO(
-            $page,
-            $per_page,
-            $paginator->total(),
-            $paginator->last_page(),
-            $items
-        );
+        return new TermPaginatorDTO( $page, $per_page, $paginator->total(), $paginator->last_page(), $items );
     }
 
     /**
@@ -461,21 +395,22 @@ class Directorist extends Provider {
         $per_page = (int) $request->get_param( "per_page" ) ?: 10;
         $search   = sanitize_text_field( (string) $request->get_param( "search" ) );
         $taxonomy = $this->get_location_taxonomy();
-
-        $query = Term::join( "term_taxonomy", "terms.term_id", "=", "term_taxonomy.term_id" )
-            ->where( "term_taxonomy.taxonomy", $taxonomy )
-            ->select( ["terms.term_id", "terms.name", "terms.slug", "term_taxonomy.count"] );
-
+        $query    = Term::join( "term_taxonomy", "terms.term_id", "=", "term_taxonomy.term_id" )->where( "term_taxonomy.taxonomy", $taxonomy )->select(
+            [
+                "terms.term_id",
+                "terms.name",
+                "terms.slug",
+                "term_taxonomy.count"
+            ]
+        );
         if ( ! empty( $search ) ) {
             global $wpdb;
             $search = $wpdb->esc_like( $search );
-            $query->where( "terms.name", "like", "%$search%" );
+            $query->where( "terms.name", "like", "%{$search}%" );
         }
-
         $sort     = sanitize_text_field( (string) $request->get_param( "sort" ) );
         $order_by = "name";
         $order    = "ASC";
-
         if ( ! empty( $sort ) ) {
             if ( 0 === strpos( $sort, "-" ) ) {
                 $order_by = ltrim( $sort, "-" );
@@ -485,39 +420,27 @@ class Directorist extends Provider {
                 $order    = "ASC";
             }
         }
-
         $sort_map = [
             "name" => "terms.name",
             "id"   => "terms.term_id",
-            "slug" => "terms.slug",
+            "slug" => "terms.slug"
         ];
-
         $query->order_by( $sort_map[$order_by] ?? "terms.name", $order );
         $paginator = $query->paginate( $page, $per_page );
-
-        $items = [];
+        $items     = [];
         foreach ( $paginator->items() as $term ) {
             $items[] = $this->map_term_to_dto( $term, $fields );
         }
-
-        return new TermPaginatorDTO(
-            $page,
-            $per_page,
-            $paginator->total(),
-            $paginator->last_page(),
-            $items
-        );
+        return new TermPaginatorDTO( $page, $per_page, $paginator->total(), $paginator->last_page(), $items );
     }
 
     public function location( ?TermDTO $location, Request $request, array $fields = [] ): ?TermDTO {
         $location_id = (int) craf_appna_route_param( $request, "id" );
         $taxonomy    = $this->get_location_taxonomy();
         $term        = get_term( $location_id, $taxonomy );
-
         if ( ! $term || is_wp_error( $term ) ) {
             return null;
         }
-
         return $this->map_term_to_dto( $term, $fields );
     }
 
@@ -530,7 +453,6 @@ class Directorist extends Provider {
      */
     private function map_term_to_dto( $term, array $fields ): TermDTO {
         $dto = new TermDTO();
-
         if ( in_array( "id", $fields, true ) ) {
             $dto->set_id( (int) $term->term_id );
         }
@@ -544,12 +466,18 @@ class Directorist extends Provider {
             $dto->set_count( (int) $term->count );
         }
         if ( in_array( "image", $fields, true ) ) {
-            $image = $this->get_term_image( (int) $term->term_id, ["location_img", "category_img", "thumbnail_id", "image"] );
+            $image = $this->get_term_image(
+                (int) $term->term_id, [
+                    "location_img",
+                    "category_img",
+                    "thumbnail_id",
+                    "image"
+                ]
+            );
             if ( ! empty( $image ) ) {
                 $dto->set_image( $image );
             }
         }
-
         return $dto;
     }
 
@@ -559,10 +487,8 @@ class Directorist extends Provider {
             if ( empty( $image ) ) {
                 continue;
             }
-
             return $image;
         }
-
         return [];
     }
 
@@ -570,42 +496,34 @@ class Directorist extends Provider {
         if ( empty( $image_meta ) ) {
             return [];
         }
-
         if ( is_array( $image_meta ) ) {
             $image_id = (int) ( $image_meta["id"] ?? $image_meta["attachment_id"] ?? $image_meta["attachmentId"] ?? 0 );
             $src      = (string) ( $image_meta["src"] ?? $image_meta["url"] ?? "" );
-
             if ( ! $src && $image_id ) {
                 $src = (string) wp_get_attachment_url( $image_id );
             }
-
             if ( $src ) {
                 return [
                     "id"  => $image_id,
-                    "src" => esc_url_raw( $src ),
+                    "src" => esc_url_raw( $src )
                 ];
             }
-
             return [];
         }
-
         if ( is_numeric( $image_meta ) ) {
             $image_id = (int) $image_meta;
             $src      = (string) wp_get_attachment_url( $image_id );
-
             return $src ? [
                 "id"  => $image_id,
-                "src" => esc_url_raw( $src ),
+                "src" => esc_url_raw( $src )
             ] : [];
         }
-
         if ( is_string( $image_meta ) && filter_var( $image_meta, FILTER_VALIDATE_URL ) ) {
             return [
                 "id"  => 0,
-                "src" => esc_url_raw( $image_meta ),
+                "src" => esc_url_raw( $image_meta )
             ];
         }
-
         return [];
     }
 
@@ -616,22 +534,20 @@ class Directorist extends Provider {
      * @return array
      */
     private function get_category_columns_from_fields( array $fields ): array {
-        $map = [
+        $map     = [
             "id"          => "terms.term_id",
             "name"        => "terms.name",
             "slug"        => "terms.slug",
             "description" => "term_taxonomy.description",
             "parent"      => "term_taxonomy.parent",
-            "count"       => "term_taxonomy.count",
+            "count"       => "term_taxonomy.count"
         ];
-
         $columns = ["terms.term_id"];
         foreach ( $fields as $field ) {
             if ( isset( $map[$field] ) ) {
                 $columns[] = $map[$field];
             }
         }
-
         return array_unique( $columns );
     }
 
@@ -644,7 +560,6 @@ class Directorist extends Provider {
      */
     private function map_term_to_category_dto( $term, array $fields ): CategoryDTO {
         $dto = new CategoryDTO();
-
         if ( in_array( "id", $fields, true ) ) {
             $dto->set_id( (int) $term->term_id );
         }
@@ -669,7 +584,6 @@ class Directorist extends Provider {
                 $dto->set_image( $image );
             }
         }
-
         return $dto;
     }
 
@@ -682,7 +596,6 @@ class Directorist extends Provider {
      */
     private function map_listing_to_dto( WP_Post $listing, array $fields ): ListingDTO {
         $dto = new ListingDTO();
-
         if ( in_array( "id", $fields, true ) ) {
             $dto->set_id( (int) $listing->ID );
         }
@@ -714,22 +627,68 @@ class Directorist extends Provider {
             $dto->set_views_count( $this->get_listing_views_count( $listing->ID ) );
         }
         if ( in_array( "address", $fields, true ) ) {
-            $dto->set_address( $this->get_meta_value( $listing->ID, ["_address", "address"] ) );
+            $dto->set_address(
+                $this->get_meta_value(
+                    $listing->ID, [
+                        "_address",
+                        "address"
+                    ]
+                )
+            );
         }
         if ( in_array( "latitude", $fields, true ) ) {
-            $dto->set_latitude( $this->normalize_coordinate( $this->get_meta_value( $listing->ID, ["_manual_lat", "manual_lat"] ), -90, 90 ) );
+            $dto->set_latitude(
+                $this->normalize_coordinate(
+                    $this->get_meta_value(
+                        $listing->ID, [
+                            "_manual_lat",
+                            "manual_lat"
+                        ]
+                    ), -90, 90
+                )
+            );
         }
         if ( in_array( "longitude", $fields, true ) ) {
-            $dto->set_longitude( $this->normalize_coordinate( $this->get_meta_value( $listing->ID, ["_manual_lng", "manual_lng"] ), -180, 180 ) );
+            $dto->set_longitude(
+                $this->normalize_coordinate(
+                    $this->get_meta_value(
+                        $listing->ID, [
+                            "_manual_lng",
+                            "manual_lng"
+                        ]
+                    ), -180, 180
+                )
+            );
         }
         if ( in_array( "phone", $fields, true ) ) {
-            $dto->set_phone( $this->get_meta_value( $listing->ID, ["_phone", "phone"] ) );
+            $dto->set_phone(
+                $this->get_meta_value(
+                    $listing->ID, [
+                        "_phone",
+                        "phone"
+                    ]
+                )
+            );
         }
         if ( in_array( "email", $fields, true ) ) {
-            $dto->set_email( $this->get_meta_value( $listing->ID, ["_email", "email"] ) );
+            $dto->set_email(
+                $this->get_meta_value(
+                    $listing->ID, [
+                        "_email",
+                        "email"
+                    ]
+                )
+            );
         }
         if ( in_array( "website", $fields, true ) ) {
-            $dto->set_website( $this->get_meta_value( $listing->ID, ["_website", "website"] ) );
+            $dto->set_website(
+                $this->get_meta_value(
+                    $listing->ID, [
+                        "_website",
+                        "website"
+                    ]
+                )
+            );
         }
         if ( in_array( "favorite", $fields, true ) ) {
             $dto->set_favorite( $this->is_favorite_listing( $listing->ID ) );
@@ -760,7 +719,6 @@ class Directorist extends Provider {
         }
         if ( in_array( "review_count", $fields, true ) || in_array( "rating_count", $fields, true ) ) {
             $review_count = $this->get_listing_review_count( (int) $listing->ID );
-
             if ( in_array( "review_count", $fields, true ) ) {
                 $dto->set_review_count( $review_count );
             }
@@ -768,7 +726,6 @@ class Directorist extends Provider {
                 $dto->set_rating_count( $review_count );
             }
         }
-
         return $dto;
     }
 
@@ -782,9 +739,7 @@ class Directorist extends Provider {
         if ( ! function_exists( "directorist_get_user_favorites" ) ) {
             return false;
         }
-
         $favorites = directorist_get_user_favorites( get_current_user_id() );
-
         return in_array( $listing_id, $favorites, true );
     }
 
@@ -798,8 +753,13 @@ class Directorist extends Provider {
         if ( function_exists( "directorist_get_listing_views_count" ) ) {
             return (int) directorist_get_listing_views_count( $listing_id );
         }
-
-        return (int) $this->get_meta_value( $listing_id, ["_atbdp_post_views_count", "atbdp_post_views_count", "view_count"] );
+        return (int) $this->get_meta_value(
+            $listing_id, [
+                "_atbdp_post_views_count",
+                "atbdp_post_views_count",
+                "view_count"
+            ]
+        );
     }
 
     /**
@@ -812,7 +772,6 @@ class Directorist extends Provider {
         if ( class_exists( Helper::class ) ) {
             return (bool) Helper::is_new( $listing_id );
         }
-
         return false;
     }
 
@@ -826,7 +785,6 @@ class Directorist extends Provider {
         if ( class_exists( Helper::class ) ) {
             return (bool) Helper::is_popular( $listing_id );
         }
-
         return false;
     }
 
@@ -840,7 +798,7 @@ class Directorist extends Provider {
         return [
             "price"       => $this->clean_listing_value( get_post_meta( $listing_id, "_price", true ) ),
             "price_type"  => $this->clean_listing_value( get_post_meta( $listing_id, "_atbd_listing_pricing", true ) ),
-            "price_range" => $this->clean_listing_value( get_post_meta( $listing_id, "_price_range", true ) ),
+            "price_range" => $this->clean_listing_value( get_post_meta( $listing_id, "_price_range", true ) )
         ];
     }
 
@@ -854,7 +812,6 @@ class Directorist extends Provider {
         if ( function_exists( "directorist_clean" ) ) {
             return (string) directorist_clean( $value );
         }
-
         return is_scalar( $value ) ? sanitize_text_field( (string) $value ) : "";
     }
 
@@ -872,7 +829,6 @@ class Directorist extends Provider {
                 return is_scalar( $value ) ? sanitize_text_field( (string) $value ) : "";
             }
         }
-
         return "";
     }
 
@@ -893,8 +849,16 @@ class Directorist extends Provider {
             $cover_id  = $this->get_listing_image_id( $listing_id );
             $image_ids = array_values( array_filter( $image_ids, fn( int $image_id ): bool => $image_id !== $cover_id ) );
         }
-
-        return array_values( array_filter( array_map( [$this, "map_attachment_image"], $image_ids ) ) );
+        return array_values(
+            array_filter(
+                array_map(
+                    [
+                        $this,
+                        "map_attachment_image"
+                    ], $image_ids
+                )
+            )
+        );
     }
 
     private function get_listing_image_id( int $listing_id ): int {
@@ -902,19 +866,16 @@ class Directorist extends Provider {
         if ( $image_id > 0 ) {
             return $image_id;
         }
-
         if ( function_exists( "directorist_get_listing_preview_image" ) ) {
             $image_id = (int) directorist_get_listing_preview_image( $listing_id );
             if ( $image_id > 0 ) {
                 return $image_id;
             }
         }
-
         $image_id = (int) get_post_meta( $listing_id, "_listing_prv_img", true );
         if ( $image_id > 0 ) {
             return $image_id;
         }
-
         $image_ids = $this->get_listing_image_ids( $listing_id );
         return $image_ids ? (int) reset( $image_ids ) : 0;
     }
@@ -926,29 +887,15 @@ class Directorist extends Provider {
         } else {
             $image_ids = $this->positive_ids( get_post_meta( $listing_id, "_listing_img", true ) );
         }
-
         $preview_id = function_exists( "directorist_get_listing_preview_image" ) ? (int) directorist_get_listing_preview_image( $listing_id ) : (int) get_post_meta( $listing_id, "_listing_prv_img", true );
         if ( $preview_id > 0 ) {
             array_unshift( $image_ids, $preview_id );
         }
-
         $thumbnail_id = (int) get_post_thumbnail_id( $listing_id );
         if ( $thumbnail_id > 0 ) {
             array_unshift( $image_ids, $thumbnail_id );
         }
-
         return array_values( array_unique( array_filter( $image_ids ) ) );
-    }
-
-    private function map_attachment_image( int $image_id ): array {
-        $src = wp_get_attachment_url( $image_id );
-
-        return $src ? [
-            "id"    => (int) $image_id,
-            "src"   => esc_url_raw( (string) $src ),
-            "alt"   => sanitize_text_field( (string) get_post_meta( $image_id, "_wp_attachment_image_alt", true ) ),
-            "title" => (string) get_the_title( $image_id ),
-        ] : [];
     }
 
     /**
@@ -961,8 +908,15 @@ class Directorist extends Provider {
         if ( function_exists( "directorist_get_listing_rating" ) ) {
             return (float) directorist_get_listing_rating( $listing_id );
         }
-
-        return (float) $this->get_meta_value( $listing_id, ["_directorist_listing_rating", "_average_rating", "average_rating", "_rating", "rating"] );
+        return (float) $this->get_meta_value(
+            $listing_id, [
+                "_directorist_listing_rating",
+                "_average_rating",
+                "average_rating",
+                "_rating",
+                "rating"
+            ]
+        );
     }
 
     /**
@@ -972,11 +926,16 @@ class Directorist extends Provider {
      * @return int
      */
     private function get_listing_review_count( int $listing_id ): int {
-        $raw_review_count = (int) get_comments( ["post_id" => $listing_id, "status" => "approve", "type" => "review", "parent" => 0, "count" => true] );
-
-        return function_exists( "directorist_get_listing_review_count" )
-            ? max( (int) directorist_get_listing_review_count( $listing_id ), $raw_review_count )
-            : $raw_review_count;
+        $raw_review_count = (int) get_comments(
+            [
+                "post_id" => $listing_id,
+                "status"  => "approve",
+                "type"    => "review",
+                "parent"  => 0,
+                "count"   => true
+            ]
+        );
+        return function_exists( "directorist_get_listing_review_count" ) ? max( (int) directorist_get_listing_review_count( $listing_id ), $raw_review_count ) : $raw_review_count;
     }
 
     /**
@@ -988,20 +947,17 @@ class Directorist extends Provider {
      */
     private function get_listing_terms( int $listing_id, string $taxonomy ): array {
         $terms = get_the_terms( $listing_id, $taxonomy );
-
         if ( empty( $terms ) || is_wp_error( $terms ) ) {
             return [];
         }
-
         return array_map(
-            function( $term ): array {
+            function ( $term ): array {
                 return [
                     "id"   => (int) $term->term_id,
                     "name" => (string) $term->name,
-                    "slug" => (string) $term->slug,
+                    "slug" => (string) $term->slug
                 ];
-            },
-            $terms
+            }, $terms
         );
     }
 
@@ -1018,12 +974,7 @@ class Directorist extends Provider {
             "review"       => wp_kses_post( (string) $comment->comment_content ),
             "rating"       => (float) get_comment_meta( $comment->comment_ID, "rating", true ),
             "date_created" => (string) get_comment_date( DATE_ATOM, $comment ),
-            "avatar_url"   => (string) get_avatar_url(
-                $comment,
-                [
-                    "size" => 96,
-                ]
-            ),
+            "avatar_url"   => (string) get_avatar_url( $comment, ["size" => 96] )
         ];
     }
 
@@ -1040,28 +991,24 @@ class Directorist extends Provider {
             "2" => 0,
             "3" => 0,
             "4" => 0,
-            "5" => 0,
+            "5" => 0
         ];
-
         if ( is_array( $counts ) ) {
             foreach ( $normalized as $rating => $count ) {
                 $normalized[$rating] = (int) ( $counts[$rating] ?? 0 );
             }
-
             if ( array_sum( $normalized ) > 0 ) {
                 return $normalized;
             }
         }
-
         $comments = get_comments(
             [
                 "post_id" => $listing_id,
                 "status"  => "approve",
                 "type"    => "review",
-                "parent"  => 0,
+                "parent"  => 0
             ]
         );
-
         foreach ( $comments as $comment ) {
             $rating = (int) round( (float) get_comment_meta( $comment->comment_ID, "rating", true ) );
             if ( $rating <= 0 ) {
@@ -1070,7 +1017,6 @@ class Directorist extends Provider {
             $rating = max( 1, min( 5, $rating ) );
             $normalized[(string) $rating]++;
         }
-
         return $normalized;
     }
 
@@ -1083,12 +1029,10 @@ class Directorist extends Provider {
     private function calculate_average_rating( array $rating_counts ): float {
         $total = 0;
         $sum   = 0;
-
         foreach ( $rating_counts as $rating => $count ) {
             $total += (int) $count;
             $sum   += (int) $rating * (int) $count;
         }
-
         return $total > 0 ? round( $sum / $total, 1 ) : 0.0;
     }
 }

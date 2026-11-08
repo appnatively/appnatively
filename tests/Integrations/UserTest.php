@@ -12,7 +12,7 @@ class UserTest extends \WP_UnitTestCase
     public function test_user_model_can_fetch_users() {
         // WordPress testing environment usually has a default admin user.
         $users = User::all();
-        
+
         $this->assertGreaterThanOrEqual( 0, $users->count() );
     }
 
